@@ -33,7 +33,7 @@ from src.utils.logger import setup_logger
 from src.utils.comm import synchronize, is_main_process, get_rank, get_world_size, all_gather
 from src.utils.miscellaneous import mkdir, set_seed
 from src.utils.metric_logger import AverageMeter
-from src.utils.renderer import Renderer, visualize_reconstruction_and_att_local, visualize_reconstruction_no_text
+#from src.utils.renderer import Renderer, visualize_reconstruction_and_att_local, visualize_reconstruction_no_text
 from src.utils.metric_pampjpe import reconstruction_error
 from src.utils.geometric_layers import orthographic_projection
 
@@ -66,8 +66,8 @@ def run_inference(args, image_list, Graphormer_model, mano, renderer, mesh_sampl
                 img_tensor = transform(img)
                 img_visual = transform_visualize(img)
 
-                batch_imgs = torch.unsqueeze(img_tensor, 0).cuda()
-                batch_visual_imgs = torch.unsqueeze(img_visual, 0).cuda()
+                batch_imgs = torch.unsqueeze(img_tensor, 0)#.cuda()
+                batch_visual_imgs = torch.unsqueeze(img_visual, 0)#.cuda()
                 # forward-pass
                 pred_camera, pred_3d_joints, pred_vertices_sub, pred_vertices, hidden_states, att = Graphormer_model(batch_imgs, mano, mesh_sampler)
                 # obtain 3d joints from full mesh
@@ -88,23 +88,12 @@ def run_inference(args, image_list, Graphormer_model, mano, renderer, mesh_sampl
                 pred_2d_coarse_vertices_from_mesh = orthographic_projection(pred_vertices_sub.contiguous(), pred_camera.contiguous())
 
 
-                visual_imgs_output = visualize_mesh( renderer, batch_visual_imgs[0],
-                                                            pred_vertices[0].detach(), 
-                                                            pred_camera.detach())
-                # visual_imgs_output = visualize_mesh_and_attention( renderer, batch_visual_imgs[0],
-                #                                             pred_vertices[0].detach(), 
-                #                                             pred_vertices_sub[0].detach(), 
-                #                                             pred_2d_coarse_vertices_from_mesh[0].detach(),
-                #                                             pred_2d_joints_from_mesh[0].detach(),
-                #                                             pred_camera.detach(),
-                #                                             att[-1][0].detach())
-                visual_imgs = visual_imgs_output.transpose(1,2,0)
-                visual_imgs = np.asarray(visual_imgs)
-                        
-                temp_fname = image_file[:-4] + '_graphormer_pred.jpg'
-                print('save to ', temp_fname)
-                cv2.imwrite(temp_fname, np.asarray(visual_imgs[:,:,::-1]*255))
-    return
+                # visual_imgs_output = visualize_mesh(renderer, batch_visual_imgs[0],
+                #                                     pred_vertices[0].detach(),
+                #                                     pred_camera.detach())
+                # visual_imgs = visual_imgs_output.transpose(1,2,0)
+
+    return pred_vertices[0], pred_camera
 
 def visualize_mesh( renderer, images,
                     pred_vertices_full,
@@ -206,12 +195,13 @@ def main(args):
     logger.info("Using {} GPUs".format(args.num_gpus))
 
     # Mesh and MANO utils
+    print(args)
     mano_model = MANO().to(args.device)
-    mano_model.layer = mano_model.layer.cuda()
+    #mano_model.layer = mano_model.layer.cuda()
     mesh_sampler = Mesh()
 
     # Renderer for visualization
-    renderer = Renderer(faces=mano_model.face)
+    renderer = None#Renderer(faces=mano_model.face)
 
     # Load pretrained model
     trans_encoder = []
