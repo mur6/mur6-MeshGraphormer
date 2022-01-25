@@ -53,8 +53,11 @@ transform_visualize = transforms.Compose([
                     transforms.CenterCrop(224),
                     transforms.ToTensor()])
 
-def run_inference(args, image_list, Graphormer_model, mano, renderer, mesh_sampler):
-# switch to evaluate mode
+import torch.onnx
+
+def run_inference(args, image_list, Graphormer_model, mano):
+    mesh_sampler = Mesh()
+    # switch to evaluate mode
     Graphormer_model.eval()
     mano.eval()
     with torch.no_grad():
@@ -69,7 +72,18 @@ def run_inference(args, image_list, Graphormer_model, mano, renderer, mesh_sampl
                 batch_imgs = torch.unsqueeze(img_tensor, 0)#.cuda()
                 batch_visual_imgs = torch.unsqueeze(img_visual, 0)#.cuda()
                 # forward-pass
-                pred_camera, pred_3d_joints, pred_vertices_sub, pred_vertices, hidden_states, att = Graphormer_model(batch_imgs, mano, mesh_sampler)
+                template_pose = torch.zeros((1,48))
+                template_betas = torch.zeros((1,10))
+                template_vertices, template_3d_joints = mano.layer(template_pose, template_betas)
+                template_vertices = template_vertices / 1000.0
+                template_3d_joints = template_3d_joints / 1000.0
+                template_vertices_sub = mesh_sampler.downsample(template_vertices)
+
+                pred_camera, pred_3d_joints, pred_vertices_sub, pred_vertices, hidden_states, att = Graphormer_model(
+                    batch_imgs, template_vertices, template_3d_joints, template_vertices_sub)
+
+                torch.onnx.export(Graphormer_model, (batch_imgs, template_vertices, template_3d_joints, template_vertices_sub), "graphormer.onnx", opset_version=11)
+                break
                 # obtain 3d joints from full mesh
                 pred_3d_joints_from_mesh = mano.get_3d_joints(pred_vertices)
                 pred_3d_pelvis = pred_3d_joints_from_mesh[:,cfg.J_NAME.index('Wrist'),:]
@@ -93,7 +107,7 @@ def run_inference(args, image_list, Graphormer_model, mano, renderer, mesh_sampl
                 #                                     pred_camera.detach())
                 # visual_imgs = visual_imgs_output.transpose(1,2,0)
 
-    return pred_vertices[0], pred_camera
+    return #pred_vertices[0], pred_camera
 
 def visualize_mesh( renderer, images,
                     pred_vertices_full,
@@ -198,7 +212,7 @@ def main(args):
     print(args)
     mano_model = MANO().to(args.device)
     #mano_model.layer = mano_model.layer.cuda()
-    mesh_sampler = Mesh()
+    #mesh_sampler = Mesh()
 
     # Renderer for visualization
     renderer = None#Renderer(faces=mano_model.face)
@@ -314,11 +328,12 @@ def main(args):
         # should be a path with images only
         for filename in os.listdir(args.image_file_or_path):
             if filename.endswith(".png") or filename.endswith(".jpg") and 'pred' not in filename:
-                image_list.append(args.image_file_or_path+'/'+filename) 
+                image_list.append(args.image_file_or_path+'/'+filename)
     else:
         raise ValueError("Cannot find images at {}".format(args.image_file_or_path))
-
-    run_inference(args, image_list, _model, mano_model, renderer, mesh_sampler)    
+    print(mano_model)
+    print(image_list)
+    run_inference(args, image_list, _model, mano_model)
 
 if __name__ == "__main__":
     args = parse_args()
