@@ -80,29 +80,18 @@ def run_inference(args, image_list, Graphormer_model, mano, trans_encoder_first)
                 template_3d_joints = template_3d_joints / 1000.0
                 template_vertices_sub = mesh_sampler.downsample(template_vertices)
 
-                # pred_camera, pred_3d_joints, pred_vertices_sub, pred_vertices, hidden_states, att = Graphormer_model(
-                #     batch_imgs, template_vertices, template_3d_joints, template_vertices_sub)
+                ##############
+                img_feats = Graphormer_model.calc_features(batch_imgs, template_vertices, template_3d_joints, template_vertices_sub)
+                batch_size = len(img_feats)
+                print(batch_size)
+                seq_length = len(img_feats[0])
+                print(seq_length)
+                input_ids = torch.zeros([batch_size, seq_length],dtype=torch.long)
+                position_ids = torch.arange(seq_length, dtype=torch.long, device=input_ids.device)
+                position_ids = position_ids.unsqueeze(0).expand_as(input_ids)
+                out = trans_encoder_first(img_feats, input_ids, position_ids)
+                torch.onnx.export(trans_encoder_first, (img_feats, input_ids, position_ids), "trans_encoder_first.onnx", opset_version=11)
 
-                #torch.onnx.export(Graphormer_model, (batch_imgs, template_vertices, template_3d_joints, template_vertices_sub), "graphormer.onnx", opset_version=11)
-                fe = Graphormer_model.calc_features(batch_imgs, template_vertices, template_3d_joints, template_vertices_sub)
-                bert = trans_encoder_first.bert
-                #print(bert)
-                out = bert(fe)
-                # print(fe.shape)
-                # print(out)
-                torch.onnx.export(bert, fe, "bert.onnx")
-
-                #torch.onnx.export(trans_encoder_first, fe, "trans_encoder.onnx")
-                ###############################################################
-                # position_embeddings = bert.position_embeddings
-                # batch_size = 1
-                # seq_length = 265
-                # input_ids = torch.zeros([batch_size, seq_length],dtype=torch.long)
-                # position_ids = torch.arange(seq_length, dtype=torch.long, device=input_ids.device)
-                # position_ids = position_ids.unsqueeze(0).expand_as(input_ids)
-                # position_embeddings_output = position_embeddings(position_ids)
-                # print(position_embeddings_output)
-                # torch.onnx.export(position_embeddings, position_ids, "pe.onnx")
                 break
                 # obtain 3d joints from full mesh
                 pred_3d_joints_from_mesh = mano.get_3d_joints(pred_vertices)
