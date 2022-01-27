@@ -16,6 +16,11 @@ class SparseMM(torch.autograd.Function):
         return torch.matmul(sparse, dense)
 
     @staticmethod
+    def symbolic(g: torch._C.Graph, input: torch._C.Value) -> torch._C.Value:
+        #return g.op("Clip", input, g.op("Constant", value_t=torch.tensor(0, dtype=torch.float)))
+        return g.op("MatMul", input)
+
+    @staticmethod
     def backward(ctx, grad_output):
         grad_input = None
         sparse, = ctx.saved_tensors
@@ -137,7 +142,7 @@ class GraphConvolution(torch.nn.Module):
             adj_mat_value = torch.load('./src/modeling/data/mano_195_adjmat_values.pt')
             adj_mat_size = torch.load('./src/modeling/data/mano_195_adjmat_size.pt')
 
-        self.adjmat = torch.sparse_coo_tensor(adj_indices, adj_mat_value, size=adj_mat_size).to(device)
+        self.adjmat = torch.sparse_coo_tensor(adj_indices, adj_mat_value, size=adj_mat_size).to_dense()
 
         self.weight = torch.nn.Parameter(torch.FloatTensor(in_features, out_features))
         if bias:
@@ -164,8 +169,8 @@ class GraphConvolution(torch.nn.Module):
             output = []
             for i in range(x.shape[0]):
                 support = torch.matmul(x[i], self.weight)
-                # output.append(torch.matmul(self.adjmat, support))
-                output.append(spmm(self.adjmat, support))
+                output.append(torch.matmul(self.adjmat, support))
+                # output.append(spmm(self.adjmat, support))
             output = torch.stack(output, dim=0)
             if self.bias is not None:
                 output = output + self.bias
