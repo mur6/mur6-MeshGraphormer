@@ -232,10 +232,10 @@ class EncoderBlock(BertPreTrainedModel):
     def forward(self, img_feats, input_ids=None, token_type_ids=None, attention_mask=None,
             position_ids=None, head_mask=None):
 
-        batch_size = 1#len(img_feats)
-        #print(batch_size)
-        seq_length = 265#len(img_feats[0])
-        #print(seq_length)
+        batch_size = len(img_feats)
+        print(f"batch_size={batch_size}")
+        seq_length = len(img_feats[0])
+        print(f"seq_length={seq_length}")
         input_ids = torch.zeros([batch_size, seq_length],dtype=torch.long)#.cuda()
 
         if position_ids is None:
@@ -306,15 +306,18 @@ class Graphormer(BertPreTrainedModel):
         self.residual = nn.Linear(config.img_feature_dim, self.config.output_feature_dim)
         self.apply(self.init_weights)
 
-    def forward(self, img_feats, input_ids=None, token_type_ids=None, attention_mask=None, masked_lm_labels=None,
-            next_sentence_label=None, position_ids=None, head_mask=None):
+    def forward(self, img_feats, input_ids, position_ids, token_type_ids=None, attention_mask=None, masked_lm_labels=None,
+            next_sentence_label=None, head_mask=None):
         '''
         # self.bert has three outputs
         # predictions[0]: output tokens
         # predictions[1]: all_hidden_states, if enable "self.config.output_hidden_states"
         # predictions[2]: attentions, if enable "self.config.output_attentions"
         '''
-        #print(img_feats, input_ids, position_ids, token_type_ids, attention_mask, head_mask)
+        print(f"Graphormer: img_feats={img_feats.shape}")
+        print(f"Graphormer: input_ids={input_ids}")
+        print(f"Graphormer: position_ids={position_ids}")
+        #, input_ids, position_ids, token_type_ids, attention_mask, head_mask
         predictions = self.bert(img_feats=img_feats, input_ids=input_ids, position_ids=position_ids, token_type_ids=token_type_ids,
                             attention_mask=attention_mask, head_mask=head_mask)
 
