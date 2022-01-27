@@ -21,6 +21,7 @@ import gc
 import numpy as np
 import cv2
 from src.modeling.bert import BertConfig, Graphormer
+# from src.modeling.bert.modeling_graphormer import EncoderBlock2
 from src.modeling.bert import Graphormer_Hand_Network as Graphormer_Network
 from src.modeling._mano import MANO, Mesh
 from src.modeling.hrnet.hrnet_cls_net_gridfeat import get_cls_net_gridfeat
@@ -55,7 +56,7 @@ transform_visualize = transforms.Compose([
 
 import torch.onnx
 
-def run_inference(args, image_list, Graphormer_model, mano):
+def run_inference(args, image_list, Graphormer_model, mano, trans_encoder_first):
     mesh_sampler = Mesh()
     # switch to evaluate mode
     Graphormer_model.eval()
@@ -79,10 +80,29 @@ def run_inference(args, image_list, Graphormer_model, mano):
                 template_3d_joints = template_3d_joints / 1000.0
                 template_vertices_sub = mesh_sampler.downsample(template_vertices)
 
-                pred_camera, pred_3d_joints, pred_vertices_sub, pred_vertices, hidden_states, att = Graphormer_model(
-                    batch_imgs, template_vertices, template_3d_joints, template_vertices_sub)
+                # pred_camera, pred_3d_joints, pred_vertices_sub, pred_vertices, hidden_states, att = Graphormer_model(
+                #     batch_imgs, template_vertices, template_3d_joints, template_vertices_sub)
 
-                torch.onnx.export(Graphormer_model, (batch_imgs, template_vertices, template_3d_joints, template_vertices_sub), "graphormer.onnx", opset_version=11)
+                #torch.onnx.export(Graphormer_model, (batch_imgs, template_vertices, template_3d_joints, template_vertices_sub), "graphormer.onnx", opset_version=11)
+                fe = Graphormer_model.calc_features(batch_imgs, template_vertices, template_3d_joints, template_vertices_sub)
+                bert = trans_encoder_first.bert
+                #print(bert)
+                out = bert(fe)
+                # print(fe.shape)
+                # print(out)
+                torch.onnx.export(bert, fe, "bert.onnx")
+
+                #torch.onnx.export(trans_encoder_first, fe, "trans_encoder.onnx")
+                ###############################################################
+                # position_embeddings = bert.position_embeddings
+                # batch_size = 1
+                # seq_length = 265
+                # input_ids = torch.zeros([batch_size, seq_length],dtype=torch.long)
+                # position_ids = torch.arange(seq_length, dtype=torch.long, device=input_ids.device)
+                # position_ids = position_ids.unsqueeze(0).expand_as(input_ids)
+                # position_embeddings_output = position_embeddings(position_ids)
+                # print(position_embeddings_output)
+                # torch.onnx.export(position_embeddings, position_ids, "pe.onnx")
                 break
                 # obtain 3d joints from full mesh
                 pred_3d_joints_from_mesh = mano.get_3d_joints(pred_vertices)
@@ -287,6 +307,7 @@ def main(args):
             # remove the last fc layer
             backbone = torch.nn.Sequential(*list(backbone.children())[:-1])
 
+        trans_encoder_first = trans_encoder[0]
         trans_encoder = torch.nn.Sequential(*trans_encoder)
         total_params = sum(p.numel() for p in trans_encoder.parameters())
         logger.info('Graphormer encoders total parameters: {}'.format(total_params))
@@ -333,7 +354,7 @@ def main(args):
         raise ValueError("Cannot find images at {}".format(args.image_file_or_path))
     print(mano_model)
     print(image_list)
-    run_inference(args, image_list, _model, mano_model)
+    run_inference(args, image_list, _model, mano_model, trans_encoder_first)
 
 if __name__ == "__main__":
     args = parse_args()
