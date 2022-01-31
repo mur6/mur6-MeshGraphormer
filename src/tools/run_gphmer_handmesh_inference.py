@@ -70,9 +70,16 @@ def run_inference(args, image_list, Graphormer_model, mano, trans_encoder_first)
                 img_tensor = transform(img)
                 img_visual = transform_visualize(img)
 
-                batch_imgs = torch.unsqueeze(img_tensor, 0)#.cuda()
-                batch_visual_imgs = torch.unsqueeze(img_visual, 0)#.cuda()
+                batch_imgs = torch.unsqueeze(img_tensor, 0)
+                
                 # forward-pass
+                pred_camera, pred_3d_joints, pred_vertices_sub, pred_vertices, hidden_states, att = Graphormer_model(batch_imgs, mano, mesh_sampler)
+                # obtain 3d joints from full mesh
+                pred_3d_joints_from_mesh = mano.get_3d_joints(pred_vertices)
+                pred_3d_pelvis = pred_3d_joints_from_mesh[:,cfg.J_NAME.index('Wrist'),:]
+                pred_3d_joints_from_mesh = pred_3d_joints_from_mesh - pred_3d_pelvis[:, None, :]
+                pred_vertices = pred_vertices - pred_3d_pelvis[:, None, :]
+                ##
                 template_pose = torch.zeros((1,48))
                 template_betas = torch.zeros((1,10))
                 template_vertices, template_3d_joints = mano.layer(template_pose, template_betas)
@@ -218,7 +225,6 @@ def main(args):
     logger.info("Using {} GPUs".format(args.num_gpus))
 
     # Mesh and MANO utils
-    print(args)
     mano_model = MANO().to(args.device)
     #mano_model.layer = mano_model.layer.cuda()
     #mesh_sampler = Mesh()
