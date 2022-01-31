@@ -136,12 +136,9 @@ def get_graph_params(filename, nsize=1):
 
 class Mesh(object):
     """Mesh object that is used for handling certain graph operations."""
-    def __init__(self, filename=cfg.MANO_sampling_matrix,
-                 num_downsampling=1, nsize=1, device=torch.device('cuda')):
+    def __init__(self, filename=cfg.MANO_sampling_matrix, num_downsampling=1, nsize=1):
+        print(filename)
         self._A, self._U, self._D = get_graph_params(filename=filename, nsize=nsize)
-        # self._A = [a.to(device) for a in self._A]
-        #self._U = [u.to(device) for u in self._U]
-        #self._D = [d.to(device) for d in self._D]
         self.num_downsampling = num_downsampling
 
     def downsample(self, x, n1=0, n2=None):
