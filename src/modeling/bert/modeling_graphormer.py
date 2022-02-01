@@ -242,10 +242,16 @@ class EncoderBlock(BertPreTrainedModel):
         for layer, heads in heads_to_prune.items():
             self.encoder.layer[layer].attention.prune_heads(heads)
 
-    def forward(self, img_feats, input_ids, position_ids, token_type_ids=None, attention_mask=None, head_mask=None):
+    def forward(self, img_feats, input_ids=None, position_ids=None, token_type_ids=None, attention_mask=None, head_mask=None):
         print(f"EncoderBlock: token_type_ids={token_type_ids} attention_mask={attention_mask} head_mask={head_mask}")
         print(f"EncoderBlock: input_ids={input_ids} position_ids={position_ids}")
-        #input_ids, position_ids = make_input_ids_and_position_ids()
+        batch_size=img_feats.shape[0]
+        seq_length=img_feats.shape[1]
+        print(f"EncoderBlock: batch_size={batch_size}")
+        print(f"EncoderBlock: seq_length={seq_length}")
+        input_ids = torch.zeros([batch_size, seq_length],dtype=torch.long)
+        position_ids = torch.arange(seq_length, dtype=torch.long, device=input_ids.device)
+        position_ids = position_ids.unsqueeze(0).expand_as(input_ids)
         position_embeddings = self.position_embeddings(position_ids)
 
         if attention_mask is None:
@@ -310,7 +316,7 @@ class Graphormer(BertPreTrainedModel):
         self.residual = nn.Linear(config.img_feature_dim, self.config.output_feature_dim)
         self.apply(self.init_weights)
 
-    def forward(self, img_feats, input_ids, position_ids, token_type_ids=None, attention_mask=None, masked_lm_labels=None,
+    def forward(self, img_feats, input_ids=None, position_ids=None, token_type_ids=None, attention_mask=None, masked_lm_labels=None,
             next_sentence_label=None, head_mask=None):
         '''
         # self.bert has three outputs

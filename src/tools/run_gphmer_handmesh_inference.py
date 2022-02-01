@@ -118,9 +118,9 @@ def run_inference(args, image_list, Graphormer_model, mano, trans_encoder_first)
                 #[2]
                 print("#################################\n")
                 img_feats = calc_features(Graphormer_model, batch_imgs, template_3d_joints, template_vertices_sub)
-                input_ids, position_ids = make_input_ids_and_position_ids()
-                trans_encoder_first(img_feats, input_ids, position_ids)
-                torch.onnx.export(trans_encoder_first, (img_feats, input_ids, position_ids), "trans_encoder_first.onnx", opset_version=11)
+                #input_ids, position_ids = make_input_ids_and_position_ids()
+                trans_encoder_first(img_feats, )
+                torch.onnx.export(trans_encoder_first, (img_feats, ), "trans_encoder_first.onnx", opset_version=11)
                 return 
                 # obtain 3d joints from full mesh
                 pred_3d_joints_from_mesh = mano.get_3d_joints(pred_vertices)
