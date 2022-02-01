@@ -208,6 +208,8 @@ def make_input_ids_and_position_ids(img_feats):
     input_ids = torch.zeros([batch_size, seq_length],dtype=torch.long)
     position_ids = torch.arange(seq_length, dtype=torch.long, device=input_ids.device)
     position_ids = position_ids.unsqueeze(0).expand_as(input_ids)
+    print(f"EncoderBlock: input_ids={input_ids.shape}")
+    print(f"EncoderBlock: position_ids={position_ids.shape}")
     return input_ids, position_ids
 
 class EncoderBlock(BertPreTrainedModel):

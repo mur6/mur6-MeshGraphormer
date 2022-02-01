@@ -100,6 +100,7 @@ def run_inference(args, image_list, Graphormer_model, mano, trans_encoder_first)
                 template_vertices, template_3d_joints, template_vertices_sub = template_normalize(template_vertices, template_3d_joints, template_vertices_sub)
                 # forward-pass
                 pred_camera, pred_3d_joints, pred_vertices_sub, pred_vertices, hidden_states, att = Graphormer_model(batch_imgs, template_vertices, template_3d_joints, template_vertices_sub)
+                torch.onnx.export(Graphormer_model, (batch_imgs, template_vertices, template_3d_joints, template_vertices_sub), "gm.onnx", opset_version=11)
                 #img_feats = calc_features(Graphormer_model, batch_imgs, template_3d_joints, template_vertices_sub)
                 #trans_encoder_first(img_feats, input_ids, position_ids)
                 return 
