@@ -243,8 +243,8 @@ class EncoderBlock(BertPreTrainedModel):
             self.encoder.layer[layer].attention.prune_heads(heads)
 
     def forward(self, img_feats, input_ids=None, position_ids=None, token_type_ids=None, attention_mask=None, head_mask=None):
-        print(f"EncoderBlock: token_type_ids={token_type_ids} attention_mask={attention_mask} head_mask={head_mask}")
-        print(f"EncoderBlock: input_ids={input_ids} position_ids={position_ids}")
+        #print(f"EncoderBlock: token_type_ids={token_type_ids} attention_mask={attention_mask} head_mask={head_mask}")
+        #print(f"EncoderBlock: input_ids={input_ids} position_ids={position_ids}")
         batch_size=img_feats.shape[0]
         seq_length=img_feats.shape[1]
         print(f"EncoderBlock: batch_size={batch_size}")

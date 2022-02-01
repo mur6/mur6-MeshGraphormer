@@ -93,7 +93,7 @@ def make_input_ids_and_position_ids():
     return input_ids, position_ids
 
 
-def run_inference(args, image_list, Graphormer_model, mano, trans_encoder_first):
+def run_inference(args, image_list, Graphormer_model, mano, trans_encoder):
     mesh_sampler = Mesh()
     # switch to evaluate mode
     Graphormer_model.eval()
@@ -119,8 +119,8 @@ def run_inference(args, image_list, Graphormer_model, mano, trans_encoder_first)
                 print("#################################\n")
                 img_feats = calc_features(Graphormer_model, batch_imgs, template_3d_joints, template_vertices_sub)
                 #input_ids, position_ids = make_input_ids_and_position_ids()
-                trans_encoder_first(img_feats, )
-                torch.onnx.export(trans_encoder_first, (img_feats, ), "trans_encoder_first.onnx", opset_version=11)
+                trans_encoder(img_feats, )
+                torch.onnx.export(trans_encoder, (img_feats, ), "trans_encoder3.onnx", opset_version=11)
                 return 
                 # obtain 3d joints from full mesh
                 pred_3d_joints_from_mesh = mano.get_3d_joints(pred_vertices)
@@ -389,7 +389,7 @@ def main(args):
         raise ValueError("Cannot find images at {}".format(args.image_file_or_path))
     print(mano_model)
     print(image_list)
-    run_inference(args, image_list, _model, mano_model, trans_encoder_first)
+    run_inference(args, image_list, _model, mano_model, trans_encoder)
 
 if __name__ == "__main__":
     args = parse_args()
