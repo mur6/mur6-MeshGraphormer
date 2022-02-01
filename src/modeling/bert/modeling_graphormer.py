@@ -199,6 +199,17 @@ class GraphormerEncoder(nn.Module):
 
         return outputs  # outputs, (hidden states), (attentions)
 
+
+def make_input_ids_and_position_ids(img_feats):
+    batch_size = len(img_feats)
+    print(f"EncoderBlock: batch_size={batch_size}")
+    seq_length = len(img_feats[0])
+    print(f"EncoderBlock: seq_length={seq_length}")
+    input_ids = torch.zeros([batch_size, seq_length],dtype=torch.long)
+    position_ids = torch.arange(seq_length, dtype=torch.long, device=input_ids.device)
+    position_ids = position_ids.unsqueeze(0).expand_as(input_ids)
+    return input_ids, position_ids
+
 class EncoderBlock(BertPreTrainedModel):
     def __init__(self, config):
         super(EncoderBlock, self).__init__(config)
@@ -231,16 +242,7 @@ class EncoderBlock(BertPreTrainedModel):
 
     def forward(self, img_feats, input_ids=None, token_type_ids=None, attention_mask=None, position_ids=None, head_mask=None):
         print(f"EncoderBlock: input_ids={input_ids} token_type_ids={token_type_ids} attention_mask={attention_mask} position_ids={position_ids} head_mask={head_mask}")
-        batch_size = len(img_feats)
-        print(f"EncoderBlock: batch_size={batch_size}")
-        seq_length = len(img_feats[0])
-        print(f"EncoderBlock: seq_length={seq_length}")
-        input_ids = torch.zeros([batch_size, seq_length],dtype=torch.long)#.cuda()
-
-        if position_ids is None:
-            position_ids = torch.arange(seq_length, dtype=torch.long, device=input_ids.device)
-            position_ids = position_ids.unsqueeze(0).expand_as(input_ids)
-
+        input_ids, position_ids = make_input_ids_and_position_ids(img_feats)
         position_embeddings = self.position_embeddings(position_ids)
 
         if attention_mask is None:

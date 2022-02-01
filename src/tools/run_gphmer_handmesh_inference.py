@@ -57,16 +57,6 @@ transform_visualize = transforms.Compose([
 import torch.onnx
 from src.modeling.bert.e2e_hand_network import generate_t_pose_template_mesh, get_template_vertices_sub, template_normalize
 
-def make_input_ids_and_position_ids(img_feats):
-    batch_size = len(img_feats)
-    print(batch_size)
-    seq_length = len(img_feats[0])
-    print(seq_length)
-    input_ids = torch.zeros([batch_size, seq_length],dtype=torch.long)
-    position_ids = torch.arange(seq_length, dtype=torch.long, device=input_ids.device)
-    position_ids = position_ids.unsqueeze(0).expand_as(input_ids)
-    return input_ids, position_ids
-
 
 def calc_features(Graphormer_model, images, template_3d_joints, template_vertices_sub):
     batch_size = images.size(0)
@@ -109,7 +99,6 @@ def run_inference(args, image_list, Graphormer_model, mano, trans_encoder_first)
                 template_vertices_sub = get_template_vertices_sub(mesh_sampler, template_vertices)
                 template_vertices, template_3d_joints, template_vertices_sub = template_normalize(template_vertices, template_3d_joints, template_vertices_sub)
                 # forward-pass
-                input_ids, position_ids = make_input_ids_and_position_ids(batch_imgs)
                 pred_camera, pred_3d_joints, pred_vertices_sub, pred_vertices, hidden_states, att = Graphormer_model(batch_imgs, template_vertices, template_3d_joints, template_vertices_sub)
                 #img_feats = calc_features(Graphormer_model, batch_imgs, template_3d_joints, template_vertices_sub)
                 #trans_encoder_first(img_feats, input_ids, position_ids)
