@@ -55,8 +55,45 @@ transform_visualize = transforms.Compose([
                     transforms.ToTensor()])
 
 import torch.onnx
+from src.modeling.bert.e2e_hand_network import generate_t_pose_template_mesh, get_template_vertices_sub, template_normalize
 
-def run_inference(args, image_list, Graphormer_model, mano, trans_encoder_first):
+
+def calc_features(Graphormer_model, images, template_3d_joints, template_vertices_sub):
+    batch_size = images.size(0)
+    num_joints = template_3d_joints.shape[1]
+    # concatinate template joints and template vertices, and then duplicate to batch size
+    ref_vertices = torch.cat([template_3d_joints, template_vertices_sub],dim=1)
+    ref_vertices = ref_vertices.expand(batch_size, -1, -1)
+
+    # extract grid features and global image features using a CNN backbone
+    image_feat, grid_feat = Graphormer_model.backbone(images)
+    # concatinate image feat and mesh template
+    image_feat = image_feat.view(batch_size, 1, 2048).expand(-1, ref_vertices.shape[-2], -1)
+    # process grid features
+    grid_feat = torch.flatten(grid_feat, start_dim=2)
+    grid_feat = grid_feat.transpose(1,2)
+    grid_feat = Graphormer_model.grid_feat_dim(grid_feat)
+    # concatinate image feat and template mesh to form the joint/vertex queries
+    features = torch.cat([ref_vertices, image_feat], dim=2)
+    # prepare input tokens including joint/vertex queries and grid features
+    features = torch.cat([features, grid_feat],dim=1)
+    return features
+
+
+def make_input_ids_and_position_ids():
+    batch_size=1
+    seq_length=265
+    print(f"EncoderBlock: batch_size={batch_size}")
+    print(f"EncoderBlock: seq_length={seq_length}")
+    input_ids = torch.zeros([batch_size, seq_length],dtype=torch.long)
+    position_ids = torch.arange(seq_length, dtype=torch.long, device=input_ids.device)
+    position_ids = position_ids.unsqueeze(0).expand_as(input_ids)
+    print(f"EncoderBlock: input_ids={input_ids.shape}")
+    print(f"EncoderBlock: position_ids={position_ids.shape}")
+    return input_ids, position_ids
+
+
+def run_inference(args, image_list, Graphormer_model, mano, trans_encoder):
     mesh_sampler = Mesh()
     # switch to evaluate mode
     Graphormer_model.eval()
@@ -71,9 +108,24 @@ def run_inference(args, image_list, Graphormer_model, mano, trans_encoder_first)
                 img_visual = transform_visualize(img)
 
                 batch_imgs = torch.unsqueeze(img_tensor, 0)
-                
+                template_vertices, template_3d_joints = generate_t_pose_template_mesh(mano)
+                template_vertices_sub = get_template_vertices_sub(mesh_sampler, template_vertices)
+                template_vertices, template_3d_joints, template_vertices_sub = template_normalize(template_vertices, template_3d_joints, template_vertices_sub)
+                #torch.save((template_vertices, template_3d_joints, template_vertices_sub), 'template_params.pt')
                 # forward-pass
-                pred_camera, pred_3d_joints, pred_vertices_sub, pred_vertices, hidden_states, att = Graphormer_model(batch_imgs, mano, mesh_sampler)
+                #[1]
+                pred_camera, pred_3d_joints, pred_vertices_sub, pred_vertices, hidden_states, att = Graphormer_model(batch_imgs, template_vertices, template_3d_joints, template_vertices_sub)
+                torch.onnx.export(Graphormer_model, (batch_imgs, template_vertices, template_3d_joints, template_vertices_sub), "gm2.onnx",
+                    input_names = ['batch_imgs', 'template_vertices', 'template_3d_joints', 'template_vertices_sub'],
+                    output_names = ['pred_camera', 'pred_3d_joints', 'pred_vertices_sub', 'pred_vertices', 'hidden_states', "att"],
+                    opset_version=11)
+                return 
+                print("#################################\n")
+                img_feats = calc_features(Graphormer_model, batch_imgs, template_3d_joints, template_vertices_sub)
+                #input_ids, position_ids = make_input_ids_and_position_ids()
+                trans_encoder(img_feats, )
+                torch.onnx.export(trans_encoder, (img_feats, ), "trans_encoder3.onnx", opset_version=11)
+                return 
                 # obtain 3d joints from full mesh
                 pred_3d_joints_from_mesh = mano.get_3d_joints(pred_vertices)
                 pred_3d_pelvis = pred_3d_joints_from_mesh[:,cfg.J_NAME.index('Wrist'),:]
@@ -89,15 +141,7 @@ def run_inference(args, image_list, Graphormer_model, mano, trans_encoder_first)
 
                 ##############
                 img_feats = Graphormer_model.calc_features(batch_imgs, template_vertices, template_3d_joints, template_vertices_sub)
-                batch_size = len(img_feats)
-                print(batch_size)
-                seq_length = len(img_feats[0])
-                print(seq_length)
-                input_ids = torch.zeros([batch_size, seq_length],dtype=torch.long)
-                position_ids = torch.arange(seq_length, dtype=torch.long, device=input_ids.device)
-                position_ids = position_ids.unsqueeze(0).expand_as(input_ids)
                 out = trans_encoder_first(img_feats, input_ids, position_ids)
-                torch.onnx.export(trans_encoder_first, (img_feats, input_ids, position_ids), "trans_encoder_first.onnx", opset_version=11)
 
                 break
                 # obtain 3d joints from full mesh
@@ -349,7 +393,7 @@ def main(args):
         raise ValueError("Cannot find images at {}".format(args.image_file_or_path))
     print(mano_model)
     print(image_list)
-    run_inference(args, image_list, _model, mano_model, trans_encoder_first)
+    run_inference(args, image_list, _model, mano_model, trans_encoder)
 
 if __name__ == "__main__":
     args = parse_args()
