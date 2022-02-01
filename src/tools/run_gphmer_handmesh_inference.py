@@ -80,6 +80,19 @@ def calc_features(Graphormer_model, images, template_3d_joints, template_vertice
     return features
 
 
+def make_input_ids_and_position_ids():
+    batch_size=1
+    seq_length=265
+    print(f"EncoderBlock: batch_size={batch_size}")
+    print(f"EncoderBlock: seq_length={seq_length}")
+    input_ids = torch.zeros([batch_size, seq_length],dtype=torch.long)
+    position_ids = torch.arange(seq_length, dtype=torch.long, device=input_ids.device)
+    position_ids = position_ids.unsqueeze(0).expand_as(input_ids)
+    print(f"EncoderBlock: input_ids={input_ids.shape}")
+    print(f"EncoderBlock: position_ids={position_ids.shape}")
+    return input_ids, position_ids
+
+
 def run_inference(args, image_list, Graphormer_model, mano, trans_encoder_first):
     mesh_sampler = Mesh()
     # switch to evaluate mode
@@ -99,10 +112,15 @@ def run_inference(args, image_list, Graphormer_model, mano, trans_encoder_first)
                 template_vertices_sub = get_template_vertices_sub(mesh_sampler, template_vertices)
                 template_vertices, template_3d_joints, template_vertices_sub = template_normalize(template_vertices, template_3d_joints, template_vertices_sub)
                 # forward-pass
-                pred_camera, pred_3d_joints, pred_vertices_sub, pred_vertices, hidden_states, att = Graphormer_model(batch_imgs, template_vertices, template_3d_joints, template_vertices_sub)
-                torch.onnx.export(Graphormer_model, (batch_imgs, template_vertices, template_3d_joints, template_vertices_sub), "gm.onnx", opset_version=11)
-                #img_feats = calc_features(Graphormer_model, batch_imgs, template_3d_joints, template_vertices_sub)
-                #trans_encoder_first(img_feats, input_ids, position_ids)
+                #[1]
+                #pred_camera, pred_3d_joints, pred_vertices_sub, pred_vertices, hidden_states, att = Graphormer_model(batch_imgs, template_vertices, template_3d_joints, template_vertices_sub)
+                #torch.onnx.export(Graphormer_model, (batch_imgs, template_vertices, template_3d_joints, template_vertices_sub), "gm.onnx", opset_version=11)
+                #[2]
+                print("#################################\n")
+                img_feats = calc_features(Graphormer_model, batch_imgs, template_3d_joints, template_vertices_sub)
+                input_ids, position_ids = make_input_ids_and_position_ids()
+                trans_encoder_first(img_feats, input_ids, position_ids)
+                torch.onnx.export(trans_encoder_first, (img_feats, input_ids, position_ids), "trans_encoder_first.onnx", opset_version=11)
                 return 
                 # obtain 3d joints from full mesh
                 pred_3d_joints_from_mesh = mano.get_3d_joints(pred_vertices)
@@ -120,7 +138,6 @@ def run_inference(args, image_list, Graphormer_model, mano, trans_encoder_first)
                 ##############
                 img_feats = Graphormer_model.calc_features(batch_imgs, template_vertices, template_3d_joints, template_vertices_sub)
                 out = trans_encoder_first(img_feats, input_ids, position_ids)
-                torch.onnx.export(trans_encoder_first, (img_feats, input_ids, position_ids), "trans_encoder_first.onnx", opset_version=11)
 
                 break
                 # obtain 3d joints from full mesh
