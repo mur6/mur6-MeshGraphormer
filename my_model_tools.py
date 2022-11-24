@@ -12,7 +12,7 @@ import src.modeling.data.config as cfg
 from logging import (DEBUG, INFO, basicConfig, critical, debug, error,
                      exception, info, getLogger)
 
-#basicConfig(level=INFO)
+
 logger = getLogger(__name__)
 
 
@@ -83,6 +83,7 @@ def get_model(device):
         logger.info('Backbone total parameters: {}'.format(backbone_total_params))
 
         # build end-to-end Graphormer network (CNN backbone + multi-layer Graphormer encoder)
+        args = None
         _model = Graphormer_Network(args, config, backbone, trans_encoder)
 
 
@@ -98,11 +99,3 @@ def get_model(device):
 
     _model.to(device)
     return _model
-
-
-logger.info("Model Loaded.")
-
-
-# if __name__ == "__main__":
-#     #args = parse_args()
-#     main_2(args=None)
