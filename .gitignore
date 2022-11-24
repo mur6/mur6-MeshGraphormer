@@ -21,12 +21,6 @@ dist/
 *.swp
 *~
 
-# Pycharm editor settings
-.idea
-
-# VS code
-.vscode
-
 # MacOS
 .DS_Store
 
