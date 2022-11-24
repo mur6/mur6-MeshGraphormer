@@ -33,12 +33,12 @@ from src.utils.logger import setup_logger
 from src.utils.comm import synchronize, is_main_process, get_rank, get_world_size, all_gather
 from src.utils.miscellaneous import mkdir, set_seed
 from src.utils.metric_logger import AverageMeter
-from src.utils.renderer import Renderer, visualize_reconstruction, visualize_reconstruction_test, visualize_reconstruction_no_text
+# from src.utils.renderer import Renderer, visualize_reconstruction, visualize_reconstruction_test, visualize_reconstruction_no_text
 from src.utils.metric_pampjpe import reconstruction_error
 from src.utils.geometric_layers import orthographic_projection
 
-from azureml.core.run import Run
-aml_run = Run.get_context()
+# from azureml.core.run import Run
+# aml_run = Run.get_context()
 
 def save_checkpoint(model, args, epoch, iteration, num_trial=10):
     checkpoint_dir = op.join(args.output_dir, 'checkpoint-{}-{}'.format(
@@ -106,7 +106,7 @@ def vertices_loss(criterion_vertices, pred_vertices, gt_vertices, has_smpl):
         return criterion_vertices(pred_vertices_with_shape, gt_vertices_with_shape)
     else:
         return torch.FloatTensor(1).fill_(0.).cuda()
-    
+
 
 def run(args, train_dataloader, Graphormer_model, mano_model, renderer, mesh_sampler):
 

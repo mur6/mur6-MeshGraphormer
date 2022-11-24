@@ -221,8 +221,7 @@ def parse_args():
                         help="Path to specific checkpoint for resume training.")
     parser.add_argument("--output_dir", default='output/', type=str, required=False,
                         help="The output directory to save checkpoint and test results.")
-    parser.add_argument("--config_name", default="", type=str, 
-                        help="Pretrained config name or path if not the same as model_name.")
+    parser.add_argument("--config_name", default="", type=str, help="Pretrained config name or path if not the same as model_name.")
     parser.add_argument('-a', '--arch', default='hrnet-w64',
                     help='CNN backbone architecture: hrnet-w64, hrnet, resnet50')
     #########################################################
@@ -262,7 +261,7 @@ def main(args):
     args.num_gpus = int(os.environ['WORLD_SIZE']) if 'WORLD_SIZE' in os.environ else 1
     os.environ['OMP_NUM_THREADS'] = str(args.num_workers)
     print('set os.environ[OMP_NUM_THREADS] to {}'.format(os.environ['OMP_NUM_THREADS']))
-   
+
     mkdir(args.output_dir)
     logger = setup_logger("Graphormer", args.output_dir, get_rank())
     set_seed(args.seed, args.num_gpus)
@@ -282,7 +281,7 @@ def main(args):
     input_feat_dim = [int(item) for item in args.input_feat_dim.split(',')]
     hidden_feat_dim = [int(item) for item in args.hidden_feat_dim.split(',')]
     output_feat_dim = input_feat_dim[1:] + [3]
-    
+
     # which encoder block to have graph convs
     which_blk_graph = [int(item) for item in args.which_gcn.split(',')]
 
@@ -299,7 +298,7 @@ def main(args):
                     else args.model_name_or_path)
 
             config.output_attentions = False
-            config.img_feature_dim = input_feat_dim[i] 
+            config.img_feature_dim = input_feat_dim[i]
             config.output_feature_dim = output_feat_dim[i]
             args.hidden_size = hidden_feat_dim[i]
             args.intermediate_size = int(args.hidden_size*2)
@@ -323,10 +322,10 @@ def main(args):
 
             # init a transformer encoder and append it to a list
             assert config.hidden_size % config.num_attention_heads == 0
-            model = model_class(config=config) 
+            model = model_class(config=config)
             logger.info("Init model from scratch.")
             trans_encoder.append(model)
-        
+
         # create backbone model
         if args.arch=='hrnet':
             hrnet_yaml = 'models/hrnet/cls_hrnet_w40_sgd_lr5e-2_wd1e-4_bs32_x100.yaml'
