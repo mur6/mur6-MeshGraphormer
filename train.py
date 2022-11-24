@@ -114,10 +114,12 @@ def vertices_loss(criterion_vertices, pred_vertices, gt_vertices, has_smpl):
         return torch.FloatTensor(1).fill_(0.0).cuda()
 
 
-def run(args, train_dataloader, Graphormer_model, mano_model, renderer, mesh_sampler):
-
+# def run(args, train_dataloader, Graphormer_model, mano_model, renderer, mesh_sampler):
+def run(train_dataloader):
+    # _model, mano_model, renderer, mesh_sampler
     max_iter = len(train_dataloader)
-    iters_per_epoch = max_iter // args.num_train_epochs
+    num_train_epochs = 
+    iters_per_epoch = max_iter // args.
 
     optimizer = torch.optim.Adam(
         params=list(Graphormer_model.parameters()),
@@ -130,14 +132,6 @@ def run(args, train_dataloader, Graphormer_model, mano_model, renderer, mesh_sam
     criterion_2d_keypoints = torch.nn.MSELoss(reduction="none").cuda(args.device)
     criterion_keypoints = torch.nn.MSELoss(reduction="none").cuda(args.device)
     criterion_vertices = torch.nn.L1Loss().cuda(args.device)
-
-    if args.distributed:
-        Graphormer_model = torch.nn.parallel.DistributedDataParallel(
-            Graphormer_model,
-            device_ids=[args.local_rank],
-            output_device=args.local_rank,
-            find_unused_parameters=True,
-        )
 
     start_training_time = time.time()
     end = time.time()
@@ -273,10 +267,10 @@ def run(args, train_dataloader, Graphormer_model, mano_model, renderer, mesh_sam
                 )
             )
 
-            aml_run.log(name="Loss", value=float(log_losses.avg))
-            aml_run.log(name="3d joint Loss", value=float(log_loss_3djoints.avg))
-            aml_run.log(name="2d joint Loss", value=float(log_loss_2djoints.avg))
-            aml_run.log(name="vertex Loss", value=float(log_loss_vertices.avg))
+            # aml_run.log(name="Loss", value=float(log_losses.avg))
+            # aml_run.log(name="3d joint Loss", value=float(log_loss_3djoints.avg))
+            # aml_run.log(name="2d joint Loss", value=float(log_loss_2djoints.avg))
+            # aml_run.log(name="vertex Loss", value=float(log_loss_vertices.avg))
 
             visual_imgs = visualize_mesh(
                 renderer,
@@ -296,14 +290,14 @@ def run(args, train_dataloader, Graphormer_model, mano_model, renderer, mesh_sam
                 cv2.imwrite(temp_fname, np.asarray(visual_imgs[:, :, ::-1] * 255))
                 aml_run.log_image(name="visual results", path=temp_fname)
 
-        if iteration % iters_per_epoch == 0:
-            if epoch % 10 == 0:
-                checkpoint_dir = save_checkpoint(Graphormer_model, args, epoch, iteration)
+        # if iteration % iters_per_epoch == 0:
+        #     if epoch % 10 == 0:
+        #         checkpoint_dir = save_checkpoint(Graphormer_model, args, epoch, iteration)
 
     total_training_time = time.time() - start_training_time
     total_time_str = str(datetime.timedelta(seconds=total_training_time))
     logger.info("Total training time: {} ({:.4f} s / iter)".format(total_time_str, total_training_time / max_iter))
-    checkpoint_dir = save_checkpoint(Graphormer_model, args, epoch, iteration)
+    # checkpoint_dir = save_checkpoint(Graphormer_model, args, epoch, iteration)
 
 
 def run_eval_and_save(args, split, val_dataloader, Graphormer_model, mano_model, renderer, mesh_sampler):
@@ -776,7 +770,7 @@ def parse_args():
     return args
 
 
-def main(args):
+def main_for_backup(args):
     global logger
 
     device = torch.device("cpu")
@@ -804,6 +798,22 @@ def main(args):
     run(args, train_dataloader, _model, mano_model, renderer, mesh_sampler)
 
 
+def main():
+    # main(args)
+    # print(args.train_yaml)
+    train_yaml = "../MeshGraphormer-datasets/freihand/train.yaml"
+    val_yaml = "../MeshGraphormer-datasets/freihand/test.yaml"
+    train_dataloader = make_hand_data_loader(
+        args,
+        train_yaml,
+        is_distributed=False,
+        is_train=True,
+        scale_factor=args.img_scale_factor,
+    )
+    # a = train_dataloader[0]
+    run(train_dataloader)
+
+
 if __name__ == "__main__":
     args = parse_args()
-    main(args)
+    main()
