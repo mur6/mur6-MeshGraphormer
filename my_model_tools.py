@@ -1,14 +1,4 @@
-from logging import (
-    DEBUG,
-    INFO,
-    basicConfig,
-    critical,
-    debug,
-    error,
-    exception,
-    getLogger,
-    info,
-)
+from logging import DEBUG, INFO, basicConfig, critical, debug, error, exception, getLogger, info
 
 import torch
 import torchvision.models as models
@@ -25,9 +15,12 @@ from src.modeling.hrnet.hrnet_cls_net_gridfeat import get_cls_net_gridfeat
 logger = getLogger(__name__)
 
 
-def get_model(device):
+def get_mano_model(device):
     mano_model = MANO().to(device)
+    return mano_model
 
+
+def get_model(device):
     # Load pretrained model
     trans_encoder = []
 
@@ -49,8 +42,8 @@ def get_model(device):
         config.output_attentions = False
         config.img_feature_dim = input_feat_dim[i]
         config.output_feature_dim = output_feat_dim[i]
-        hidden_size = hidden_feat_dim[i]
-        intermediate_size = int(hidden_size * 2)
+        # hidden_size = hidden_feat_dim[i]
+        # intermediate_size = int(hidden_size * 2)
 
         if which_blk_graph[i] == 1:
             config.graph_conv = True
@@ -75,25 +68,25 @@ def get_model(device):
         logger.info("Init model from scratch.")
         trans_encoder.append(model)
 
-        # create backbone model
-        # default arch is `hrnet-w64`
-        hrnet_yaml = "models/hrnet/cls_hrnet_w64_sgd_lr5e-2_wd1e-4_bs32_x100.yaml"
-        hrnet_checkpoint = "models/hrnet/hrnetv2_w64_imagenet_pretrained.pth"
-        hrnet_update_config(hrnet_config, hrnet_yaml)
-        logger.info("=> loading... hrnet-v2-w64 model")
-        backbone = get_cls_net_gridfeat(hrnet_config, pretrained=hrnet_checkpoint)
-        logger.info("=> loaded hrnet-v2-w64 model")
+    # create backbone model
+    # default arch is `hrnet-w64`
+    hrnet_yaml = "models/hrnet/cls_hrnet_w64_sgd_lr5e-2_wd1e-4_bs32_x100.yaml"
+    hrnet_checkpoint = "models/hrnet/hrnetv2_w64_imagenet_pretrained.pth"
+    hrnet_update_config(hrnet_config, hrnet_yaml)
+    logger.info("=> loading... hrnet-v2-w64 model")
+    backbone = get_cls_net_gridfeat(hrnet_config, pretrained=hrnet_checkpoint)
+    logger.info("=> loaded hrnet-v2-w64 model")
 
-        trans_encoder_first = trans_encoder[0]
-        trans_encoder = torch.nn.Sequential(*trans_encoder)
-        total_params = sum(p.numel() for p in trans_encoder.parameters())
-        logger.info("Graphormer encoders total parameters: {}".format(total_params))
-        backbone_total_params = sum(p.numel() for p in backbone.parameters())
-        logger.info("Backbone total parameters: {}".format(backbone_total_params))
+    trans_encoder = torch.nn.Sequential(*trans_encoder)
+    total_params = sum(p.numel() for p in trans_encoder.parameters())
+    logger.info("Graphormer encoders total parameters: {}".format(total_params))
+    backbone_total_params = sum(p.numel() for p in backbone.parameters())
+    logger.info("Backbone total parameters: {}".format(backbone_total_params))
 
-        # build end-to-end Graphormer network (CNN backbone + multi-layer Graphormer encoder)
-        args = None
-        _model = Graphormer_Network(args, config, backbone, trans_encoder)
+    # build end-to-end Graphormer network (CNN backbone + multi-layer Graphormer encoder)
+    args = None
+    _model = Graphormer_Network(args, config, backbone, trans_encoder)
+    _model.to(device)
 
     # update configs to enable attention outputs
     setattr(_model.trans_encoder[-1].config, "output_attentions", True)
@@ -101,9 +94,7 @@ def get_model(device):
     _model.trans_encoder[-1].bert.encoder.output_attentions = True
     _model.trans_encoder[-1].bert.encoder.output_hidden_states = True
     for iter_layer in range(4):
-        _model.trans_encoder[-1].bert.encoder.layer[
-            iter_layer
-        ].attention.self.output_attentions = True
+        _model.trans_encoder[-1].bert.encoder.layer[iter_layer].attention.self.output_attentions = True
     for inter_block in range(3):
         setattr(_model.trans_encoder[-1].config, "device", device)
 
