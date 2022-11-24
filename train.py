@@ -115,9 +115,8 @@ def vertices_loss(criterion_vertices, pred_vertices, gt_vertices, has_smpl):
         return torch.FloatTensor(1).fill_(0.0).cuda()
 
 
-# renderer, mesh_sampler):
-def run(args, train_dataloader, Graphormer_model, mano_model):
-    # _model, mano_model, renderer, mesh_sampler
+# renderer
+def run(args, train_dataloader, Graphormer_model, mano_model, mesh_sampler):
     max_iter = len(train_dataloader)
     iters_per_epoch = max_iter // args.num_train_epochs
 
@@ -151,15 +150,15 @@ def run(args, train_dataloader, Graphormer_model, mano_model):
         adjust_learning_rate(optimizer, epoch, args)
         data_time.update(time.time() - end)
 
-        images = images.cuda()
-        gt_2d_joints = annotations["joints_2d"].cuda()
-        gt_pose = annotations["pose"].cuda()
-        gt_betas = annotations["betas"].cuda()
-        has_mesh = annotations["has_smpl"].cuda()
+        # images = images.cuda()
+        gt_2d_joints = annotations["joints_2d"]  # .cuda()
+        gt_pose = annotations["pose"]  # .cuda()
+        gt_betas = annotations["betas"]  # .cuda()
+        has_mesh = annotations["has_smpl"]  # .cuda()
         has_3d_joints = has_mesh
         has_2d_joints = has_mesh
-        mjm_mask = annotations["mjm_mask"].cuda()
-        mvm_mask = annotations["mvm_mask"].cuda()
+        mjm_mask = annotations["mjm_mask"]  # .cuda()
+        mvm_mask = annotations["mvm_mask"]  # .cuda()
 
         # generate mesh
         gt_vertices, gt_3d_joints = mano_model.layer(gt_pose, gt_betas)
@@ -172,7 +171,7 @@ def run(args, train_dataloader, Graphormer_model, mano_model):
         gt_vertices = gt_vertices - gt_3d_root[:, None, :]
         gt_vertices_sub = gt_vertices_sub - gt_3d_root[:, None, :]
         gt_3d_joints = gt_3d_joints - gt_3d_root[:, None, :]
-        gt_3d_joints_with_tag = torch.ones((batch_size, gt_3d_joints.shape[1], 4)).cuda()
+        gt_3d_joints_with_tag = torch.ones((batch_size, gt_3d_joints.shape[1], 4))  # .cuda()
         gt_3d_joints_with_tag[:, :, :3] = gt_3d_joints
 
         # prepare masks for mask vertex/joint modeling
@@ -180,6 +179,8 @@ def run(args, train_dataloader, Graphormer_model, mano_model):
         mvm_mask_ = mvm_mask.expand(-1, -1, 2051)
         meta_masks = torch.cat([mjm_mask_, mvm_mask_], dim=1)
 
+        def forward(self, images, template_vertices, template_3d_joints, template_vertices_sub, meta_masks=None, is_train=False):
+  
         # forward-pass
         (
             pred_camera,
@@ -621,7 +622,7 @@ def parse_args():
         required=False,
         help="Yaml file with all data for validation.",
     )
-    parser.add_argument("--num_workers", default=4, type=int, help="Workers in dataloader.")
+    parser.add_argument("--num_workers", default=0, type=int, help="Workers in dataloader.")
     parser.add_argument("--img_scale_factor", default=1, type=int, help="adjust image resolution.")
     #########################################################
     # Loading/saving checkpoints
@@ -812,8 +813,9 @@ def main(args):
     )
     Graphormer_model = get_model_for_train(device)
     mano_model = get_mano_model(device)
+    mesh_sampler = Mesh()
     # a = train_dataloader[0]
-    run(args, train_dataloader, Graphormer_model, mano_model)
+    run(args, train_dataloader, Graphormer_model, mano_model, mesh_sampler)
 
 
 if __name__ == "__main__":

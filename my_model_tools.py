@@ -106,12 +106,15 @@ def get_model_for_train(device):
     # Load pretrained model
     trans_encoder = []
 
+    input_feat_dim = "2051,512,128"
+    hidden_feat_dim = "1024,256,64"
     input_feat_dim = [int(item) for item in input_feat_dim.split(",")]
     hidden_feat_dim = [int(item) for item in hidden_feat_dim.split(",")]
     output_feat_dim = input_feat_dim[1:] + [3]
 
     # which encoder block to have graph convs
-    which_blk_graph = [int(item) for item in args.which_gcn.split(",")]
+    which_gcn = "0,0,1"
+    which_blk_graph = [int(item) for item in which_gcn.split(",")]
 
     # init three transformer-encoder blocks in a loop
     for i in range(len(output_feat_dim)):
