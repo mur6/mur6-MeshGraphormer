@@ -23,6 +23,7 @@ import torchvision.models as models
 from torchvision.utils import make_grid
 
 import src.modeling.data.config as cfg
+from my_model_tools import get_mano_model, get_model_for_train
 from src.datasets.build import make_hand_data_loader
 from src.modeling._mano import MANO, Mesh
 from src.modeling.bert import BertConfig, Graphormer
@@ -114,12 +115,11 @@ def vertices_loss(criterion_vertices, pred_vertices, gt_vertices, has_smpl):
         return torch.FloatTensor(1).fill_(0.0).cuda()
 
 
-# def run(args, train_dataloader, Graphormer_model, mano_model, renderer, mesh_sampler):
-def run(train_dataloader):
+# renderer, mesh_sampler):
+def run(args, train_dataloader, Graphormer_model, mano_model):
     # _model, mano_model, renderer, mesh_sampler
     max_iter = len(train_dataloader)
-    num_train_epochs = 
-    iters_per_epoch = max_iter // args.
+    iters_per_epoch = max_iter // args.num_train_epochs
 
     optimizer = torch.optim.Adam(
         params=list(Graphormer_model.parameters()),
@@ -144,7 +144,6 @@ def run(train_dataloader):
     log_loss_vertices = AverageMeter()
 
     for iteration, (img_keys, images, annotations) in enumerate(train_dataloader):
-
         Graphormer_model.train()
         iteration += 1
         epoch = iteration // iters_per_epoch
@@ -798,7 +797,8 @@ def main_for_backup(args):
     run(args, train_dataloader, _model, mano_model, renderer, mesh_sampler)
 
 
-def main():
+def main(args):
+    device = torch.device("cpu")
     # main(args)
     # print(args.train_yaml)
     train_yaml = "../MeshGraphormer-datasets/freihand/train.yaml"
@@ -810,10 +810,12 @@ def main():
         is_train=True,
         scale_factor=args.img_scale_factor,
     )
+    Graphormer_model = get_model_for_train(device)
+    mano_model = get_mano_model(device)
     # a = train_dataloader[0]
-    run(train_dataloader)
+    run(args, train_dataloader, Graphormer_model, mano_model)
 
 
 if __name__ == "__main__":
     args = parse_args()
-    main()
+    main(args)
