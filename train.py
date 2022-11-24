@@ -848,18 +848,8 @@ def parse_args():
 
 def main(args):
     global logger
-    # Setup CUDA, GPU & distributed training
-    args.num_gpus = int(os.environ["WORLD_SIZE"]) if "WORLD_SIZE" in os.environ else 1
-    os.environ["OMP_NUM_THREADS"] = str(args.num_workers)
-    print("set os.environ[OMP_NUM_THREADS] to {}".format(os.environ["OMP_NUM_THREADS"]))
 
-    args.distributed = args.num_gpus > 1
-    args.device = torch.device(args.device)
-    if args.distributed:
-        print("Init distributed training on local rank {}".format(args.local_rank))
-        torch.cuda.set_device(args.local_rank)
-        torch.distributed.init_process_group(backend="nccl", init_method="env://")
-        synchronize()
+    device = torch.device("cpu")
 
     mkdir(args.output_dir)
     logger = setup_logger("Graphormer", args.output_dir, get_rank())
@@ -867,7 +857,7 @@ def main(args):
     logger.info("Using {} GPUs".format(args.num_gpus))
 
     # Mesh and SMPL utils
-    mano_model = MANO().to(args.device)
+    mano_model = MANO().to(device)
     mano_model.layer = mano_model.layer.cuda()
     mesh_sampler = Mesh()
 
@@ -962,51 +952,26 @@ def main(args):
             # remove the last fc layer
             backbone = torch.nn.Sequential(*list(backbone.children())[:-1])
 
-        trans_encoder = torch.nn.Sequential(*trans_encoder)
-        total_params = sum(p.numel() for p in trans_encoder.parameters())
-        logger.info("Graphormer encoders total parameters: {}".format(total_params))
-        backbone_total_params = sum(p.numel() for p in backbone.parameters())
-        logger.info("Backbone total parameters: {}".format(backbone_total_params))
+    trans_encoder = torch.nn.Sequential(*trans_encoder)
+    total_params = sum(p.numel() for p in trans_encoder.parameters())
+    logger.info("Graphormer encoders total parameters: {}".format(total_params))
+    backbone_total_params = sum(p.numel() for p in backbone.parameters())
+    logger.info("Backbone total parameters: {}".format(backbone_total_params))
 
-        # build end-to-end Graphormer network (CNN backbone + multi-layer Graphormer encoder)
-        _model = Graphormer_Network(args, config, backbone, trans_encoder)
-
-        if args.resume_checkpoint != None and args.resume_checkpoint != "None":
-            # for fine-tuning or resume training or inference, load weights from checkpoint
-            logger.info(
-                "Loading state dict from checkpoint {}".format(args.resume_checkpoint)
-            )
-            # workaround approach to load sparse tensor in graph conv.
-            state_dict = torch.load(args.resume_checkpoint)
-            _model.load_state_dict(state_dict, strict=False)
-            del state_dict
-            gc.collect()
-            torch.cuda.empty_cache()
+    # build end-to-end Graphormer network (CNN backbone + multi-layer Graphormer encoder)
+    _model = Graphormer_Network(args, config, backbone, trans_encoder)
 
     _model.to(args.device)
     logger.info("Training parameters %s", args)
 
-    if args.run_eval_only == True:
-        val_dataloader = make_hand_data_loader(
-            args,
-            args.val_yaml,
-            args.distributed,
-            is_train=False,
-            scale_factor=args.img_scale_factor,
-        )
-        run_eval_and_save(
-            args, "freihand", val_dataloader, _model, mano_model, renderer, mesh_sampler
-        )
-
-    else:
-        train_dataloader = make_hand_data_loader(
-            args,
-            args.train_yaml,
-            args.distributed,
-            is_train=True,
-            scale_factor=args.img_scale_factor,
-        )
-        run(args, train_dataloader, _model, mano_model, renderer, mesh_sampler)
+    train_dataloader = make_hand_data_loader(
+        args,
+        args.train_yaml,
+        args.distributed,
+        is_train=True,
+        scale_factor=args.img_scale_factor,
+    )
+    run(args, train_dataloader, _model, mano_model, renderer, mesh_sampler)
 
 
 if __name__ == "__main__":
