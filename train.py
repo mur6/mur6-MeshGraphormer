@@ -16,6 +16,10 @@ import os
 import os.path as op
 import time
 
+# from azureml.core.run import Run
+# aml_run = Run.get_context()
+from logging import DEBUG, INFO, basicConfig, critical, debug, error, exception, getLogger, info
+
 import cv2
 import numpy as np
 import torch
@@ -40,8 +44,7 @@ from src.utils.metric_logger import AverageMeter
 from src.utils.metric_pampjpe import reconstruction_error
 from src.utils.miscellaneous import mkdir, set_seed
 
-# from azureml.core.run import Run
-# aml_run = Run.get_context()
+logger = getLogger(__name__)
 
 
 def save_checkpoint(model, args, epoch, iteration, num_trial=10):
