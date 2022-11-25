@@ -292,7 +292,7 @@ def run(args, device, train_dataloader, Graphormer_model, mano_model, mesh_sampl
                 stamp = str(epoch) + "_" + str(iteration)
                 temp_fname = args.output_dir + "visual_" + stamp + ".jpg"
                 cv2.imwrite(temp_fname, np.asarray(visual_imgs[:, :, ::-1] * 255))
-                aml_run.log_image(name="visual results", path=temp_fname)
+                # aml_run.log_image(name="visual results", path=temp_fname)
 
         # if iteration % iters_per_epoch == 0:
         #     if epoch % 10 == 0:
@@ -803,6 +803,7 @@ def main_for_backup(args):
 
 
 def main(args):
+    basicConfig(level=INFO)
     device = torch.device(args.device)
     train_yaml = args.train_yaml
     print(device, train_yaml)
