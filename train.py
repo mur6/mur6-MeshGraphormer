@@ -39,10 +39,14 @@ from src.utils.comm import all_gather, get_rank, get_world_size, is_main_process
 from src.utils.geometric_layers import orthographic_projection
 from src.utils.logger import setup_logger
 from src.utils.metric_logger import AverageMeter
-
-# from src.utils.renderer import Renderer, visualize_reconstruction, visualize_reconstruction_test, visualize_reconstruction_no_text
 from src.utils.metric_pampjpe import reconstruction_error
 from src.utils.miscellaneous import mkdir, set_seed
+from src.utils.renderer import (
+    Renderer,
+    visualize_reconstruction,
+    visualize_reconstruction_no_text,
+    visualize_reconstruction_test,
+)
 
 logger = getLogger(__name__)
 
@@ -118,8 +122,7 @@ def vertices_loss(criterion_vertices, pred_vertices, gt_vertices, has_smpl):
         return torch.FloatTensor(1).fill_(0.0).cuda()
 
 
-# renderer
-def run(args, device, train_dataloader, Graphormer_model, mano_model, mesh_sampler):
+def run(args, device, train_dataloader, Graphormer_model, mano_model, mesh_sampler, renderer):
     max_iter = len(train_dataloader)
     iters_per_epoch = max_iter // args.num_train_epochs
 
@@ -814,7 +817,10 @@ def main(args):
     mano_model = get_mano_model(device)
     mesh_sampler = Mesh()
 
-    run(args, device, train_dataloader, Graphormer_model, mano_model, mesh_sampler)
+    # Renderer for visualization
+    renderer = Renderer(faces=mano_model.face)
+
+    run(args, device, train_dataloader, Graphormer_model, mano_model, mesh_sampler, renderer)
 
 
 if __name__ == "__main__":
