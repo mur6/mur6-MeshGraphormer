@@ -37,8 +37,9 @@ class Graphormer_Hand_Network(torch.nn.Module):
     End-to-end Graphormer network for hand pose and mesh reconstruction from a single image.
     """
 
-    def __init__(self, args, config, backbone, trans_encoder):
+    def __init__(self, device, config, backbone, trans_encoder):
         super(Graphormer_Hand_Network, self).__init__()
+        self.device = device
         self.config = config
         self.backbone = backbone
         self.trans_encoder = trans_encoder
@@ -74,7 +75,7 @@ class Graphormer_Hand_Network(torch.nn.Module):
             # apply mask vertex/joint modeling
             # meta_masks is a tensor of all the masks, randomly generated in dataloader
             # we pre-define a [MASK] token, which is a floating-value vector with 0.01s
-            special_token = torch.ones_like(features[:, :-49, :]).cuda() * 0.01
+            special_token = torch.ones_like(features[:, :-49, :]).to(self.device) * 0.01
             features[:, :-49, :] = features[:, :-49, :] * meta_masks + special_token * (1 - meta_masks)
 
         # forward pass

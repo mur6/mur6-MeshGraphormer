@@ -174,6 +174,6 @@ def get_model_for_train(device):
 
     # build end-to-end Graphormer network (CNN backbone + multi-layer Graphormer encoder)
     args = None
-    _model = Graphormer_Network(args, config, backbone, trans_encoder)
+    _model = Graphormer_Network(device, config, backbone, trans_encoder)
     _model.to(device)
     return _model
