@@ -116,7 +116,7 @@ def vertices_loss(criterion_vertices, pred_vertices, gt_vertices, has_smpl):
 
 
 # renderer
-def run(args, train_dataloader, Graphormer_model, mano_model, mesh_sampler):
+def run(args, device, train_dataloader, Graphormer_model, mano_model, mesh_sampler):
     max_iter = len(train_dataloader)
     iters_per_epoch = max_iter // args.num_train_epochs
 
@@ -150,15 +150,15 @@ def run(args, train_dataloader, Graphormer_model, mano_model, mesh_sampler):
         adjust_learning_rate(optimizer, epoch, args)
         data_time.update(time.time() - end)
 
-        # images = images.cuda()
-        gt_2d_joints = annotations["joints_2d"]  # .cuda()
-        gt_pose = annotations["pose"]  # .cuda()
-        gt_betas = annotations["betas"]  # .cuda()
-        has_mesh = annotations["has_smpl"]  # .cuda()
+        images = images.to(device)
+        gt_2d_joints = annotations["joints_2d"].to(device)
+        gt_pose = annotations["pose"].to(device)
+        gt_betas = annotations["betas"].to(device)
+        has_mesh = annotations["has_smpl"].to(device)
         has_3d_joints = has_mesh
         has_2d_joints = has_mesh
-        mjm_mask = annotations["mjm_mask"]  # .cuda()
-        mvm_mask = annotations["mvm_mask"]  # .cuda()
+        mjm_mask = annotations["mjm_mask"].to(device)
+        mvm_mask = annotations["mvm_mask"].to(device)
 
         # generate mesh
         gt_vertices, gt_3d_joints = mano_model.layer(gt_pose, gt_betas)
@@ -171,7 +171,7 @@ def run(args, train_dataloader, Graphormer_model, mano_model, mesh_sampler):
         gt_vertices = gt_vertices - gt_3d_root[:, None, :]
         gt_vertices_sub = gt_vertices_sub - gt_3d_root[:, None, :]
         gt_3d_joints = gt_3d_joints - gt_3d_root[:, None, :]
-        gt_3d_joints_with_tag = torch.ones((batch_size, gt_3d_joints.shape[1], 4))  # .cuda()
+        gt_3d_joints_with_tag = torch.ones((batch_size, gt_3d_joints.shape[1], 4)).to(device)
         gt_3d_joints_with_tag[:, :, :3] = gt_3d_joints
 
         # prepare masks for mask vertex/joint modeling
@@ -179,8 +179,6 @@ def run(args, train_dataloader, Graphormer_model, mano_model, mesh_sampler):
         mvm_mask_ = mvm_mask.expand(-1, -1, 2051)
         meta_masks = torch.cat([mjm_mask_, mvm_mask_], dim=1)
 
-        def forward(self, images, template_vertices, template_3d_joints, template_vertices_sub, meta_masks=None, is_train=False):
-  
         # forward-pass
         (
             pred_camera,
@@ -799,11 +797,9 @@ def main_for_backup(args):
 
 
 def main(args):
-    device = torch.device("cpu")
-    # main(args)
-    # print(args.train_yaml)
-    train_yaml = "../MeshGraphormer-datasets/freihand/train.yaml"
-    val_yaml = "../MeshGraphormer-datasets/freihand/test.yaml"
+    device = torch.device(args.device)
+    train_yaml = args.train_yaml
+    print(device, train_yaml)
     train_dataloader = make_hand_data_loader(
         args,
         train_yaml,
@@ -814,8 +810,8 @@ def main(args):
     Graphormer_model = get_model_for_train(device)
     mano_model = get_mano_model(device)
     mesh_sampler = Mesh()
-    # a = train_dataloader[0]
-    run(args, train_dataloader, Graphormer_model, mano_model, mesh_sampler)
+
+    run(args, device, train_dataloader, Graphormer_model, mano_model, mesh_sampler)
 
 
 if __name__ == "__main__":
