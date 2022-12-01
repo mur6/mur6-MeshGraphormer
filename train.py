@@ -41,13 +41,12 @@ from src.utils.logger import setup_logger
 from src.utils.metric_logger import AverageMeter
 from src.utils.metric_pampjpe import reconstruction_error
 from src.utils.miscellaneous import mkdir, set_seed
-
-# from src.utils.renderer import (
-#     Renderer,
-#     visualize_reconstruction,
-#     visualize_reconstruction_no_text,
-#     visualize_reconstruction_test,
-# )
+from src.utils.renderer import (
+    Renderer,
+    visualize_reconstruction,
+    visualize_reconstruction_no_text,
+    visualize_reconstruction_test,
+)
 
 
 class Renderer(object):
