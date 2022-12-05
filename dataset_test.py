@@ -59,17 +59,6 @@ from src.utils.tsv_file import TSVFile
 from src.utils.tsv_file_ops import generate_hw_file, generate_linelist_file, tsv_reader, tsv_writer
 
 
-def parse_args():
-    parser = argparse.ArgumentParser()
-    parser.add_argument(
-        "--multiscale_inference",
-        default=False,
-        action="store_true",
-    )
-    args = parser.parse_args()
-    return args
-
-
 def build_hand_dataset(yaml_file, args, is_train=True, scale_factor=1):
     print(yaml_file)
     if not op.isfile(yaml_file):
@@ -142,7 +131,7 @@ def show_data_info(img_key, transfromed_img, meta_data):
     show_stats(name="joints_2d", value=joints_2d[:, 0:2])
 
 
-def main():
+def main(*, data_index):
     device = torch.device("cpu")
     train_yaml_file = "../orig-MeshGraphormer/freihand/train.yaml"
     img_scale_factor = 1
@@ -155,10 +144,9 @@ def main():
     # )
     args = parse_args()
     dataset = build_hand_dataset(train_yaml_file, args, is_train=True)
-    for i in range(10):
-        img_key, transfromed_img, meta_data = dataset[i]
-        show_data_info(img_key, transfromed_img, meta_data)
-        break
+
+    img_key, transfromed_img, meta_data = dataset[data_index]
+    show_data_info(img_key, transfromed_img, meta_data)
     # images_per_gpu = 1  # per_gpu_train_batch_size
     # images_per_batch = images_per_gpu * get_world_size()
     # iters_per_batch = len(dataset) // images_per_batch
@@ -174,6 +162,22 @@ def show_stats(*, name, value):
     print(f"{name}[{value.shape}] => mean:{mean:.2f} std:{st:.2f} var:{var:.2f}")
 
 
+def parse_args():
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "--multiscale_inference",
+        default=False,
+        action="store_true",
+    )
+    parser.add_argument(
+        "--data_index",
+        type=int,
+        required=True,
+    )
+    args = parser.parse_args()
+    return args
+
+
 if __name__ == "__main__":
-    # args = parse_args()
-    main()
+    args = parse_args()
+    main(data_index=args.data_index)
