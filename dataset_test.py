@@ -13,11 +13,11 @@ import code
 import datetime
 import gc
 import json
+import math
 import os
 import os.path as op
 import pickle
 import sys
-import time
 from collections import defaultdict
 from logging import DEBUG, INFO, basicConfig, critical, debug, error, exception, getLogger, info
 from os.path import join
@@ -142,15 +142,18 @@ def main():
         # meta_masks = torch.cat([mjm_mask_, mvm_mask_], dim=1)
         # print(meta_masks.shape)
         pose = meta_data["pose"]
-        print(f"pose: {pose[:3]} ... {pose[-3:]}")
         betas = meta_data["betas"]
-        print(f"betas: {betas}")
         joints_3d = meta_data["joints_3d"]
-        # print(f"joints_3d: {joints_3d[0]}")
-        print(f"joints_3d: {joints_3d}")
         joints_2d = meta_data["joints_2d"]
-        # print(f"joints_2d: {joints_2d[0]}")
-        print(f"joints_2d: {joints_2d}")
+        # print(f"pose: {pose[:3]} ... {pose[-3:]}")
+        show_stats(name="pose", value=pose)
+        show_stats(name="betas", value=betas)
+        # print(f"joints_3d: {joints_3d}")
+        # print(f"joints_3d: {joints_3d[:, 0:3]}")
+        show_stats(name="joints_3d", value=joints_3d[:, 0:3])
+        # print(f"joints_2d: {joints_2d}")
+        # print(f"joints_2d: {joints_2d[:, 0:2]}")
+        show_stats(name="joints_2d", value=joints_2d[:, 0:2])
         break
     # images_per_gpu = 1  # per_gpu_train_batch_size
     # images_per_batch = images_per_gpu * get_world_size()
@@ -159,6 +162,12 @@ def main():
     # logger.info("Train with {} images per GPU.".format(images_per_gpu))
     # logger.info("Total batch size {}".format(images_per_batch))
     # logger.info("Total training steps {}".format(num_iters))
+
+
+def show_stats(*, name, value):
+    var, mean = torch.var_mean(value)
+    st = math.sqrt(var)
+    print(f"{name}[{value.shape}] => mean:{mean:.2f} std:{st:.2f} var:{var:.2f}")
 
 
 if __name__ == "__main__":
