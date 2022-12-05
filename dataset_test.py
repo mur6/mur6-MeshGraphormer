@@ -24,6 +24,7 @@ from os.path import join
 
 import cv2
 import imageio
+import matplotlib.pyplot as plt
 import numpy as np
 
 # from metro.modeling._mano import MANO
@@ -123,21 +124,34 @@ def main():
     dataset = build_hand_dataset(train_yaml_file, args, is_train=True)
     for i in range(10):
         img_key, transfromed_img, meta_data = dataset[i]
-        print(img_key)
-        print(transfromed_img)
+        print("######################")
         for name, value in meta_data.items():
-            if hasattr(value, "shape"):
-                print(f"meta_data: {name} {value.shape}")
+            if name in ("center", "has_smpl"):
+                print(f"{name} val={value}")
+            elif hasattr(value, "shape"):
+                print(f"{name}\t{value.shape}")
             else:
-                print(f"meta_data: {name} {value}")
-        mjm_mask = meta_data["mjm_mask"]
-        print(mjm_mask.unsqueeze(0).expand(-1, -1, 2051).shape)
-        mvm_mask = meta_data["mvm_mask"]
-        print(mvm_mask.unsqueeze(0).expand(-1, -1, 2051))
-        mjm_mask_ = mjm_mask.unsqueeze(0).expand(-1, -1, 2051)
-        mvm_mask_ = mvm_mask.unsqueeze(0).expand(-1, -1, 2051)
-        meta_masks = torch.cat([mjm_mask_, mvm_mask_], dim=1)
-        print(meta_masks.shape)
+                print(f"{name} val={value}")
+        print("######################")
+        # mjm_mask = meta_data["mjm_mask"]
+        # print(mjm_mask.unsqueeze(0).expand(-1, -1, 2051).shape)
+        # mvm_mask = meta_data["mvm_mask"]
+        # print(mvm_mask.unsqueeze(0).expand(-1, -1, 2051))
+        # mjm_mask_ = mjm_mask.unsqueeze(0).expand(-1, -1, 2051)
+        # mvm_mask_ = mvm_mask.unsqueeze(0).expand(-1, -1, 2051)
+        # meta_masks = torch.cat([mjm_mask_, mvm_mask_], dim=1)
+        # print(meta_masks.shape)
+        pose = meta_data["pose"]
+        print(f"pose: {pose[:3]} ... {pose[-3:]}")
+        betas = meta_data["betas"]
+        print(f"betas: {betas}")
+        joints_3d = meta_data["joints_3d"]
+        # print(f"joints_3d: {joints_3d[0]}")
+        print(f"joints_3d: {joints_3d}")
+        joints_2d = meta_data["joints_2d"]
+        # print(f"joints_2d: {joints_2d[0]}")
+        print(f"joints_2d: {joints_2d}")
+        break
     # images_per_gpu = 1  # per_gpu_train_batch_size
     # images_per_batch = images_per_gpu * get_world_size()
     # iters_per_batch = len(dataset) // images_per_batch
