@@ -40,3 +40,4 @@ predictions
 .venv/
 misc-data/
 misc-scripts/
+temp_hand_images/
