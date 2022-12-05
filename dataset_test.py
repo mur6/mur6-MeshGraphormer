@@ -109,6 +109,39 @@ def make_hand_data_loader(args, yaml_file, is_distributed=True, is_train=True, s
     return data_loader
 
 
+def show_data_info(img_key, transfromed_img, meta_data):
+    print("######################")
+    for name, value in meta_data.items():
+        if name in ("center", "has_smpl"):
+            print(f"{name} val={value}")
+        elif hasattr(value, "shape"):
+            print(f"{name}\t{value.shape}")
+        else:
+            print(f"{name} val={value}")
+    print("######################")
+    # mjm_mask = meta_data["mjm_mask"]
+    # print(mjm_mask.unsqueeze(0).expand(-1, -1, 2051).shape)
+    # mvm_mask = meta_data["mvm_mask"]
+    # print(mvm_mask.unsqueeze(0).expand(-1, -1, 2051))
+    # mjm_mask_ = mjm_mask.unsqueeze(0).expand(-1, -1, 2051)
+    # mvm_mask_ = mvm_mask.unsqueeze(0).expand(-1, -1, 2051)
+    # meta_masks = torch.cat([mjm_mask_, mvm_mask_], dim=1)
+    # print(meta_masks.shape)
+    pose = meta_data["pose"]
+    betas = meta_data["betas"]
+    joints_3d = meta_data["joints_3d"]
+    joints_2d = meta_data["joints_2d"]
+    # print(f"pose: {pose[:3]} ... {pose[-3:]}")
+    show_stats(name="pose", value=pose)
+    show_stats(name="betas", value=betas)
+    # print(f"joints_3d: {joints_3d}")
+    # print(f"joints_3d: {joints_3d[:, 0:3]}")
+    show_stats(name="joints_3d", value=joints_3d[:, 0:3])
+    # print(f"joints_2d: {joints_2d}")
+    # print(f"joints_2d: {joints_2d[:, 0:2]}")
+    show_stats(name="joints_2d", value=joints_2d[:, 0:2])
+
+
 def main():
     device = torch.device("cpu")
     train_yaml_file = "../orig-MeshGraphormer/freihand/train.yaml"
@@ -124,36 +157,7 @@ def main():
     dataset = build_hand_dataset(train_yaml_file, args, is_train=True)
     for i in range(10):
         img_key, transfromed_img, meta_data = dataset[i]
-        print("######################")
-        for name, value in meta_data.items():
-            if name in ("center", "has_smpl"):
-                print(f"{name} val={value}")
-            elif hasattr(value, "shape"):
-                print(f"{name}\t{value.shape}")
-            else:
-                print(f"{name} val={value}")
-        print("######################")
-        # mjm_mask = meta_data["mjm_mask"]
-        # print(mjm_mask.unsqueeze(0).expand(-1, -1, 2051).shape)
-        # mvm_mask = meta_data["mvm_mask"]
-        # print(mvm_mask.unsqueeze(0).expand(-1, -1, 2051))
-        # mjm_mask_ = mjm_mask.unsqueeze(0).expand(-1, -1, 2051)
-        # mvm_mask_ = mvm_mask.unsqueeze(0).expand(-1, -1, 2051)
-        # meta_masks = torch.cat([mjm_mask_, mvm_mask_], dim=1)
-        # print(meta_masks.shape)
-        pose = meta_data["pose"]
-        betas = meta_data["betas"]
-        joints_3d = meta_data["joints_3d"]
-        joints_2d = meta_data["joints_2d"]
-        # print(f"pose: {pose[:3]} ... {pose[-3:]}")
-        show_stats(name="pose", value=pose)
-        show_stats(name="betas", value=betas)
-        # print(f"joints_3d: {joints_3d}")
-        # print(f"joints_3d: {joints_3d[:, 0:3]}")
-        show_stats(name="joints_3d", value=joints_3d[:, 0:3])
-        # print(f"joints_2d: {joints_2d}")
-        # print(f"joints_2d: {joints_2d[:, 0:2]}")
-        show_stats(name="joints_2d", value=joints_2d[:, 0:2])
+        show_data_info(img_key, transfromed_img, meta_data)
         break
     # images_per_gpu = 1  # per_gpu_train_batch_size
     # images_per_batch = images_per_gpu * get_world_size()
