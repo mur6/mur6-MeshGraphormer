@@ -1,3 +1,4 @@
+import argparse
 import pickle
 from pathlib import Path
 
@@ -90,4 +91,10 @@ def main():
     display_hand(hand_info)
 
 
-main()
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="Server.")
+    parser.add_argument("--model_file", type=str)
+    parser.add_argument("--ncomps", type=int)
+    args = parser.parse_args()
+
+    main()
