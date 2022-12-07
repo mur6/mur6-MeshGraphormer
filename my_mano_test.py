@@ -72,9 +72,8 @@ def make_hand(pca_pose, ncomps=45, mano_root="src/modeling/data"):
     return {"verts": verts, "joints": joints, "faces": mano_layer.th_faces}
 
 
-def main():
-    base = "/Users/taichi.muraki/workspace/Python/mur6/obman_render"
-    meta_filepath = Path(base) / "datageneration/tmp/meta/00000000.pkl"
+def main(base_path):
+    meta_filepath = base_path / "datageneration/tmp/meta/00000000.pkl"
     b = meta_filepath.read_bytes()
     d = pickle.loads(b)
     a = d["mano_pose"]
@@ -92,9 +91,12 @@ def main():
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Server.")
-    parser.add_argument("--model_file", type=str)
-    parser.add_argument("--ncomps", type=int)
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--base_path", type=Path, required=True)
+    # parser.add_argument(
+    #     "--pkl_filepath",
+    #     type=Path,
+    #     required=True,
+    # )
     args = parser.parse_args()
-
-    main()
+    main(args.base_path)
