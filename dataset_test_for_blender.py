@@ -9,6 +9,7 @@ from pathlib import Path
 import matplotlib.pyplot as plt
 import numpy as np
 import torch
+import torchvision
 import torchvision.models as models
 import transforms3d
 from PIL import Image
@@ -192,13 +193,30 @@ def load_data(meta_filepath, image_filepath):
     b = meta_filepath.read_bytes()
     data = pickle.loads(b)
     image = Image.open(image_filepath)
+    image = torchvision.transforms.functional.to_tensor(image)
     return data, image
 
+
+######################
+# [ok!] ori_img torch.Size([3, 224, 224])
+# pose    torch.Size([48])
+# betas   torch.Size([10])
+# joints_3d       torch.Size([21, 4])
+# has_3d_joints val=1
+# has_smpl val=1
+# mjm_mask        torch.Size([21, 1])
+# mvm_mask        torch.Size([195, 1])
+# has_2d_joints val=1
+# joints_2d       torch.Size([21, 3])
+# scale val=0.8026036997235448
+# center val=[112. 112.]
+######################
 
 if __name__ == "__main__":
     args = parse_args()
     meta_filepath = args.base_path / "datageneration/tmp/meta/00000000.pkl"
     image_filepath = args.base_path / "datageneration/tmp/rgb/00000000.jpg"
     data, image = load_data(meta_filepath, image_filepath)
+    print("ori_img: ", image.shape)
     # visualize_data(image)
     # main(data_index=)
