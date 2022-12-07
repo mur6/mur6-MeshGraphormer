@@ -197,26 +197,6 @@ def add_ones_column(x):
     return torch.cat([x, additional], dim=1)
 
 
-def load_data(meta_filepath, image_filepath):
-    b = meta_filepath.read_bytes()
-    d = pickle.loads(b)
-    image = Image.open(image_filepath)
-    image = torchvision.transforms.functional.to_tensor(image)
-    mano_pose = d["mano_pose"]
-    trans = d["trans"]
-    pose = np.concatenate([mano_pose, trans])
-    pose = torch.from_numpy(pose)
-    betas = torch.from_numpy(d["shape"])
-    scale = d["z"]
-    coords_2d = d["coords_2d"]
-    joints_2d = torch.from_numpy(coords_2d)
-    joints_2d = add_ones_column(joints_2d)
-    coords_3d = d["coords_3d"]
-    joints_3d = torch.from_numpy(coords_3d)
-    joints_3d = add_ones_column(joints_3d)
-    return image, HandMeta(pose, betas, scale, joints_2d, joints_3d)
-
-
 def get_sorted_files(folder, *, extension):
     iter = folder.glob(f"*.{extension}")
     return list(sorted(iter))
@@ -234,8 +214,6 @@ class BlenderHandMeshDataset(object):
         print(a[:10])
         print(b[:10])
 
-        # meta_filepath = base_path / "datageneration/tmp/meta/00000000.pkl"
-        # image_filepath = base_path / "datageneration/tmp/rgb/00000000.jpg"
         # self.linelist_file = linelist_file
         # self.img_tsv = self.get_tsv_file(img_file)
         # self.label_tsv = None if label_file is None else self.get_tsv_file(label_file)
@@ -257,63 +235,85 @@ class BlenderHandMeshDataset(object):
         # self.rot_factor = 90  # Random rotation in the range [-rot_factor, rot_factor]
         # self.img_res = 224
         # self.image_keys = self.prepare_image_keys()
+        self.normalize_img = transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
 
     def __len__(self):
         return self.data_length
 
+    def get_image(self, image_file):
+        image = Image.open(image_file)
+        return torchvision.transforms.functional.to_tensor(image)
+
+    def get_annotations(self, meta_file):
+        b = meta_file.read_bytes()
+        d = pickle.loads(b)
+        mano_pose = d["mano_pose"]
+        trans = d["trans"]
+        pose = np.concatenate([mano_pose, trans])
+        pose = torch.from_numpy(pose)
+        betas = torch.from_numpy(d["shape"])
+        scale = d["z"]
+        coords_2d = d["coords_2d"]
+        joints_2d = torch.from_numpy(coords_2d)
+        joints_2d = add_ones_column(joints_2d)
+        coords_3d = d["coords_3d"]
+        joints_3d = torch.from_numpy(coords_3d)
+        joints_3d = add_ones_column(joints_3d)
+        return HandMeta(pose, betas, scale, joints_2d, joints_3d)
+
+    def get_metadata_dict(self):
+        meta_data = dict(
+            center=torch.tensor([112.0, 112]),
+            has_2d_joints=1,
+            has_3d_joints=1,
+            has_smpl=1,
+            mjm_mask=torch.ones([21, 1]),
+            mvm_mask=torch.ones([195, 1]),
+        )
+        # print("center: ", center)
+        # print(f"mjm_mask: {mjm_mask.shape}")
+        # print(f"mvm_mask: {mvm_mask.shape}")
+        return meta_data
+
     def __getitem__(self, idx):
-        img = self.get_image(idx)
-        img_key = self.get_img_key(idx)
-        annotations = self.get_annotations(idx)
+        meta_file = self.meta_filepath / f"{idx:08}.pkl"
+        # print(meta_file, meta_file.exists())
+        image_file = self.image_filepath / f"{idx:08}.jpg"
+        # print(image_file, image_file.exists())
 
-        annotations = annotations[0]
-        center = annotations["center"]
-        scale = annotations["scale"]
-        has_2d_joints = annotations["has_2d_joints"]
-        has_3d_joints = annotations["has_3d_joints"]
-        joints_2d = np.asarray(annotations["2d_joints"])
-        joints_3d = np.asarray(annotations["3d_joints"])
-
-        if joints_2d.ndim == 3:
-            joints_2d = joints_2d[0]
-        if joints_3d.ndim == 3:
-            joints_3d = joints_3d[0]
-
-        # Get SMPL parameters, if available
-        has_smpl = np.asarray(annotations["has_smpl"])
-        pose = np.asarray(annotations["pose"])
-        betas = np.asarray(annotations["betas"])
-
-
-normalize_img = transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
+        hand_meta = self.get_annotations(meta_file)
+        img = self.get_image(image_file)
+        transfromed_img = self.normalize_img(img)
+        img_key = image_file.name
+        ##############################################
+        meta_data = self.get_metadata_dict()
+        meta_data["ori_img"] = img
+        meta_data["pose"] = hand_meta.pose
+        meta_data["betas"] = hand_meta.betas
+        meta_data["joints_3d"] = hand_meta.joints_3d
+        meta_data["joints_2d"] = hand_meta.joints_2d
+        meta_data["scale"] = hand_meta.scale
+        return (img_key, transfromed_img, meta_data)
 
 
 def main_backup(args):
     image, meta = load_data(meta_filepath, image_filepath)
     transfromed_img = normalize_img(image)
 
-    center = torch.tensor([112.0, 112])
     print("transfromed_img: ", transfromed_img.shape)
     print("ori_img: ", image.shape)
     print("pose: ", meta.pose.shape)
     print("betas: ", meta.betas.shape)
-    print("center: ", center)
+
     print(f"scale: {meta.scale}")
     print(f"joints_3d: {meta.joints_3d.shape}")
     print(f"joints_2d: {meta.joints_2d.shape}")
-    has_2d_joints = 1
-    has_3d_joints = 1
-    has_smpl = 1
-    mjm_mask = torch.ones([21, 1])
-    mvm_mask = torch.ones([195, 1])
-    print(f"mjm_mask: {mjm_mask.shape}")
-    print(f"mvm_mask: {mvm_mask.shape}")
 
 
 if __name__ == "__main__":
     args = parse_args()
     dataset = BlenderHandMeshDataset(base_path=args.base_path)
-    print(dataset)
-
+    print(len(dataset))
+    dataset[0]
 # visualize_data(image)
 # main(data_index=)
