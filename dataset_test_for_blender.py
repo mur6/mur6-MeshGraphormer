@@ -68,27 +68,27 @@ def make_hand_data_loader(args, yaml_file, is_distributed=True, is_train=True, s
     return data_loader
 
 
-def visualize_data(*, image, mano_pose, shape):
-    n_cols = 2
-    n_rows = 2
-    fig, axs = plt.subplots(n_cols, n_rows, figsize=(9, 9))
-    axs = axs.flatten()
-    ax = axs[0]
-    ax.set_title("original image")
-    ax.imshow(image)
-    ax = axs[1]
-    ax.set_title("mano_pose[45]")
-    ax.plot(mano_pose)
-    ax.grid()
-    ax = axs[2]
-    ax.set_title("shape[10]")
-    ax.plot(shape)
-    start, end = ax.get_xlim()
-    ax.xaxis.set_ticks(np.arange(0.0, 10.0, 1.0))
-    ax.yaxis.set_ticks(np.arange(-1.5, 3.0, 0.25))
-    ax.grid()
-    plt.tight_layout()
-    plt.show()
+# def visualize_data(*, image, mano_pose, shape):
+#     n_cols = 2
+#     n_rows = 2
+#     fig, axs = plt.subplots(n_cols, n_rows, figsize=(9, 9))
+#     axs = axs.flatten()
+#     ax = axs[0]
+#     ax.set_title("original image")
+#     ax.imshow(image)
+#     ax = axs[1]
+#     ax.set_title("mano_pose[45]")
+#     ax.plot(mano_pose)
+#     ax.grid()
+#     ax = axs[2]
+#     ax.set_title("shape[10]")
+#     ax.plot(shape)
+#     start, end = ax.get_xlim()
+#     ax.xaxis.set_ticks(np.arange(0.0, 10.0, 1.0))
+#     ax.yaxis.set_ticks(np.arange(-1.5, 3.0, 0.25))
+#     ax.grid()
+#     plt.tight_layout()
+#     plt.show()
 
 
 def show_data_info(img_key, transfromed_img, meta_data):
@@ -175,9 +175,17 @@ def parse_args():
     return args
 
 
-if __name__ == "__main__":
-    args = parse_args()
-    main(data_index=args.data_index)
+def visualize_data_only_image(image, coords_2d=None, mano_pose=None):
+    n_cols = 2
+    n_rows = 2
+    fig, axs = plt.subplots(n_cols, n_rows, figsize=(9, 9))
+    axs = axs.flatten()
+    ax = axs[0]
+    ax.set_title("image")
+    ax.imshow(image)
+    # ax.scatter(coords_2d[:, 0], coords_2d[:, 1], c="red", alpha=0.75)
+    plt.tight_layout()
+    plt.show()
 
 
 def load_data(meta_filepath, image_filepath):
@@ -191,5 +199,6 @@ if __name__ == "__main__":
     args = parse_args()
     meta_filepath = args.base_path / "datageneration/tmp/meta/00000000.pkl"
     image_filepath = args.base_path / "datageneration/tmp/rgb/00000000.jpg"
-    data, image = load_data(meta_filepath)
+    data, image = load_data(meta_filepath, image_filepath)
+    # visualize_data(image)
     # main(data_index=)
