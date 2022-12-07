@@ -11,6 +11,7 @@ import numpy as np
 import torch
 import torchvision
 import torchvision.models as models
+import torchvision.transforms as transforms
 import transforms3d
 from PIL import Image
 from pycocotools.coco import COCO
@@ -20,7 +21,6 @@ import src.modeling.data.config as cfg
 from my_model_tools import get_mano_model, get_model_for_train
 from src.datasets.build import make_hand_data_loader
 from src.datasets.hand_mesh_tsv import HandMeshTSVDataset, HandMeshTSVYamlDataset
-from src.datasets.human_mesh_tsv import MeshTSVDataset, MeshTSVYamlDataset
 from src.modeling._mano import MANO, Mesh
 from src.modeling.bert import BertConfig, Graphormer
 from src.modeling.bert import Graphormer_Hand_Network as Graphormer_Network
@@ -217,12 +217,17 @@ def load_data(meta_filepath, image_filepath):
     return image, HandMeta(pose, betas, scale, joints_2d, joints_3d)
 
 
+normalize_img = transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
+
 if __name__ == "__main__":
     args = parse_args()
     meta_filepath = args.base_path / "datageneration/tmp/meta/00000000.pkl"
     image_filepath = args.base_path / "datageneration/tmp/rgb/00000000.jpg"
     image, meta = load_data(meta_filepath, image_filepath)
+    transfromed_img = normalize_img(image)
+
     center = torch.tensor([112.0, 112])
+    print("transfromed_img: ", transfromed_img.shape)
     print("ori_img: ", image.shape)
     print("pose: ", meta.pose.shape)
     print("betas: ", meta.betas.shape)
