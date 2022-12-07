@@ -217,18 +217,6 @@ def load_data(meta_filepath, image_filepath):
     return image, pose, betas, HandMeta(scale, joints_2d, joints_3d), d
 
 
-######################
-# [ok!] ori_img torch.Size([3, 224, 224])
-# [ok!] pose    torch.Size([48])
-# [ok!] betas   torch.Size([10])
-# [ok!] scale   val=0.8026036997235448
-# [ok!] joints_3d  torch.Size([21, 4])
-# [ok!] joints_2d  torch.Size([21, 3])
-######################
-# mjm_mask        torch.Size([21, 1])
-# mvm_mask        torch.Size([195, 1])
-
-
 if __name__ == "__main__":
     args = parse_args()
     meta_filepath = args.base_path / "datageneration/tmp/meta/00000000.pkl"
@@ -245,5 +233,9 @@ if __name__ == "__main__":
     has_2d_joints = 1
     has_3d_joints = 1
     has_smpl = 1
+    mjm_mask = torch.ones([21, 1])
+    mvm_mask = torch.ones([195, 1])
+    print(f"mjm_mask: {mjm_mask.shape}")
+    print(f"mvm_mask: {mvm_mask.shape}")
 # visualize_data(image)
 # main(data_index=)
