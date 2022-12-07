@@ -1,18 +1,19 @@
 import argparse
 import math
 import os.path as op
+import pickle
 from collections import defaultdict
 from logging import DEBUG, INFO, basicConfig, critical, debug, error, exception, getLogger, info
-from os.path import join
+from pathlib import Path
 
 import matplotlib.pyplot as plt
 import numpy as np
 import torch
 import torchvision.models as models
 import transforms3d
+from PIL import Image
 from pycocotools.coco import COCO
 from torchvision.utils import make_grid
-from tqdm import tqdm
 
 import src.modeling.data.config as cfg
 from my_model_tools import get_mano_model, get_model_for_train
@@ -159,16 +160,17 @@ def show_stats(*, name, value):
 
 def parse_args():
     parser = argparse.ArgumentParser()
-    parser.add_argument(
-        "--multiscale_inference",
-        default=False,
-        action="store_true",
-    )
-    parser.add_argument(
-        "--data_index",
-        type=int,
-        required=True,
-    )
+    parser.add_argument("--base_path", type=Path, required=True)
+    # parser.add_argument(
+    #     "--multiscale_inference",
+    #     default=False,
+    #     action="store_true",
+    # )
+    # parser.add_argument(
+    #     "--data_index",
+    #     type=int,
+    #     required=True,
+    # )
     args = parser.parse_args()
     return args
 
@@ -176,3 +178,18 @@ def parse_args():
 if __name__ == "__main__":
     args = parse_args()
     main(data_index=args.data_index)
+
+
+def load_data(meta_filepath, image_filepath):
+    b = meta_filepath.read_bytes()
+    data = pickle.loads(b)
+    image = Image.open(image_filepath)
+    return data, image
+
+
+if __name__ == "__main__":
+    args = parse_args()
+    meta_filepath = args.base_path / "datageneration/tmp/meta/00000000.pkl"
+    image_filepath = args.base_path / "datageneration/tmp/rgb/00000000.jpg"
+    data, image = load_data(meta_filepath)
+    # main(data_index=)
