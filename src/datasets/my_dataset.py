@@ -28,8 +28,8 @@ def get_sorted_files(folder, *, extension):
 class BlenderHandMeshDataset(object):
     def __init__(self, base_path, scale_factor=1):
         self.base_path = base_path
-        self.meta_filepath = base_path / "datageneration/tmp/meta/"
-        self.image_filepath = base_path / "datageneration/tmp/rgb/"
+        self.meta_filepath = base_path / "tmp/meta/"
+        self.image_filepath = base_path / "tmp/rgb/"
         meta_files = get_sorted_files(self.meta_filepath, extension="pkl")
         im_files = get_sorted_files(self.image_filepath, extension="jpg")
         assert len(meta_files) == len(im_files)
