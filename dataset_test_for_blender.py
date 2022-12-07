@@ -12,19 +12,9 @@ import torch
 import torchvision
 import torchvision.models as models
 import torchvision.transforms as transforms
-import transforms3d
-from PIL import Image
-from pycocotools.coco import COCO
-from torchvision.utils import make_grid
 
-import src.modeling.data.config as cfg
-from my_model_tools import get_mano_model, get_model_for_train
-from src.datasets.build import make_hand_data_loader
 from src.datasets.hand_mesh_tsv import HandMeshTSVDataset, HandMeshTSVYamlDataset
 from src.datasets.my_dataset import BlenderHandMeshDataset
-from src.modeling._mano import MANO, Mesh
-from src.modeling.bert import BertConfig, Graphormer
-from src.modeling.bert import Graphormer_Hand_Network as Graphormer_Network
 from src.modeling.hrnet.config import config as hrnet_config
 from src.modeling.hrnet.config import update_config as hrnet_update_config
 from src.modeling.hrnet.hrnet_cls_net_gridfeat import get_cls_net_gridfeat

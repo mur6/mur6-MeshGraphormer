@@ -8,7 +8,6 @@ Training and evaluation codes for 3D hand mesh reconstruction from an image
 from __future__ import absolute_import, division, print_function
 
 import argparse
-import code
 import datetime
 import gc
 import json
@@ -19,6 +18,7 @@ import time
 # from azureml.core.run import Run
 # aml_run = Run.get_context()
 from logging import DEBUG, INFO, basicConfig, critical, debug, error, exception, getLogger, info
+from pathlib import Path
 
 import cv2
 import numpy as np
@@ -29,6 +29,7 @@ from torchvision.utils import make_grid
 import src.modeling.data.config as cfg
 from my_model_tools import get_mano_model, get_model_for_train
 from src.datasets.build import make_hand_data_loader
+from src.datasets.my_dataset import BlenderHandMeshDataset
 from src.modeling._mano import MANO, Mesh
 from src.modeling.bert import BertConfig, Graphormer
 from src.modeling.bert import Graphormer_Hand_Network as Graphormer_Network
@@ -623,6 +624,11 @@ def parse_args():
         type=str,
         required=False,
         help="Yaml file with all data for training.",
+    )
+    parser.add_argument(
+        "--blender_ds_base_path",
+        type=Path,
+        required=False,
     )
     parser.add_argument(
         "--val_yaml",

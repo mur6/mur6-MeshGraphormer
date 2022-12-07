@@ -1,6 +1,5 @@
 import pickle
 from collections import namedtuple
-from pathlib import Path
 
 import numpy as np
 import torch
