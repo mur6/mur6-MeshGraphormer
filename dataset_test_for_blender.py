@@ -207,34 +207,10 @@ class BlenderHandMeshDataset(object):
         self.base_path = base_path
         self.meta_filepath = base_path / "datageneration/tmp/meta/"
         self.image_filepath = base_path / "datageneration/tmp/rgb/"
-        a = get_sorted_files(self.meta_filepath, extension="pkl")
-        b = get_sorted_files(self.image_filepath, extension="jpg")
-        assert len(a) == len(b)
-        self.data_length = len(a)
-        # print(a[:10])
-        # print(b[:10])
-
-        # self.linelist_file = linelist_file
-        # self.img_tsv = self.get_tsv_file(img_file)
-        # self.label_tsv = None if label_file is None else self.get_tsv_file(label_file)
-        # self.hw_tsv = None if hw_file is None else self.get_tsv_file(hw_file)
-
-        # if self.is_composite:
-        #     assert op.isfile(self.linelist_file)
-        #     self.line_list = [i for i in range(self.hw_tsv.num_rows())]
-        # else:
-        #     self.line_list = load_linelist_file(linelist_file)
-
-        # self.cv2_output = cv2_output
-        # self.normalize_img = transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
-        # self.is_train = is_train
-        # self.scale_factor = (
-        #     0.25  # rescale bounding boxes by a factor of [1-options.scale_factor,1+options.scale_factor]
-        # )
-        # self.noise_factor = 0.4
-        # self.rot_factor = 90  # Random rotation in the range [-rot_factor, rot_factor]
-        # self.img_res = 224
-        # self.image_keys = self.prepare_image_keys()
+        meta_files = get_sorted_files(self.meta_filepath, extension="pkl")
+        im_files = get_sorted_files(self.image_filepath, extension="jpg")
+        assert len(meta_files) == len(im_files)
+        self.data_length = len(meta_files)
         self.normalize_img = transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
 
     def __len__(self):
