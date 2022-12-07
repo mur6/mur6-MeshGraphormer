@@ -2,7 +2,7 @@ import argparse
 import math
 import os.path as op
 import pickle
-from collections import defaultdict
+from collections import namedtuple
 from logging import DEBUG, INFO, basicConfig, critical, debug, error, exception, getLogger, info
 from pathlib import Path
 
@@ -189,6 +189,14 @@ def visualize_data_only_image(image, coords_2d=None, mano_pose=None):
     plt.show()
 
 
+HandMeta = namedtuple("HandMeta", "scale joints_2d, joints_3d")
+
+
+def add_ones_column(x):
+    additional = torch.ones((x.shape[0], 1))
+    return torch.cat([x, additional], dim=1)
+
+
 def load_data(meta_filepath, image_filepath):
     b = meta_filepath.read_bytes()
     d = pickle.loads(b)
@@ -200,7 +208,13 @@ def load_data(meta_filepath, image_filepath):
     pose = torch.from_numpy(pose)
     betas = torch.from_numpy(d["shape"])
     scale = d["z"]
-    return image, pose, betas, scale, d
+    coords_2d = d["coords_2d"]
+    joints_2d = torch.from_numpy(coords_2d)
+    joints_2d = add_ones_column(joints_2d)
+    coords_3d = d["coords_3d"]
+    joints_3d = torch.from_numpy(coords_3d)
+    joints_3d = add_ones_column(joints_3d)
+    return image, pose, betas, HandMeta(scale, joints_2d, joints_3d), d
 
 
 ######################
@@ -209,7 +223,6 @@ def load_data(meta_filepath, image_filepath):
 # [ok!] betas   torch.Size([10])
 # [ok!] scale   val=0.8026036997235448
 ######################
-
 # mjm_mask        torch.Size([21, 1])
 # mvm_mask        torch.Size([195, 1])
 
@@ -221,13 +234,15 @@ if __name__ == "__main__":
     args = parse_args()
     meta_filepath = args.base_path / "datageneration/tmp/meta/00000000.pkl"
     image_filepath = args.base_path / "datageneration/tmp/rgb/00000000.jpg"
-    image, pose, betas, scale, data = load_data(meta_filepath, image_filepath)
+    image, pose, betas, meta, data = load_data(meta_filepath, image_filepath)
     center = torch.tensor([112.0, 112])
     print("ori_img: ", image.shape)
     print("pose: ", pose.shape)
     print("betas: ", betas.shape)
     print("center: ", center)
-    print(f"scale: {scale}")
+    print(f"scale: {meta.scale}")
+    print(f"joints_3d: {meta.joints_3d.shape}")
+    print(f"joints_2d: {meta.joints_2d.shape}")
     has_2d_joints = 1
     has_3d_joints = 1
     has_smpl = 1
