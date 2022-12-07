@@ -230,6 +230,7 @@ class BlenderHandMeshDataset(object):
         a = get_sorted_files(self.meta_filepath, extension="pkl")
         b = get_sorted_files(self.image_filepath, extension="jpg")
         assert len(a) == len(b)
+        self.data_length = len(a)
         print(a[:10])
         print(b[:10])
 
@@ -258,13 +259,9 @@ class BlenderHandMeshDataset(object):
         # self.image_keys = self.prepare_image_keys()
 
     def __len__(self):
-        if self.line_list is None:
-            return self.img_tsv.num_rows()
-        else:
-            return len(self.line_list)
+        return self.data_length
 
     def __getitem__(self, idx):
-
         img = self.get_image(idx)
         img_key = self.get_img_key(idx)
         annotations = self.get_annotations(idx)
@@ -290,9 +287,8 @@ class BlenderHandMeshDataset(object):
 
 normalize_img = transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
 
-if __name__ == "__main__":
-    args = parse_args()
 
+def main_backup(args):
     image, meta = load_data(meta_filepath, image_filepath)
     transfromed_img = normalize_img(image)
 
@@ -312,5 +308,12 @@ if __name__ == "__main__":
     mvm_mask = torch.ones([195, 1])
     print(f"mjm_mask: {mjm_mask.shape}")
     print(f"mvm_mask: {mvm_mask.shape}")
+
+
+if __name__ == "__main__":
+    args = parse_args()
+    dataset = BlenderHandMeshDataset(base_path=args.base_path)
+    print(dataset)
+
 # visualize_data(image)
 # main(data_index=)
