@@ -49,9 +49,8 @@ from src.utils.renderer import (
     visualize_reconstruction_test,
 )
 
-
-class Renderer(object):
-    pass
+# class Renderer(object):
+#     pass
 
 
 logger = getLogger(__name__)
