@@ -189,7 +189,7 @@ def visualize_data_only_image(image, coords_2d=None, mano_pose=None):
     plt.show()
 
 
-HandMeta = namedtuple("HandMeta", "scale joints_2d, joints_3d")
+HandMeta = namedtuple("HandMeta", "pose betas scale joints_2d, joints_3d")
 
 
 def add_ones_column(x):
@@ -214,18 +214,18 @@ def load_data(meta_filepath, image_filepath):
     coords_3d = d["coords_3d"]
     joints_3d = torch.from_numpy(coords_3d)
     joints_3d = add_ones_column(joints_3d)
-    return image, pose, betas, HandMeta(scale, joints_2d, joints_3d), d
+    return image, HandMeta(pose, betas, scale, joints_2d, joints_3d)
 
 
 if __name__ == "__main__":
     args = parse_args()
     meta_filepath = args.base_path / "datageneration/tmp/meta/00000000.pkl"
     image_filepath = args.base_path / "datageneration/tmp/rgb/00000000.jpg"
-    image, pose, betas, meta, data = load_data(meta_filepath, image_filepath)
+    image, meta = load_data(meta_filepath, image_filepath)
     center = torch.tensor([112.0, 112])
     print("ori_img: ", image.shape)
-    print("pose: ", pose.shape)
-    print("betas: ", betas.shape)
+    print("pose: ", meta.pose.shape)
+    print("betas: ", meta.betas.shape)
     print("center: ", center)
     print(f"scale: {meta.scale}")
     print(f"joints_3d: {meta.joints_3d.shape}")
