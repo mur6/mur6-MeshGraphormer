@@ -290,6 +290,7 @@ if __name__ == "__main__":
     args = parse_args()
     dataset = BlenderHandMeshDataset(base_path=args.base_path)
     print(len(dataset))
-    dataset[0]
+    r = dataset[0]
+    print(r)
 # visualize_data(image)
 # main(data_index=)
