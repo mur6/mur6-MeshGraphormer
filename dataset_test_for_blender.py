@@ -211,8 +211,8 @@ class BlenderHandMeshDataset(object):
         b = get_sorted_files(self.image_filepath, extension="jpg")
         assert len(a) == len(b)
         self.data_length = len(a)
-        print(a[:10])
-        print(b[:10])
+        # print(a[:10])
+        # print(b[:10])
 
         # self.linelist_file = linelist_file
         # self.img_tsv = self.get_tsv_file(img_file)
