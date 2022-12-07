@@ -98,5 +98,6 @@ if __name__ == "__main__":
     #     type=Path,
     #     required=True,
     # )
+    parser.add_argument("--output_dir", type=Path, required=True)
     args = parser.parse_args()
     main(args.base_path)
