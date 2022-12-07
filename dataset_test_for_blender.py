@@ -222,12 +222,11 @@ def load_data(meta_filepath, image_filepath):
 # [ok!] pose    torch.Size([48])
 # [ok!] betas   torch.Size([10])
 # [ok!] scale   val=0.8026036997235448
+# [ok!] joints_3d  torch.Size([21, 4])
+# [ok!] joints_2d  torch.Size([21, 3])
 ######################
 # mjm_mask        torch.Size([21, 1])
 # mvm_mask        torch.Size([195, 1])
-
-# joints_3d       torch.Size([21, 4])
-# joints_2d       torch.Size([21, 3])
 
 
 if __name__ == "__main__":
