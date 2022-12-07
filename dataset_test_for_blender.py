@@ -217,66 +217,82 @@ def load_data(meta_filepath, image_filepath):
     return image, HandMeta(pose, betas, scale, joints_2d, joints_3d)
 
 
+def get_sorted_files(folder, *, extension):
+    iter = folder.glob(f"*.{extension}")
+    return list(sorted(iter))
+
+
 class BlenderHandMeshDataset(object):
     def __init__(self, base_path, scale_factor=1):
-
-        self.args = args
         self.base_path = base_path
-        self.label_file = label_file
-        self.hw_file = hw_file
-        self.linelist_file = linelist_file
-        self.img_tsv = self.get_tsv_file(img_file)
-        self.label_tsv = None if label_file is None else self.get_tsv_file(label_file)
-        self.hw_tsv = None if hw_file is None else self.get_tsv_file(hw_file)
+        self.meta_filepath = base_path / "datageneration/tmp/meta/"
+        self.image_filepath = base_path / "datageneration/tmp/rgb/"
+        a = get_sorted_files(self.meta_filepath, extension="pkl")
+        b = get_sorted_files(self.image_filepath, extension="jpg")
+        assert len(a) == len(b)
+        print(a[:10])
+        print(b[:10])
 
-        if self.is_composite:
-            assert op.isfile(self.linelist_file)
-            self.line_list = [i for i in range(self.hw_tsv.num_rows())]
+        # meta_filepath = base_path / "datageneration/tmp/meta/00000000.pkl"
+        # image_filepath = base_path / "datageneration/tmp/rgb/00000000.jpg"
+        # self.linelist_file = linelist_file
+        # self.img_tsv = self.get_tsv_file(img_file)
+        # self.label_tsv = None if label_file is None else self.get_tsv_file(label_file)
+        # self.hw_tsv = None if hw_file is None else self.get_tsv_file(hw_file)
+
+        # if self.is_composite:
+        #     assert op.isfile(self.linelist_file)
+        #     self.line_list = [i for i in range(self.hw_tsv.num_rows())]
+        # else:
+        #     self.line_list = load_linelist_file(linelist_file)
+
+        # self.cv2_output = cv2_output
+        # self.normalize_img = transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
+        # self.is_train = is_train
+        # self.scale_factor = (
+        #     0.25  # rescale bounding boxes by a factor of [1-options.scale_factor,1+options.scale_factor]
+        # )
+        # self.noise_factor = 0.4
+        # self.rot_factor = 90  # Random rotation in the range [-rot_factor, rot_factor]
+        # self.img_res = 224
+        # self.image_keys = self.prepare_image_keys()
+
+    def __len__(self):
+        if self.line_list is None:
+            return self.img_tsv.num_rows()
         else:
-            self.line_list = load_linelist_file(linelist_file)
+            return len(self.line_list)
 
-        self.cv2_output = cv2_output
-        self.normalize_img = transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
-        self.is_train = is_train
-        self.scale_factor = (
-            0.25  # rescale bounding boxes by a factor of [1-options.scale_factor,1+options.scale_factor]
-        )
-        self.noise_factor = 0.4
-        self.rot_factor = 90  # Random rotation in the range [-rot_factor, rot_factor]
-        self.img_res = 224
-        self.image_keys = self.prepare_image_keys()
-        self.joints_definition = (
-            "Wrist",
-            "Thumb_1",
-            "Thumb_2",
-            "Thumb_3",
-            "Thumb_4",
-            "Index_1",
-            "Index_2",
-            "Index_3",
-            "Index_4",
-            "Middle_1",
-            "Middle_2",
-            "Middle_3",
-            "Middle_4",
-            "Ring_1",
-            "Ring_2",
-            "Ring_3",
-            "Ring_4",
-            "Pinky_1",
-            "Pinky_2",
-            "Pinky_3",
-            "Pinky_4",
-        )
-        self.root_index = self.joints_definition.index("Wrist")
+    def __getitem__(self, idx):
+
+        img = self.get_image(idx)
+        img_key = self.get_img_key(idx)
+        annotations = self.get_annotations(idx)
+
+        annotations = annotations[0]
+        center = annotations["center"]
+        scale = annotations["scale"]
+        has_2d_joints = annotations["has_2d_joints"]
+        has_3d_joints = annotations["has_3d_joints"]
+        joints_2d = np.asarray(annotations["2d_joints"])
+        joints_3d = np.asarray(annotations["3d_joints"])
+
+        if joints_2d.ndim == 3:
+            joints_2d = joints_2d[0]
+        if joints_3d.ndim == 3:
+            joints_3d = joints_3d[0]
+
+        # Get SMPL parameters, if available
+        has_smpl = np.asarray(annotations["has_smpl"])
+        pose = np.asarray(annotations["pose"])
+        betas = np.asarray(annotations["betas"])
 
 
 normalize_img = transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
 
 if __name__ == "__main__":
     args = parse_args()
-    meta_filepath = args.base_path / "datageneration/tmp/meta/00000000.pkl"
-    image_filepath = args.base_path / "datageneration/tmp/rgb/00000000.jpg"
+
     image, meta = load_data(meta_filepath, image_filepath)
     transfromed_img = normalize_img(image)
 
