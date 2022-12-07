@@ -39,7 +39,8 @@ def display_hand(hand_info, mano_faces=None, ax=None, alpha=0.2, batch_idx=0, sa
     ax.scatter(joints[:, 0], joints[:, 1], joints[:, 2], color="r")
     cam_equal_aspect_3d(ax, verts.numpy())
     if save:
-        plt.show()
+        # plt.show()
+        plt.savefig("aaa.png")
 
 
 def cam_equal_aspect_3d(ax, verts, flip_x=False):
