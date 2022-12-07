@@ -197,33 +197,39 @@ def load_data(meta_filepath, image_filepath):
     mano_pose = d["mano_pose"]
     trans = d["trans"]
     pose = np.concatenate([mano_pose, trans])
-    betas = d["shape"]
-    return image, pose, betas, d
+    pose = torch.from_numpy(pose)
+    betas = torch.from_numpy(d["shape"])
+    scale = d["z"]
+    return image, pose, betas, scale, d
 
 
 ######################
 # [ok!] ori_img torch.Size([3, 224, 224])
 # [ok!] pose    torch.Size([48])
 # [ok!] betas   torch.Size([10])
-# joints_3d       torch.Size([21, 4])
-# has_3d_joints val=1
-# has_smpl val=1
+# [ok!] scale   val=0.8026036997235448
+######################
+
 # mjm_mask        torch.Size([21, 1])
 # mvm_mask        torch.Size([195, 1])
-# has_2d_joints val=1
+
+# joints_3d       torch.Size([21, 4])
 # joints_2d       torch.Size([21, 3])
-# scale val=0.8026036997235448
-# center val=[112. 112.]
-######################
+
 
 if __name__ == "__main__":
     args = parse_args()
     meta_filepath = args.base_path / "datageneration/tmp/meta/00000000.pkl"
     image_filepath = args.base_path / "datageneration/tmp/rgb/00000000.jpg"
-    image, pose, betas, data = load_data(meta_filepath, image_filepath)
+    image, pose, betas, scale, data = load_data(meta_filepath, image_filepath)
+    center = torch.tensor([112.0, 112])
     print("ori_img: ", image.shape)
     print("pose: ", pose.shape)
     print("betas: ", betas.shape)
-
-    # visualize_data(image)
-    # main(data_index=)
+    print("center: ", center)
+    print(f"scale: {scale}")
+    has_2d_joints = 1
+    has_3d_joints = 1
+    has_smpl = 1
+# visualize_data(image)
+# main(data_index=)
