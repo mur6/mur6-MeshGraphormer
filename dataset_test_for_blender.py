@@ -191,16 +191,20 @@ def visualize_data_only_image(image, coords_2d=None, mano_pose=None):
 
 def load_data(meta_filepath, image_filepath):
     b = meta_filepath.read_bytes()
-    data = pickle.loads(b)
+    d = pickle.loads(b)
     image = Image.open(image_filepath)
     image = torchvision.transforms.functional.to_tensor(image)
-    return data, image
+    mano_pose = d["mano_pose"]
+    trans = d["trans"]
+    pose = np.concatenate([mano_pose, trans])
+    betas = d["shape"]
+    return image, pose, betas, d
 
 
 ######################
 # [ok!] ori_img torch.Size([3, 224, 224])
-# pose    torch.Size([48])
-# betas   torch.Size([10])
+# [ok!] pose    torch.Size([48])
+# [ok!] betas   torch.Size([10])
 # joints_3d       torch.Size([21, 4])
 # has_3d_joints val=1
 # has_smpl val=1
@@ -216,7 +220,10 @@ if __name__ == "__main__":
     args = parse_args()
     meta_filepath = args.base_path / "datageneration/tmp/meta/00000000.pkl"
     image_filepath = args.base_path / "datageneration/tmp/rgb/00000000.jpg"
-    data, image = load_data(meta_filepath, image_filepath)
+    image, pose, betas, data = load_data(meta_filepath, image_filepath)
     print("ori_img: ", image.shape)
+    print("pose: ", pose.shape)
+    print("betas: ", betas.shape)
+
     # visualize_data(image)
     # main(data_index=)
