@@ -566,6 +566,11 @@ def parse_args():
         help="Yaml file with all data for training.",
     )
     parser.add_argument(
+        "--blender_ds_base_path",
+        type=Path,
+        required=False,
+    )
+    parser.add_argument(
         "--val_yaml",
         default="imagenet2012/test.yaml",
         type=str,
