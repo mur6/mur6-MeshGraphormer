@@ -299,6 +299,8 @@ def run(args, device, train_dataloader, Graphormer_model, mano_model, mesh_sampl
                 cv2.imwrite(temp_fname, np.asarray(visual_imgs[:, :, ::-1] * 255))
                 # aml_run.log_image(name="visual results", path=temp_fname)
 
+        if iteration == 0:
+            checkpoint_dir = save_checkpoint(Graphormer_model, args, epoch, iteration)
         if iteration % iters_per_epoch == 0:
             if epoch % 10 == 0:
                 checkpoint_dir = save_checkpoint(Graphormer_model, args, epoch, iteration)
