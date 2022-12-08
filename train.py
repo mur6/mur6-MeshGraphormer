@@ -842,8 +842,13 @@ def main(args):
         run_eval_and_save(args, "freihand", val_dataloader, _model, mano_model, renderer, mesh_sampler)
 
     else:
+        blender_ds_base_path = args.blender_ds_base_path
         train_dataloader = make_hand_data_loader(
-            args, args.train_yaml, args.distributed, is_train=True, scale_factor=args.img_scale_factor
+            args,
+            blender_ds_base_path=blender_ds_base_path,
+            is_distributed=False,
+            is_train=True,
+            scale_factor=args.img_scale_factor,
         )
         run(args, train_dataloader, _model, mano_model, renderer, mesh_sampler)
 
