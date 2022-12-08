@@ -37,8 +37,6 @@ from src.utils.renderer import Renderer, visualize_reconstruction, visualize_rec
 from src.utils.metric_pampjpe import reconstruction_error
 from src.utils.geometric_layers import orthographic_projection
 
-from azureml.core.run import Run
-aml_run = Run.get_context()
 
 def save_checkpoint(model, args, epoch, iteration, num_trial=10):
     checkpoint_dir = op.join(args.output_dir, 'checkpoint-{}-{}'.format(
@@ -234,10 +232,10 @@ def run(args, train_dataloader, Graphormer_model, mano_model, renderer, mesh_sam
                     optimizer.param_groups[0]['lr'])
             )
 
-            aml_run.log(name='Loss', value=float(log_losses.avg))
-            aml_run.log(name='3d joint Loss', value=float(log_loss_3djoints.avg))
-            aml_run.log(name='2d joint Loss', value=float(log_loss_2djoints.avg))
-            aml_run.log(name='vertex Loss', value=float(log_loss_vertices.avg))
+            # aml_run.log(name='Loss', value=float(log_losses.avg))
+            # aml_run.log(name='3d joint Loss', value=float(log_loss_3djoints.avg))
+            # aml_run.log(name='2d joint Loss', value=float(log_loss_2djoints.avg))
+            # aml_run.log(name='vertex Loss', value=float(log_loss_vertices.avg))
 
             visual_imgs = visualize_mesh(   renderer,
                                             annotations['ori_img'].detach(),
@@ -253,7 +251,7 @@ def run(args, train_dataloader, Graphormer_model, mano_model, renderer, mesh_sam
                 stamp = str(epoch) + '_' + str(iteration)
                 temp_fname = args.output_dir + 'visual_' + stamp + '.jpg'
                 cv2.imwrite(temp_fname, np.asarray(visual_imgs[:,:,::-1]*255))
-                aml_run.log_image(name='visual results', path=temp_fname)
+                # aml_run.log_image(name='visual results', path=temp_fname)
 
         if iteration % iters_per_epoch == 0:
             if epoch%10==0:
