@@ -9,13 +9,13 @@ Training and evaluation codes for
 from __future__ import absolute_import, division, print_function
 
 import argparse
-import code
 import datetime
 import gc
 import json
 import os
 import os.path as op
 import time
+from pathlib import Path
 
 import cv2
 import numpy as np
