@@ -24,7 +24,8 @@ import torchvision.models as models
 from torchvision.utils import make_grid
 
 import src.modeling.data.config as cfg
-from src.datasets.build import make_hand_data_loader
+from src.datasets.build import make_batch_data_sampler, make_data_sampler
+from src.datasets.my_dataset import BlenderHandMeshDataset
 from src.modeling._mano import MANO, Mesh
 from src.modeling.bert import BertConfig, Graphormer
 from src.modeling.bert import Graphormer_Hand_Network as Graphormer_Network
@@ -674,6 +675,34 @@ def parse_args():
     parser.add_argument("--local_rank", type=int, default=0, help="For distributed training.")
     args = parser.parse_args()
     return args
+
+
+def make_hand_data_loader(
+    args, *, blender_ds_base_path, is_distributed=True, is_train=True, start_iter=0, scale_factor=1
+):
+    dataset = BlenderHandMeshDataset(base_path=blender_ds_base_path)
+
+    shuffle = True
+    images_per_gpu = args.per_gpu_train_batch_size
+    images_per_batch = images_per_gpu * get_world_size()
+    # print(f"images_per_batch: {images_per_batch}")
+    # print(f"dataset count: {len(dataset)}")
+    iters_per_batch = len(dataset) // images_per_batch
+    print(f"iters_per_batch: {iters_per_batch}")
+    num_iters = iters_per_batch * args.num_train_epochs
+    logger.info("Train with {} images per GPU.".format(images_per_gpu))
+    logger.info("Total batch size {}".format(images_per_batch))
+    logger.info("Total training steps {}".format(num_iters))
+
+    sampler = make_data_sampler(dataset, shuffle, is_distributed)
+    batch_sampler = make_batch_data_sampler(sampler, images_per_gpu, num_iters, start_iter)
+    data_loader = torch.utils.data.DataLoader(
+        dataset,
+        num_workers=args.num_workers,
+        batch_sampler=batch_sampler,
+        pin_memory=True,
+    )
+    return data_loader
 
 
 def main(args):
