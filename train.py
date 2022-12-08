@@ -299,14 +299,14 @@ def run(args, device, train_dataloader, Graphormer_model, mano_model, mesh_sampl
                 cv2.imwrite(temp_fname, np.asarray(visual_imgs[:, :, ::-1] * 255))
                 # aml_run.log_image(name="visual results", path=temp_fname)
 
-        # if iteration % iters_per_epoch == 0:
-        #     if epoch % 10 == 0:
-        #         checkpoint_dir = save_checkpoint(Graphormer_model, args, epoch, iteration)
+        if iteration % iters_per_epoch == 0:
+            if epoch % 10 == 0:
+                checkpoint_dir = save_checkpoint(Graphormer_model, args, epoch, iteration)
 
     total_training_time = time.time() - start_training_time
     total_time_str = str(datetime.timedelta(seconds=total_training_time))
     logger.info("Total training time: {} ({:.4f} s / iter)".format(total_time_str, total_training_time / max_iter))
-    # checkpoint_dir = save_checkpoint(Graphormer_model, args, epoch, iteration)
+    checkpoint_dir = save_checkpoint(Graphormer_model, args, epoch, iteration)
 
 
 def run_eval_and_save(args, split, val_dataloader, Graphormer_model, mano_model, renderer, mesh_sampler):
