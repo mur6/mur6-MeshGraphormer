@@ -46,8 +46,8 @@ class BlenderHandMeshDataset(object):
     def get_annotations(self, meta_file):
         b = meta_file.read_bytes()
         d = pickle.loads(b)
-        mano_pose = d["mano_pose"]
-        trans = d["trans"]
+        mano_pose = d["mano_pose"] * 1.48
+        trans = d["trans"] * 0.47
         pose = np.concatenate([mano_pose, trans])
         pose = torch.from_numpy(pose)
         betas = torch.from_numpy(d["shape"] * 0.93)
