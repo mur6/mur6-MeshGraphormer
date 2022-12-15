@@ -45,3 +45,5 @@ predictions
 # mur6
 misc-scripts/
 misc-data/
+.venv/
+temp_hand_images/
