@@ -86,24 +86,14 @@ def iter_meta_info(dataset_partial):
 
 
 def iter_stats_dicts(dataset_partial):
-    def get_stats(*, value):
-        var, mean = torch.var_mean(value)
-        std = math.sqrt(var)
-        return Stats(mean, std, var)
+
 
     for meta_info in iter_meta_info(dataset_partial):
-        d = {
-            "mano_pose": get_stats(value=meta_info.mano_pose),
-            "trans": get_stats(value=meta_info.trans),
-            "betas": get_stats(value=meta_info.betas),
-            "joints_2d": get_stats(value=meta_info.joints_2d),
-            "joints_3d": get_stats(value=meta_info.joints_3d),
-        }
+
         yield d
 
 
 def main(args, *, train_yaml_file, num):
-    # device = torch.device("cpu")
     dataset = build_hand_dataset(train_yaml_file, args, is_train=True)
     dict_list = list(iter_stats_dicts(itertools.islice(dataset, num)))
     keys = ("mano_pose", "trans", "betas", "joints_2d", "joints_3d")
@@ -130,7 +120,8 @@ def parse_args():
     parser.add_argument(
         "--num",
         type=int,
-        required=True,
+        default=1,
+        # required=True,
     )
     args = parser.parse_args()
     return args
@@ -139,7 +130,3 @@ def parse_args():
 if __name__ == "__main__":
     args = parse_args()
     main(args, train_yaml_file=args.train_yaml, num=args.num)
-
-
-if __name__ == "__main__":
-    main()
