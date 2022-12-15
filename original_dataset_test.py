@@ -240,47 +240,53 @@ def visualize_mesh_no_text( renderer,
 #             torch.cuda.empty_cache()
 
 def main(args, *, train_yaml_file, num):
-    args.distributed = False
+    args.num_gpus = int(os.environ['WORLD_SIZE']) if 'WORLD_SIZE' in os.environ else 1
+    #os.environ['OMP_NUM_THREADS'] = str(args.num_workers)
+    # print('set os.environ[OMP_NUM_THREADS] to {}'.format(os.environ['OMP_NUM_THREADS']))
+    args.distributed = args.num_gpus > 1
+    #args.distributed = False
+    print(f"args.distributed: {args.distributed}")
     train_dataloader = make_hand_data_loader(
         args, args.train_yaml,
         args.distributed, is_train=True,
         scale_factor=args.img_scale_factor)
     max_iter = len(train_dataloader)
     iters_per_epoch = max_iter // args.num_train_epochs
+    print(f"iters_per_epoch: {iters_per_epoch}")
 
     for iteration, (img_keys, images, annotations) in enumerate(train_dataloader):
-        epoch = iteration // iters_per_epoch
+        #epoch = iteration // iters_per_epoch
         batch_size = images.size(0)
-
+        print(f"batch_size: {batch_size}")
 
         images = images.cuda()
-        gt_2d_joints = annotations['joints_2d'].cuda()
-        gt_pose = annotations['pose'].cuda()
-        gt_betas = annotations['betas'].cuda()
-        has_mesh = annotations['has_smpl'].cuda()
+        gt_2d_joints = annotations['joints_2d']
+        gt_pose = annotations['pose']
+        gt_betas = annotations['betas']
+        has_mesh = annotations['has_smpl']
         has_3d_joints = has_mesh
         has_2d_joints = has_mesh
-        mjm_mask = annotations['mjm_mask'].cuda()
-        mvm_mask = annotations['mvm_mask'].cuda()
+        mjm_mask = annotations['mjm_mask']
+        mvm_mask = annotations['mvm_mask']
 
-        # generate mesh
-        gt_vertices, gt_3d_joints = mano_model.layer(gt_pose, gt_betas)
-        gt_vertices = gt_vertices/1000.0
-        gt_3d_joints = gt_3d_joints/1000.0
+        # # generate mesh
+        # gt_vertices, gt_3d_joints = mano_model.layer(gt_pose, gt_betas)
+        # gt_vertices = gt_vertices/1000.0
+        # gt_3d_joints = gt_3d_joints/1000.0
 
-        gt_vertices_sub = mesh_sampler.downsample(gt_vertices)
-        # normalize gt based on hand's wrist 
-        gt_3d_root = gt_3d_joints[:,cfg.J_NAME.index('Wrist'),:]
-        gt_vertices = gt_vertices - gt_3d_root[:, None, :]
-        gt_vertices_sub = gt_vertices_sub - gt_3d_root[:, None, :]
-        gt_3d_joints = gt_3d_joints - gt_3d_root[:, None, :]
-        gt_3d_joints_with_tag = torch.ones((batch_size,gt_3d_joints.shape[1],4)).cuda()
-        gt_3d_joints_with_tag[:,:,:3] = gt_3d_joints
+        # gt_vertices_sub = mesh_sampler.downsample(gt_vertices)
+        # # normalize gt based on hand's wrist 
+        # gt_3d_root = gt_3d_joints[:,cfg.J_NAME.index('Wrist'),:]
+        # gt_vertices = gt_vertices - gt_3d_root[:, None, :]
+        # gt_vertices_sub = gt_vertices_sub - gt_3d_root[:, None, :]
+        # gt_3d_joints = gt_3d_joints - gt_3d_root[:, None, :]
+        # gt_3d_joints_with_tag = torch.ones((batch_size,gt_3d_joints.shape[1],4)).cuda()
+        # gt_3d_joints_with_tag[:,:,:3] = gt_3d_joints
 
-        # prepare masks for mask vertex/joint modeling
-        mjm_mask_ = mjm_mask.expand(-1,-1,2051)
-        mvm_mask_ = mvm_mask.expand(-1,-1,2051)
-        meta_masks = torch.cat([mjm_mask_, mvm_mask_], dim=1)
+        # # prepare masks for mask vertex/joint modeling
+        # mjm_mask_ = mjm_mask.expand(-1,-1,2051)
+        # mvm_mask_ = mvm_mask.expand(-1,-1,2051)
+        # meta_masks = torch.cat([mjm_mask_, mvm_mask_], dim=1)
 
         visual_imgs = visualize_mesh(
             renderer,
@@ -290,12 +296,6 @@ def main(args, *, train_yaml_file, num):
             pred_camera.detach(),
             pred_2d_joints_from_mesh.detach())
 
-
-    # # mano_model.layer = mano_model.layer.cuda()
-    # mano_layer = mano_model.layer
-    # pose = meta_info.pose.unsqueeze(0)
-    # betas = meta_info.betas.unsqueeze(0)
-    # gt_vertices, gt_3d_joints = mano_model.layer(pose, betas)
 
 
 
@@ -319,13 +319,13 @@ def parse_args():
         default=1,
         # required=True,
     )
-    parser.add_argument("--per_gpu_train_batch_size", default=64, type=int, 
+    parser.add_argument("--per_gpu_train_batch_size", default=64, type=int,
                         help="Batch size per GPU/CPU for training.")
-    parser.add_argument("--per_gpu_eval_batch_size", default=64, type=int, 
+    parser.add_argument("--per_gpu_eval_batch_size", default=64, type=int,
                         help="Batch size per GPU/CPU for evaluation.")
-    parser.add_argument("--num_train_epochs", default=200, type=int, 
+    parser.add_argument("--num_train_epochs", default=200, type=int,
                         help="Total number of training epochs to perform.")
-    parser.add_argument("--num_workers", default=4, type=int, help="Workers in dataloader.")
+    parser.add_argument("--num_workers", default=0, type=int, help="Workers in dataloader.")
     args = parser.parse_args()
     return args
 
