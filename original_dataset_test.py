@@ -265,7 +265,7 @@ def visualize_data(image, ori_img, joints_2d, mano_pose=None, shape=None):
 def main(args, *, train_yaml_file, num):
     mano_model = MANO().to("cpu")
     #mano_model.layer = mano_model.layer.cuda()
-    #mesh_sampler = Mesh()
+    mesh_sampler = Mesh()
     renderer = Renderer(faces=mano_model.face)
     args.num_gpus = int(os.environ['WORLD_SIZE']) if 'WORLD_SIZE' in os.environ else 1
     # os.environ['OMP_NUM_THREADS'] = str(args.num_workers)
@@ -305,6 +305,17 @@ def main(args, *, train_yaml_file, num):
     gt_vertices, gt_3d_joints = mano_model.layer(gt_pose, gt_betas)
     #gt_vertices = gt_vertices / 1000.0
     #gt_3d_joints = gt_3d_joints / 1000.0
+    gt_vertices = gt_vertices/1000.0
+    gt_3d_joints = gt_3d_joints/1000.0
+
+    gt_vertices_sub = mesh_sampler.downsample(gt_vertices)
+    # normalize gt based on hand's wrist
+    gt_3d_root = gt_3d_joints[:,cfg.J_NAME.index('Wrist'),:]
+    gt_vertices = gt_vertices - gt_3d_root[:, None, :]
+    gt_vertices_sub = gt_vertices_sub - gt_3d_root[:, None, :]
+    gt_3d_joints = gt_3d_joints - gt_3d_root[:, None, :]
+    gt_3d_joints_with_tag = torch.ones((batch_size, gt_3d_joints.shape[1],4))
+    gt_3d_joints_with_tag[:,:,:3] = gt_3d_joints
 
     # visual_imgs = visualize_mesh(
     #     renderer,
@@ -319,8 +330,14 @@ def main(args, *, train_yaml_file, num):
     ax = fig.add_subplot(111, projection='3d')
     #verts, joints = hand_info['verts'][batch_idx], hand_info['joints'][batch_idx]
     #if mano_faces is None:
-    ax.scatter(gt_vertices[:, 0], gt_vertices[:, 1], gt_vertices[:, 2], alpha=0.1)
-    # ax.scatter(gt_3d_joints[:, 0], gt_3d_joints[:, 1], gt_3d_joints[:, 2], color='r')
+    #
+    print("gt_vertices_sub:", gt_vertices_sub.shape)
+    verts = gt_vertices_sub[0]
+    ax.scatter(verts[:, 0], verts[:, 1], verts[:, 2], alpha=0.1)
+    print(gt_3d_joints.shape)
+    print(gt_3d_joints[0])
+    joints = gt_3d_joints[0]
+    ax.scatter(joints[:, 0], joints[:, 1], joints[:, 2], color='r')
     plt.show()
 
     # visual_imgs = visualize_mesh(
