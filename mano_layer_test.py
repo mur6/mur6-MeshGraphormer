@@ -51,13 +51,10 @@ def main(args, *, train_yaml_file, num):
     mano_model = MANO().to("cpu")
     # mano_model.layer = mano_model.layer.cuda()
     mano_layer = mano_model.layer
-    gt_vertices, gt_3d_joints = mano_model.layer(meta_info.pose, meta_info.betas)
-    # keys = ("mano_pose", "trans", "betas", "joints_2d", "joints_3d")
-    # print("[gphmer],mean,var")
-    # for key in keys:
-    #     m = sum(d[key].mean for d in dict_list) / num
-    #     v = sum(d[key].var for d in dict_list) / num
-    #     print(f"{key},{m:.03},{v:.03}")
+    pose = meta_info.pose.unsqueeze(0)
+    betas = meta_info.betas.unsqueeze(0)
+    gt_vertices, gt_3d_joints = mano_model.layer(pose, betas)
+
 
 
 def parse_args():
