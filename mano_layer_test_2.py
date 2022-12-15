@@ -94,16 +94,42 @@ def visualize_data_3d(gt_vertices_sub, gt_3d_joints):
     plt.show()
 
 
-def build_hand_dataset(yaml_file, args, is_train=True, scale_factor=1):
-    if not os.path.isfile(yaml_file):
-        yaml_file = os.path.join(args.data_dir, yaml_file)
-        # code.interact(local=locals())
-        assert os.path.isfile(yaml_file)
-    return HandMeshTSVYamlDataset(args, yaml_file, is_train, False, scale_factor)
+# def build_hand_dataset(yaml_file, args, is_train=True, scale_factor=1):
+#     if not os.path.isfile(yaml_file):
+#         yaml_file = os.path.join(args.data_dir, yaml_file)
+#         # code.interact(local=locals())
+#         assert os.path.isfile(yaml_file)
+#     return HandMeshTSVYamlDataset(args, yaml_file, is_train, False, scale_factor)
 
 
-MetaInfo = namedtuple("MetaInfo", "pose,betas,joints_2d,joints_3d")
+def visualize_data(image, ori_img, joints_2d, mano_pose=None, shape=None):
+    n_cols = 2
+    n_rows = 2
+    fig, axs = plt.subplots(n_cols, n_rows, figsize=(9, 9))
+    axs = axs.flatten()
 
+    ax = axs[0]
+    ax.set_title("joints_2d")
+    ax.imshow(image)
+    print(joints_2d)
+    img_size = 224
+    # joints_2d = joints_2d * img_size
+    joints_2d = ((joints_2d[:, :2] + 1) * 0.5) * img_size
+    print(joints_2d)
+    ax.scatter(joints_2d[:, 0], joints_2d[:, 1], c="red", alpha=0.75)
+    ax = axs[1]
+    ax.set_title("ori_img")
+    ax.imshow(ori_img)
+
+    # ax = axs[2]
+    # ax.set_title("shape[10]")
+    # ax.plot(shape)
+    # start, end = ax.get_xlim()
+    # ax.xaxis.set_ticks(np.arange(0.0, 10.0, 1.0))
+    # ax.yaxis.set_ticks(np.arange(-1.5, 3.0, 0.25))
+    # ax.grid()
+    plt.tight_layout()
+    plt.show()
 
 def iter_meta_info(dataset_partial):
     for img_key, transfromed_img, meta_data in dataset_partial:
@@ -149,22 +175,48 @@ def make_hand_data_loader(
     )
     return data_loader
 
-def main(args, *, train_dataloader, num):
-    train_dataloader
-    # meta_info = list(iter_meta_info(itertools.islice(dataset, num)))[0]
-    # # print(meta_info)
-    # mano_model = MANO().to("cpu")
-    # # mano_model.layer = mano_model.layer.cuda()
-    # mano_layer = mano_model.layer
-    # pose = meta_info.pose.unsqueeze(0)
-    # betas = meta_info.betas.unsqueeze(0)
-    # gt_vertices, gt_3d_joints = mano_model.layer(pose, betas)
+def main(args, dataset, num):
+    #train_dataloader
+    img_keys, images, annotations = dataset[0]
+    print(annotations.keys())
+    # dict_keys(['center', 'has_2d_joints', 'has_3d_joints', 'has_smpl', 'mjm_mask', 'mvm_mask', 'ori_img', 'pose', 'betas', 'joints_3d', 'joints_2d', 'scale'])
 
-    # # fig = plt.figure()
-    # # ax = fig.add_subplot(111, projection='3d')
-    # # #verts, joints = hand_info['verts'][batch_idx], hand_info['joints'][batch_idx]
-    # # #if mano_faces is None:
-    # visualize_data_3d(gt_vertices, gt_3d_joints)
+    # # print(meta_info)
+    mano_model = MANO().to("cpu")
+    mano_layer = mano_model.layer
+    mesh_sampler = Mesh(device=torch.device('cpu'))
+
+    gt_2d_joints = annotations['joints_2d']
+    gt_pose = annotations['pose']
+    gt_betas = annotations['betas']
+    has_mesh = annotations['has_smpl']
+    has_3d_joints = has_mesh
+    has_2d_joints = has_mesh
+    mjm_mask = annotations['mjm_mask']
+    mvm_mask = annotations['mvm_mask']
+    # gt_vertices, gt_3d_joints = mano_model.layer(pose, betas)
+    img = images.numpy().transpose(1,2,0)
+    ori_img = annotations['ori_img'].numpy().transpose(1,2,0)
+    joints_2d = annotations['joints_2d']
+    visualize_data(img, ori_img, joints_2d)
+    # generate mesh
+    gt_vertices, gt_3d_joints = mano_model.layer(gt_pose, gt_betas)
+    gt_vertices = gt_vertices / 1000.0
+    gt_3d_joints = gt_3d_joints / 1000.0
+    gt_vertices_sub = mesh_sampler.downsample(gt_vertices)
+
+    # # normalize gt based on hand's wrist
+    # gt_3d_root = gt_3d_joints[:,cfg.J_NAME.index('Wrist'),:]
+    # gt_vertices = gt_vertices - gt_3d_root[:, None, :]
+    # gt_vertices_sub = gt_vertices_sub - gt_3d_root[:, None, :]
+    # gt_3d_joints = gt_3d_joints - gt_3d_root[:, None, :]
+    # gt_3d_joints_with_tag = torch.ones((batch_size, gt_3d_joints.shape[1],4))
+    # gt_3d_joints_with_tag[:,:,:3] = gt_3d_joints
+    # # # fig = plt.figure()
+    # # # ax = fig.add_subplot(111, projection='3d')
+    # # # #verts, joints = hand_info['verts'][batch_idx], hand_info['joints'][batch_idx]
+    # # # #if mano_faces is None:
+    # # visualize_data_3d(gt_vertices, gt_3d_joints)
 
 
 def parse_args():
@@ -174,12 +226,12 @@ def parse_args():
         default=False,
         action="store_true",
     )
-    parser.add_argument(
-        "--train_yaml",
-        type=Path,
-        required=True,
-        help="Yaml file with all data for training.",
-    )
+    # parser.add_argument(
+    #     "--train_yaml",
+    #     type=Path,
+    #     required=True,
+    #     help="Yaml file with all data for training.",
+    # )
     parser.add_argument(
         "--num",
         type=int,
@@ -198,11 +250,12 @@ def parse_args():
 if __name__ == "__main__":
     args = parse_args()
     blender_ds_base_path = args.blender_ds_base_path
-    train_dataloader = make_hand_data_loader(
-        args,
-        blender_ds_base_path=blender_ds_base_path,
-        is_distributed=False,
-        is_train=True,
-        scale_factor=args.img_scale_factor,
-    )
-    main(args, train_dataloader, num=args.num)
+    # train_dataloader = make_hand_data_loader(
+    #     args,
+    #     blender_ds_base_path=blender_ds_base_path,
+    #     is_distributed=False,
+    #     is_train=True,
+    #     scale_factor=1#args.img_scale_factor,
+    # )
+    dataset = BlenderHandMeshDataset(base_path=blender_ds_base_path)
+    main(args, dataset, num=args.num)
