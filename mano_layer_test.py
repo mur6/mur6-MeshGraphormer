@@ -24,20 +24,16 @@ def build_hand_dataset(yaml_file, args, is_train=True, scale_factor=1):
     return HandMeshTSVYamlDataset(args, yaml_file, is_train, False, scale_factor)
 
 
-MetaInfo = namedtuple("MetaInfo", "mano_pose,trans,betas,joints_2d,joints_3d")
-
+MetaInfo = namedtuple("MetaInfo", "pose,betas,joints_2d,joints_3d")
 
 
 def iter_meta_info(dataset_partial):
     for img_key, transfromed_img, meta_data in dataset_partial:
         pose = meta_data["pose"]
-        # print(f"##############: pose={pose.shape}")
-        # print(pose)
-        mano_pose, trans = pose[:45], pose[45:]
-        assert mano_pose.shape == (45,)
-        # print(f"##############: mano_pose={mano_pose.shape}")
-        # print(mano_pose)
-        assert trans.shape == (3,)
+        assert pose.shape == (48,)
+        # mano_pose, trans = pose[:45], pose[45:]
+        # assert mano_pose.shape == (45,)
+        # assert trans.shape == (3,)
         betas = meta_data["betas"]
         assert betas.shape == (10,)
         joints_2d = meta_data["joints_2d"][:, 0:2]
@@ -45,7 +41,7 @@ def iter_meta_info(dataset_partial):
         joints_3d = meta_data["joints_3d"][:, 0:3]
         assert joints_3d.shape == (21, 3)
         # print(mano_pose.shape, trans.shape, betas.shape, joints_2d.shape, joints_3d.shape)
-        yield MetaInfo(mano_pose, trans, betas, joints_2d, joints_3d)
+        yield MetaInfo(pose, betas, joints_2d, joints_3d)
 
 
 def main(args, *, train_yaml_file, num):
