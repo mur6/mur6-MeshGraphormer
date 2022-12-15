@@ -10,10 +10,49 @@ from pathlib import Path
 from tqdm import tqdm
 import numpy as np
 import torch
+import numpy as np
+import matplotlib.pyplot as plt
+from PIL import Image
 
 from src.modeling._mano import MANO
 from manopth.manolayer import ManoLayer
 from src.datasets.hand_mesh_tsv import HandMeshTSVDataset, HandMeshTSVYamlDataset
+
+
+
+def show_3d_plot(axs, points3d_1, points3d_2):
+    # print(pred_v3d.shape, pred_v3d)
+    for i, points3d in enumerate((points3d_1, points3d_2)):
+        points3d /= 164.0
+        X, Y, Z = points3d[:, 0], points3d[:, 1], points3d[:, 2]
+        # axs.scatter(X, Y, Z, alpha=0.1)
+        if i == 0:
+            axs.scatter(X, Y, Z, alpha=0.1)
+        else:
+            axs.scatter(X, Y, Z, color='r')
+    max_range = np.array([X.max() - X.min(), Y.max() - Y.min(), Z.max() - Z.min()]).max() * 0.5
+    mid_x = (X.max() + X.min()) * 0.5
+    mid_y = (Y.max() + Y.min()) * 0.5
+    mid_z = (Z.max() + Z.min()) * 0.5
+    axs.set_xlim(mid_x - max_range, mid_x + max_range)
+    axs.set_ylim(mid_y - max_range, mid_y + max_range)
+    axs.set_zlim(mid_z - max_range, mid_z + max_range)
+
+
+def visualize_data_3d(gt_vertices_sub, gt_3d_joints):
+    # torch.set_printoptions(precision=2)
+    # print("gt_vertices_sub.shape:", gt_vertices_sub.shape)
+    # print("gt_3d_joints.shape:", gt_3d_joints.shape)
+    verts = gt_vertices_sub[0]
+    joints = gt_3d_joints[0]
+    fig = plt.figure()
+    ax = fig.add_subplot(111, projection='3d')
+    #verts, joints = hand_info['verts'][batch_idx], hand_info['joints'][batch_idx]
+    #if mano_faces is None:
+    show_3d_plot(ax, verts, joints)
+    # ax.scatter(verts[:, 0], verts[:, 1], verts[:, 2], alpha=0.1)
+    # ax.scatter(joints[:, 0], joints[:, 1], joints[:, 2], color='r')
+    plt.show()
 
 
 def build_hand_dataset(yaml_file, args, is_train=True, scale_factor=1):
@@ -55,6 +94,11 @@ def main(args, *, train_yaml_file, num):
     betas = meta_info.betas.unsqueeze(0)
     gt_vertices, gt_3d_joints = mano_model.layer(pose, betas)
 
+    # fig = plt.figure()
+    # ax = fig.add_subplot(111, projection='3d')
+    # #verts, joints = hand_info['verts'][batch_idx], hand_info['joints'][batch_idx]
+    # #if mano_faces is None:
+    visualize_data_3d(gt_vertices, gt_3d_joints)
 
 
 def parse_args():

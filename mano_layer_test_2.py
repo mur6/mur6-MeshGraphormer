@@ -111,11 +111,11 @@ def visualize_data(image, ori_img, joints_2d, mano_pose=None, shape=None):
     ax = axs[0]
     ax.set_title("joints_2d")
     ax.imshow(image)
-    print(joints_2d)
+    # print(joints_2d)
     img_size = 224
     # joints_2d = joints_2d * img_size
     joints_2d = ((joints_2d[:, :2] + 1) * 0.5) * img_size
-    print(joints_2d)
+    # print(joints_2d)
     ax.scatter(joints_2d[:, 0], joints_2d[:, 1], c="red", alpha=0.75)
     ax = axs[1]
     ax.set_title("ori_img")
@@ -177,7 +177,7 @@ def make_hand_data_loader(
 
 def main(args, dataset, num):
     #train_dataloader
-    img_keys, images, annotations = dataset[0]
+    img_keys, images, annotations = dataset[2]
     print(annotations.keys())
     # dict_keys(['center', 'has_2d_joints', 'has_3d_joints', 'has_smpl', 'mjm_mask', 'mvm_mask', 'ori_img', 'pose', 'betas', 'joints_3d', 'joints_2d', 'scale'])
 
@@ -200,23 +200,29 @@ def main(args, dataset, num):
     joints_2d = annotations['joints_2d']
     visualize_data(img, ori_img, joints_2d)
     # generate mesh
-    gt_vertices, gt_3d_joints = mano_model.layer(gt_pose, gt_betas)
+    pose = gt_pose.unsqueeze(0)
+    betas = gt_betas.unsqueeze(0)
+    gt_vertices, gt_3d_joints = mano_model.layer(pose, betas)
     gt_vertices = gt_vertices / 1000.0
     gt_3d_joints = gt_3d_joints / 1000.0
     gt_vertices_sub = mesh_sampler.downsample(gt_vertices)
+    # print(gt_vertices.shape, gt_3d_joints.shape)
+    # normalize gt based on hand's wrist
+    batch_size = 1
 
-    # # normalize gt based on hand's wrist
-    # gt_3d_root = gt_3d_joints[:,cfg.J_NAME.index('Wrist'),:]
-    # gt_vertices = gt_vertices - gt_3d_root[:, None, :]
-    # gt_vertices_sub = gt_vertices_sub - gt_3d_root[:, None, :]
-    # gt_3d_joints = gt_3d_joints - gt_3d_root[:, None, :]
-    # gt_3d_joints_with_tag = torch.ones((batch_size, gt_3d_joints.shape[1],4))
-    # gt_3d_joints_with_tag[:,:,:3] = gt_3d_joints
+    gt_3d_root = gt_3d_joints[:,cfg.J_NAME.index('Wrist'),:]
+    gt_vertices = gt_vertices - gt_3d_root[:, None, :]
+    gt_vertices_sub = gt_vertices_sub - gt_3d_root[:, None, :]
+    gt_3d_joints = gt_3d_joints - gt_3d_root[:, None, :]
+    gt_3d_joints_with_tag = torch.ones((batch_size, gt_3d_joints.shape[1],4))
+    gt_3d_joints_with_tag[:,:,:3] = gt_3d_joints
+    print(gt_vertices_sub)
     # # # fig = plt.figure()
     # # # ax = fig.add_subplot(111, projection='3d')
     # # # #verts, joints = hand_info['verts'][batch_idx], hand_info['joints'][batch_idx]
-    # # # #if mano_faces is None:
-    # # visualize_data_3d(gt_vertices, gt_3d_joints)
+
+
+    visualize_data_3d(gt_vertices, gt_3d_joints)
 
 
 def parse_args():
