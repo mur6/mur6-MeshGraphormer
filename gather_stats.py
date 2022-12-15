@@ -78,8 +78,12 @@ Stats = namedtuple("Stats", "mean,std,var")
 def iter_meta_info(dataset_partial):
     for img_key, transfromed_img, meta_data in dataset_partial:
         pose = meta_data["pose"]
+        print(f"##############: pose={pose.shape}")
+        print(pose)
         mano_pose, trans = pose[:45], pose[45:]
         assert mano_pose.shape == (45,)
+        print(f"##############: mano_pose={mano_pose.shape}")
+        print(mano_pose)
         assert trans.shape == (3,)
         betas = meta_data["betas"]
         assert betas.shape == (10,)
