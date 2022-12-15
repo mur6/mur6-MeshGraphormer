@@ -1,48 +1,19 @@
+import argparse
+import itertools
+import os.path
+from collections import namedtuple
+from pathlib import Path
+
+# import matplotlib.pyplot as plt
+# from pycocotools.coco import COCO
+# from torchvision.utils import make_grid
+from tqdm import tqdm
 import numpy as np
 import torch
 
 from src.modeling._mano import MANO
 from manopth.manolayer import ManoLayer
-
-
-
-# def main():
-#     mano_model = MANO().to("cpu")
-#     # mano_model.layer = mano_model.layer.cuda()
-
-#     for i in range(7 + 1):
-#         fill_value = i * 0.1
-#         print(f"fill_value={fill_value}")
-#         generate_and_save(fill_value=fill_value, filename=f"mesh_gra_zero_point_{i}")
-
-
-
-
-import argparse
-import itertools
-import math
-import os.path
-from collections import namedtuple
-from logging import DEBUG, INFO, basicConfig, critical, debug, error, exception, getLogger, info
-from os.path import join
-from pathlib import Path
-
-import cv2
-import imageio
-import matplotlib.pyplot as plt
-import numpy as np
-import torch
-import torchvision.models as models
-import transforms3d
-from pycocotools.coco import COCO
-from torchvision.utils import make_grid
-from tqdm import tqdm
-
-import src.modeling.data.config as cfg
-from my_model_tools import get_mano_model, get_model_for_train
-from src.datasets.build import make_hand_data_loader
 from src.datasets.hand_mesh_tsv import HandMeshTSVDataset, HandMeshTSVYamlDataset
-from src.modeling.hrnet.config import config as hrnet_config
 
 
 def build_hand_dataset(yaml_file, args, is_train=True, scale_factor=1):
@@ -77,12 +48,14 @@ def iter_meta_info(dataset_partial):
         yield MetaInfo(mano_pose, trans, betas, joints_2d, joints_3d)
 
 
-
-
 def main(args, *, train_yaml_file, num):
     dataset = build_hand_dataset(train_yaml_file, args, is_train=True)
-    meta_info = list(iter_meta_info(itertools.islice(dataset, num)))
-    print(meta_info)
+    meta_info = list(iter_meta_info(itertools.islice(dataset, num)))[0]
+    # print(meta_info)
+    mano_model = MANO().to("cpu")
+    # mano_model.layer = mano_model.layer.cuda()
+    mano_layer = mano_model.layer
+    gt_vertices, gt_3d_joints = mano_model.layer(meta_info.pose, meta_info.betas)
     # keys = ("mano_pose", "trans", "betas", "joints_2d", "joints_3d")
     # print("[gphmer],mean,var")
     # for key in keys:
