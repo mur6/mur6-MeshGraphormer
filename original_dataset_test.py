@@ -39,373 +39,8 @@ from src.utils.geometric_layers import orthographic_projection
 
 
 
-def save_checkpoint(model, args, epoch, iteration, num_trial=10):
-    checkpoint_dir = op.join(args.output_dir, 'checkpoint-{}-{}'.format(
-        epoch, iteration))
-    if not is_main_process():
-        return checkpoint_dir
-    mkdir(checkpoint_dir)
-    model_to_save = model.module if hasattr(model, 'module') else model
-    for i in range(num_trial):
-        try:
-            torch.save(model_to_save, op.join(checkpoint_dir, 'model.bin'))
-            torch.save(model_to_save.state_dict(), op.join(checkpoint_dir, 'state_dict.bin'))
-            torch.save(args, op.join(checkpoint_dir, 'training_args.bin'))
-            logger.info("Save checkpoint to {}".format(checkpoint_dir))
-            break
-        except:
-            pass
-    else:
-        logger.info("Failed to save checkpoint after {} trails.".format(num_trial))
-    return checkpoint_dir
-
-def adjust_learning_rate(optimizer, epoch, args):
-    """
-    Sets the learning rate to the initial LR decayed by x every y epochs
-    x = 0.1, y = args.num_train_epochs/2.0 = 100
-    """
-    lr = args.lr * (0.1 ** (epoch // (args.num_train_epochs/2.0)  ))
-    for param_group in optimizer.param_groups:
-        param_group['lr'] = lr
-
-def keypoint_2d_loss(criterion_keypoints, pred_keypoints_2d, gt_keypoints_2d, has_pose_2d):
-    """
-    Compute 2D reprojection loss if 2D keypoint annotations are available.
-    The confidence is binary and indicates whether the keypoints exist or not.
-    """
-    conf = gt_keypoints_2d[:, :, -1].unsqueeze(-1).clone()
-    loss = (conf * criterion_keypoints(pred_keypoints_2d, gt_keypoints_2d[:, :, :-1])).mean()
-    return loss
-
-def keypoint_3d_loss(criterion_keypoints, pred_keypoints_3d, gt_keypoints_3d, has_pose_3d):
-    """
-    Compute 3D keypoint loss if 3D keypoint annotations are available.
-    """
-    conf = gt_keypoints_3d[:, :, -1].unsqueeze(-1).clone()
-    gt_keypoints_3d = gt_keypoints_3d[:, :, :-1].clone()
-    gt_keypoints_3d = gt_keypoints_3d[has_pose_3d == 1]
-    conf = conf[has_pose_3d == 1]
-    pred_keypoints_3d = pred_keypoints_3d[has_pose_3d == 1]
-    if len(gt_keypoints_3d) > 0:
-        gt_root = gt_keypoints_3d[:, 0,:]
-        gt_keypoints_3d = gt_keypoints_3d - gt_root[:, None, :]
-        pred_root = pred_keypoints_3d[:, 0,:]
-        pred_keypoints_3d = pred_keypoints_3d - pred_root[:, None, :]
-        return (conf * criterion_keypoints(pred_keypoints_3d, gt_keypoints_3d)).mean()
-    else:
-        return torch.FloatTensor(1).fill_(0.).cuda()
-
-def vertices_loss(criterion_vertices, pred_vertices, gt_vertices, has_smpl):
-    """
-    Compute per-vertex loss if vertex annotations are available.
-    """
-    pred_vertices_with_shape = pred_vertices[has_smpl == 1]
-    gt_vertices_with_shape = gt_vertices[has_smpl == 1]
-    if len(gt_vertices_with_shape) > 0:
-        return criterion_vertices(pred_vertices_with_shape, gt_vertices_with_shape)
-    else:
-        return torch.FloatTensor(1).fill_(0.).cuda()
 
 
-def run(args, train_dataloader, Graphormer_model, mano_model, renderer, mesh_sampler):
-
-    max_iter = len(train_dataloader)
-    iters_per_epoch = max_iter // args.num_train_epochs
-
-    optimizer = torch.optim.Adam(params=list(Graphormer_model.parameters()),
-                                           lr=args.lr,
-                                           betas=(0.9, 0.999),
-                                           weight_decay=0)
-
-    # define loss function (criterion) and optimizer
-    criterion_2d_keypoints = torch.nn.MSELoss(reduction='none').cuda(args.device)
-    criterion_keypoints = torch.nn.MSELoss(reduction='none').cuda(args.device)
-    criterion_vertices = torch.nn.L1Loss().cuda(args.device)
-
-    if args.distributed:
-        Graphormer_model = torch.nn.parallel.DistributedDataParallel(
-            Graphormer_model, device_ids=[args.local_rank],
-            output_device=args.local_rank,
-            find_unused_parameters=True,
-        )
-
-    start_training_time = time.time()
-    end = time.time()
-    Graphormer_model.train()
-    batch_time = AverageMeter()
-    data_time = AverageMeter()
-    log_losses = AverageMeter()
-    log_loss_2djoints = AverageMeter()
-    log_loss_3djoints = AverageMeter()
-    log_loss_vertices = AverageMeter()
-
-    for iteration, (img_keys, images, annotations) in enumerate(train_dataloader):
-
-        Graphormer_model.train()
-        iteration += 1
-        epoch = iteration // iters_per_epoch
-        batch_size = images.size(0)
-        adjust_learning_rate(optimizer, epoch, args)
-        data_time.update(time.time() - end)
-
-        images = images.cuda()
-        gt_2d_joints = annotations['joints_2d'].cuda()
-        gt_pose = annotations['pose'].cuda()
-        gt_betas = annotations['betas'].cuda()
-        has_mesh = annotations['has_smpl'].cuda()
-        has_3d_joints = has_mesh
-        has_2d_joints = has_mesh
-        mjm_mask = annotations['mjm_mask'].cuda()
-        mvm_mask = annotations['mvm_mask'].cuda()
-
-        # generate mesh
-        gt_vertices, gt_3d_joints = mano_model.layer(gt_pose, gt_betas)
-        gt_vertices = gt_vertices/1000.0
-        gt_3d_joints = gt_3d_joints/1000.0
-
-        gt_vertices_sub = mesh_sampler.downsample(gt_vertices)
-        # normalize gt based on hand's wrist 
-        gt_3d_root = gt_3d_joints[:,cfg.J_NAME.index('Wrist'),:]
-        gt_vertices = gt_vertices - gt_3d_root[:, None, :]
-        gt_vertices_sub = gt_vertices_sub - gt_3d_root[:, None, :]
-        gt_3d_joints = gt_3d_joints - gt_3d_root[:, None, :]
-        gt_3d_joints_with_tag = torch.ones((batch_size,gt_3d_joints.shape[1],4)).cuda()
-        gt_3d_joints_with_tag[:,:,:3] = gt_3d_joints
-
-        # prepare masks for mask vertex/joint modeling
-        mjm_mask_ = mjm_mask.expand(-1,-1,2051)
-        mvm_mask_ = mvm_mask.expand(-1,-1,2051)
-        meta_masks = torch.cat([mjm_mask_, mvm_mask_], dim=1)
-        
-        # forward-pass
-        pred_camera, pred_3d_joints, pred_vertices_sub, pred_vertices = Graphormer_model(images, mano_model, mesh_sampler, meta_masks=meta_masks, is_train=True)
-
-        # obtain 3d joints, which are regressed from the full mesh
-        pred_3d_joints_from_mesh = mano_model.get_3d_joints(pred_vertices)
-
-        # obtain 2d joints, which are projected from 3d joints of smpl mesh
-        pred_2d_joints_from_mesh = orthographic_projection(pred_3d_joints_from_mesh.contiguous(), pred_camera.contiguous())
-        pred_2d_joints = orthographic_projection(pred_3d_joints.contiguous(), pred_camera.contiguous())
-        
-        # compute 3d joint loss  (where the joints are directly output from transformer)
-        loss_3d_joints = keypoint_3d_loss(criterion_keypoints, pred_3d_joints, gt_3d_joints_with_tag, has_3d_joints)
-
-        # compute 3d vertex loss
-        loss_vertices = ( args.vloss_w_sub * vertices_loss(criterion_vertices, pred_vertices_sub, gt_vertices_sub, has_mesh) + \
-                            args.vloss_w_full * vertices_loss(criterion_vertices, pred_vertices, gt_vertices, has_mesh) )
-
-        # compute 3d joint loss (where the joints are regressed from full mesh)
-        loss_reg_3d_joints = keypoint_3d_loss(criterion_keypoints, pred_3d_joints_from_mesh, gt_3d_joints_with_tag, has_3d_joints)
-        # compute 2d joint loss
-        loss_2d_joints = keypoint_2d_loss(criterion_2d_keypoints, pred_2d_joints, gt_2d_joints, has_2d_joints)  + \
-                         keypoint_2d_loss(criterion_2d_keypoints, pred_2d_joints_from_mesh, gt_2d_joints, has_2d_joints)
-        
-        loss_3d_joints = loss_3d_joints + loss_reg_3d_joints
-            
-        # we empirically use hyperparameters to balance difference losses
-        loss = args.joints_loss_weight*loss_3d_joints + \
-                args.vertices_loss_weight*loss_vertices  + args.vertices_loss_weight*loss_2d_joints
-
-        # update logs
-        log_loss_2djoints.update(loss_2d_joints.item(), batch_size)
-        log_loss_3djoints.update(loss_3d_joints.item(), batch_size)
-        log_loss_vertices.update(loss_vertices.item(), batch_size)
-        log_losses.update(loss.item(), batch_size)
-
-        # back prop
-        optimizer.zero_grad()
-        loss.backward() 
-        optimizer.step()
-
-        batch_time.update(time.time() - end)
-        end = time.time()
-
-        if iteration % args.logging_steps == 0 or iteration == max_iter:
-            eta_seconds = batch_time.avg * (max_iter - iteration)
-            eta_string = str(datetime.timedelta(seconds=int(eta_seconds)))
-            logger.info(
-                ' '.join(
-                ['eta: {eta}', 'epoch: {ep}', 'iter: {iter}', 'max mem : {memory:.0f}',]
-                ).format(eta=eta_string, ep=epoch, iter=iteration, 
-                    memory=torch.cuda.max_memory_allocated() / 1024.0 / 1024.0) 
-                + '  loss: {:.4f}, 2d joint loss: {:.4f}, 3d joint loss: {:.4f}, vertex loss: {:.4f}, compute: {:.4f}, data: {:.4f}, lr: {:.6f}'.format(
-                    log_losses.avg, log_loss_2djoints.avg, log_loss_3djoints.avg, log_loss_vertices.avg, batch_time.avg, data_time.avg, 
-                    optimizer.param_groups[0]['lr'])
-            )
-
-            aml_run.log(name='Loss', value=float(log_losses.avg))
-            aml_run.log(name='3d joint Loss', value=float(log_loss_3djoints.avg))
-            aml_run.log(name='2d joint Loss', value=float(log_loss_2djoints.avg))
-            aml_run.log(name='vertex Loss', value=float(log_loss_vertices.avg))
-
-            visual_imgs = visualize_mesh(   renderer,
-                                            annotations['ori_img'].detach(),
-                                            annotations['joints_2d'].detach(),
-                                            pred_vertices.detach(), 
-                                            pred_camera.detach(),
-                                            pred_2d_joints_from_mesh.detach())
-            visual_imgs = visual_imgs.transpose(0,1)
-            visual_imgs = visual_imgs.transpose(1,2)
-            visual_imgs = np.asarray(visual_imgs)
-
-            if is_main_process()==True:
-                stamp = str(epoch) + '_' + str(iteration)
-                temp_fname = args.output_dir + 'visual_' + stamp + '.jpg'
-                cv2.imwrite(temp_fname, np.asarray(visual_imgs[:,:,::-1]*255))
-                aml_run.log_image(name='visual results', path=temp_fname)
-
-        if iteration % iters_per_epoch == 0:
-            if epoch%10==0:
-                checkpoint_dir = save_checkpoint(Graphormer_model, args, epoch, iteration)
-
-    total_training_time = time.time() - start_training_time
-    total_time_str = str(datetime.timedelta(seconds=total_training_time))
-    logger.info('Total training time: {} ({:.4f} s / iter)'.format(
-        total_time_str, total_training_time / max_iter)
-    )
-    checkpoint_dir = save_checkpoint(Graphormer_model, args, epoch, iteration)
-
-def run_eval_and_save(args, split, val_dataloader, Graphormer_model, mano_model, renderer, mesh_sampler):
-    criterion_keypoints = torch.nn.MSELoss(reduction='none').cuda(args.device)
-    criterion_vertices = torch.nn.L1Loss().cuda(args.device)
-
-    if args.distributed:
-        Graphormer_model = torch.nn.parallel.DistributedDataParallel(
-            Graphormer_model, device_ids=[args.local_rank], 
-            output_device=args.local_rank,
-            find_unused_parameters=True,
-        )
-    Graphormer_model.eval()
-
-    if args.aml_eval==True:
-        run_aml_inference_hand_mesh(args, val_dataloader, 
-                                Graphormer_model, 
-                                criterion_keypoints, 
-                                criterion_vertices, 
-                                0, 
-                                mano_model, mesh_sampler,
-                                renderer, split)
-    else:
-        run_inference_hand_mesh(args, val_dataloader, 
-                                Graphormer_model, 
-                                criterion_keypoints, 
-                                criterion_vertices, 
-                                0, 
-                                mano_model, mesh_sampler,
-                                renderer, split)
-    checkpoint_dir = save_checkpoint(Graphormer_model, args, 0, 0)
-    return
-
-def run_aml_inference_hand_mesh(args, val_loader, Graphormer_model, criterion, criterion_vertices, epoch, mano_model, mesh_sampler, renderer, split):
-    # switch to evaluate mode
-    Graphormer_model.eval()
-    fname_output_save = []
-    mesh_output_save = []
-    joint_output_save = []
-    world_size = get_world_size()
-    with torch.no_grad():
-        for i, (img_keys, images, annotations) in enumerate(val_loader):
-            batch_size = images.size(0)
-            # compute output
-            images = images.cuda()
-            
-            # forward-pass
-            pred_camera, pred_3d_joints, pred_vertices_sub, pred_vertices = Graphormer_model(images, mano_model, mesh_sampler)
-            # obtain 3d joints from full mesh
-            pred_3d_joints_from_mesh = mano_model.get_3d_joints(pred_vertices)
-
-            for j in range(batch_size):
-                fname_output_save.append(img_keys[j])
-                pred_vertices_list = pred_vertices[j].tolist()
-                mesh_output_save.append(pred_vertices_list)
-                pred_3d_joints_from_mesh_list = pred_3d_joints_from_mesh[j].tolist()
-                joint_output_save.append(pred_3d_joints_from_mesh_list)
-
-    if world_size > 1:
-        torch.distributed.barrier()
-    print('save results to pred.json')
-    output_json_file = 'pred.json'
-    print('save results to ', output_json_file)
-    with open(output_json_file, 'w') as f:
-        json.dump([joint_output_save, mesh_output_save], f)
-
-    azure_ckpt_name = '200' # args.resume_checkpoint.split('/')[-2].split('-')[1]
-    inference_setting = 'sc%02d_rot%s'%(int(args.sc*10),str(int(args.rot)))
-    output_zip_file = args.output_dir + 'ckpt' + azure_ckpt_name + '-' + inference_setting +'-pred.zip'
-
-    resolved_submit_cmd = 'zip ' + output_zip_file + ' ' + output_json_file
-    print(resolved_submit_cmd)
-    os.system(resolved_submit_cmd)
-    resolved_submit_cmd = 'rm %s'%(output_json_file)
-    print(resolved_submit_cmd)
-    os.system(resolved_submit_cmd)
-    if world_size > 1:
-        torch.distributed.barrier()
-
-    return 
-
-def run_inference_hand_mesh(args, val_loader, Graphormer_model, criterion, criterion_vertices, epoch, mano_model, mesh_sampler, renderer, split):
-    # switch to evaluate mode
-    Graphormer_model.eval()
-    fname_output_save = []
-    mesh_output_save = []
-    joint_output_save = []
-    with torch.no_grad():
-        for i, (img_keys, images, annotations) in enumerate(val_loader):
-            batch_size = images.size(0)
-            # compute output
-            images = images.cuda()
-
-            # forward-pass
-            pred_camera, pred_3d_joints, pred_vertices_sub, pred_vertices = Graphormer_model(images, mano_model, mesh_sampler)
-
-            # obtain 3d joints from full mesh
-            pred_3d_joints_from_mesh = mano_model.get_3d_joints(pred_vertices)
-            pred_3d_pelvis = pred_3d_joints_from_mesh[:,cfg.J_NAME.index('Wrist'),:]
-            pred_3d_joints_from_mesh = pred_3d_joints_from_mesh - pred_3d_pelvis[:, None, :]
-            pred_vertices = pred_vertices - pred_3d_pelvis[:, None, :]
-
-            for j in range(batch_size):
-                fname_output_save.append(img_keys[j])
-                pred_vertices_list = pred_vertices[j].tolist()
-                mesh_output_save.append(pred_vertices_list)
-                pred_3d_joints_from_mesh_list = pred_3d_joints_from_mesh[j].tolist()
-                joint_output_save.append(pred_3d_joints_from_mesh_list)
-
-            if i%20==0:
-                # obtain 3d joints, which are regressed from the full mesh
-                pred_3d_joints_from_mesh = mano_model.get_3d_joints(pred_vertices)
-                # obtain 2d joints, which are projected from 3d joints of mesh
-                pred_2d_joints_from_mesh = orthographic_projection(pred_3d_joints_from_mesh.contiguous(), pred_camera.contiguous())
-                visual_imgs = visualize_mesh(   renderer,
-                                                annotations['ori_img'].detach(),
-                                                annotations['joints_2d'].detach(),
-                                                pred_vertices.detach(), 
-                                                pred_camera.detach(),
-                                                pred_2d_joints_from_mesh.detach())
-
-                visual_imgs = visual_imgs.transpose(0,1)
-                visual_imgs = visual_imgs.transpose(1,2)
-                visual_imgs = np.asarray(visual_imgs)
-                
-                inference_setting = 'sc%02d_rot%s'%(int(args.sc*10),str(int(args.rot)))
-                temp_fname = args.output_dir + args.resume_checkpoint[0:-9] + 'freihand_results_'+inference_setting+'_batch'+str(i)+'.jpg'
-                cv2.imwrite(temp_fname, np.asarray(visual_imgs[:,:,::-1]*255))
-
-    print('save results to pred.json')
-    with open('pred.json', 'w') as f:
-        json.dump([joint_output_save, mesh_output_save], f)
-
-    run_exp_name = args.resume_checkpoint.split('/')[-3]
-    run_ckpt_name = args.resume_checkpoint.split('/')[-2].split('-')[1]
-    inference_setting = 'sc%02d_rot%s'%(int(args.sc*10),str(int(args.rot)))
-    resolved_submit_cmd = 'zip ' + args.output_dir + run_exp_name + '-ckpt'+ run_ckpt_name + '-' + inference_setting +'-pred.zip  ' +  'pred.json'
-    print(resolved_submit_cmd)
-    os.system(resolved_submit_cmd)
-    resolved_submit_cmd = 'rm pred.json'
-    print(resolved_submit_cmd)
-    os.system(resolved_submit_cmd)
-    return 
 
 def visualize_mesh( renderer,
                     images,
@@ -483,128 +118,126 @@ def visualize_mesh_no_text( renderer,
     rend_imgs = make_grid(rend_imgs, nrow=1)
     return rend_imgs
 
-def parse_args():
-    pass
 
-def main2(args):
-    global logger
-    # Setup CUDA, GPU & distributed training
-    args.num_gpus = int(os.environ['WORLD_SIZE']) if 'WORLD_SIZE' in os.environ else 1
-    os.environ['OMP_NUM_THREADS'] = str(args.num_workers)
-    print('set os.environ[OMP_NUM_THREADS] to {}'.format(os.environ['OMP_NUM_THREADS']))
+# def main2(args):
+#     global logger
+#     # Setup CUDA, GPU & distributed training
+#     args.num_gpus = int(os.environ['WORLD_SIZE']) if 'WORLD_SIZE' in os.environ else 1
+#     os.environ['OMP_NUM_THREADS'] = str(args.num_workers)
+#     print('set os.environ[OMP_NUM_THREADS] to {}'.format(os.environ['OMP_NUM_THREADS']))
     
-    args.distributed = args.num_gpus > 1
-    args.device = torch.device(args.device)
-    if args.distributed:
-        print("Init distributed training on local rank {}".format(args.local_rank))
-        torch.cuda.set_device(args.local_rank)
-        torch.distributed.init_process_group(
-            backend='nccl', init_method='env://'
-        )
-        synchronize()
+#     args.distributed = args.num_gpus > 1
+#     args.device = torch.device(args.device)
+#     if args.distributed:
+#         print("Init distributed training on local rank {}".format(args.local_rank))
+#         torch.cuda.set_device(args.local_rank)
+#         torch.distributed.init_process_group(
+#             backend='nccl', init_method='env://'
+#         )
+#         synchronize()
    
-    mkdir(args.output_dir)
-    logger = setup_logger("Graphormer", args.output_dir, get_rank())
-    set_seed(args.seed, args.num_gpus)
-    logger.info("Using {} GPUs".format(args.num_gpus))
+#     mkdir(args.output_dir)
+#     logger = setup_logger("Graphormer", args.output_dir, get_rank())
+#     set_seed(args.seed, args.num_gpus)
+#     logger.info("Using {} GPUs".format(args.num_gpus))
 
-    # Mesh and SMPL utils
-    mano_model = MANO().to(args.device)
-    mano_model.layer = mano_model.layer.cuda()
-    mesh_sampler = Mesh()
+#     # Mesh and SMPL utils
+#     mano_model = MANO().to(args.device)
+#     mano_model.layer = mano_model.layer.cuda()
+#     mesh_sampler = Mesh()
 
-    # Renderer for visualization
-    renderer = Renderer(faces=mano_model.face)
+#     # Renderer for visualization
+#     renderer = Renderer(faces=mano_model.face)
 
-    # Load pretrained model
-    trans_encoder = []
+#     # Load pretrained model
+#     trans_encoder = []
 
-    input_feat_dim = [int(item) for item in args.input_feat_dim.split(',')]
-    hidden_feat_dim = [int(item) for item in args.hidden_feat_dim.split(',')]
-    output_feat_dim = input_feat_dim[1:] + [3]
+#     input_feat_dim = [int(item) for item in args.input_feat_dim.split(',')]
+#     hidden_feat_dim = [int(item) for item in args.hidden_feat_dim.split(',')]
+#     output_feat_dim = input_feat_dim[1:] + [3]
     
-    # which encoder block to have graph convs
-    which_blk_graph = [int(item) for item in args.which_gcn.split(',')]
+#     # which encoder block to have graph convs
+#     which_blk_graph = [int(item) for item in args.which_gcn.split(',')]
 
-    if args.run_eval_only==True and args.resume_checkpoint!=None and args.resume_checkpoint!='None' and 'state_dict' not in args.resume_checkpoint:
-        # if only run eval, load checkpoint
-        logger.info("Evaluation: Loading from checkpoint {}".format(args.resume_checkpoint))
-        _model = torch.load(args.resume_checkpoint)
+#     if args.run_eval_only==True and args.resume_checkpoint!=None and args.resume_checkpoint!='None' and 'state_dict' not in args.resume_checkpoint:
+#         # if only run eval, load checkpoint
+#         logger.info("Evaluation: Loading from checkpoint {}".format(args.resume_checkpoint))
+#         _model = torch.load(args.resume_checkpoint)
 
-    else:
-        # init three transformer-encoder blocks in a loop
-        for i in range(len(output_feat_dim)):
-            config_class, model_class = BertConfig, Graphormer
-            config = config_class.from_pretrained(args.config_name if args.config_name \
-                    else args.model_name_or_path)
+#     else:
+#         # init three transformer-encoder blocks in a loop
+#         for i in range(len(output_feat_dim)):
+#             config_class, model_class = BertConfig, Graphormer
+#             config = config_class.from_pretrained(args.config_name if args.config_name \
+#                     else args.model_name_or_path)
 
-            config.output_attentions = False
-            config.hidden_dropout_prob = args.drop_out
-            config.img_feature_dim = input_feat_dim[i] 
-            config.output_feature_dim = output_feat_dim[i]
-            args.hidden_size = hidden_feat_dim[i]
-            args.intermediate_size = int(args.hidden_size*2)
+#             config.output_attentions = False
+#             config.hidden_dropout_prob = args.drop_out
+#             config.img_feature_dim = input_feat_dim[i] 
+#             config.output_feature_dim = output_feat_dim[i]
+#             args.hidden_size = hidden_feat_dim[i]
+#             args.intermediate_size = int(args.hidden_size*2)
 
-            if which_blk_graph[i]==1:
-                config.graph_conv = True
-                logger.info("Add Graph Conv")
-            else:
-                config.graph_conv = False
+#             if which_blk_graph[i]==1:
+#                 config.graph_conv = True
+#                 logger.info("Add Graph Conv")
+#             else:
+#                 config.graph_conv = False
 
-            config.mesh_type = args.mesh_type
+#             config.mesh_type = args.mesh_type
 
-            # update model structure if specified in arguments
-            update_params = ['num_hidden_layers', 'hidden_size', 'num_attention_heads', 'intermediate_size']
-            for idx, param in enumerate(update_params):
-                arg_param = getattr(args, param)
-                config_param = getattr(config, param)
-                if arg_param > 0 and arg_param != config_param:
-                    logger.info("Update config parameter {}: {} -> {}".format(param, config_param, arg_param))
-                    setattr(config, param, arg_param)
+#             # update model structure if specified in arguments
+#             update_params = ['num_hidden_layers', 'hidden_size', 'num_attention_heads', 'intermediate_size']
+#             for idx, param in enumerate(update_params):
+#                 arg_param = getattr(args, param)
+#                 config_param = getattr(config, param)
+#                 if arg_param > 0 and arg_param != config_param:
+#                     logger.info("Update config parameter {}: {} -> {}".format(param, config_param, arg_param))
+#                     setattr(config, param, arg_param)
 
-            # init a transformer encoder and append it to a list
-            assert config.hidden_size % config.num_attention_heads == 0
-            model = model_class(config=config) 
-            logger.info("Init model from scratch.")
-            trans_encoder.append(model)
+#             # init a transformer encoder and append it to a list
+#             assert config.hidden_size % config.num_attention_heads == 0
+#             model = model_class(config=config) 
+#             logger.info("Init model from scratch.")
+#             trans_encoder.append(model)
         
-        # create backbone model
-        if args.arch=='hrnet':
-            hrnet_yaml = 'models/hrnet/cls_hrnet_w40_sgd_lr5e-2_wd1e-4_bs32_x100.yaml'
-            hrnet_checkpoint = 'models/hrnet/hrnetv2_w40_imagenet_pretrained.pth'
-            hrnet_update_config(hrnet_config, hrnet_yaml)
-            backbone = get_cls_net_gridfeat(hrnet_config, pretrained=hrnet_checkpoint)
-            logger.info('=> loading hrnet-v2-w40 model')
-        elif args.arch=='hrnet-w64':
-            hrnet_yaml = 'models/hrnet/cls_hrnet_w64_sgd_lr5e-2_wd1e-4_bs32_x100.yaml'
-            hrnet_checkpoint = 'models/hrnet/hrnetv2_w64_imagenet_pretrained.pth'
-            hrnet_update_config(hrnet_config, hrnet_yaml)
-            backbone = get_cls_net_gridfeat(hrnet_config, pretrained=hrnet_checkpoint)
-            logger.info('=> loading hrnet-v2-w64 model')
-        else:
-            print("=> using pre-trained model '{}'".format(args.arch))
-            backbone = models.__dict__[args.arch](pretrained=True)
-            # remove the last fc layer
-            backbone = torch.nn.Sequential(*list(backbone.children())[:-1])
+#         # create backbone model
+#         if args.arch=='hrnet':
+#             hrnet_yaml = 'models/hrnet/cls_hrnet_w40_sgd_lr5e-2_wd1e-4_bs32_x100.yaml'
+#             hrnet_checkpoint = 'models/hrnet/hrnetv2_w40_imagenet_pretrained.pth'
+#             hrnet_update_config(hrnet_config, hrnet_yaml)
+#             backbone = get_cls_net_gridfeat(hrnet_config, pretrained=hrnet_checkpoint)
+#             logger.info('=> loading hrnet-v2-w40 model')
+#         elif args.arch=='hrnet-w64':
+#             hrnet_yaml = 'models/hrnet/cls_hrnet_w64_sgd_lr5e-2_wd1e-4_bs32_x100.yaml'
+#             hrnet_checkpoint = 'models/hrnet/hrnetv2_w64_imagenet_pretrained.pth'
+#             hrnet_update_config(hrnet_config, hrnet_yaml)
+#             backbone = get_cls_net_gridfeat(hrnet_config, pretrained=hrnet_checkpoint)
+#             logger.info('=> loading hrnet-v2-w64 model')
+#         else:
+#             print("=> using pre-trained model '{}'".format(args.arch))
+#             backbone = models.__dict__[args.arch](pretrained=True)
+#             # remove the last fc layer
+#             backbone = torch.nn.Sequential(*list(backbone.children())[:-1])
 
-        trans_encoder = torch.nn.Sequential(*trans_encoder)
-        total_params = sum(p.numel() for p in trans_encoder.parameters())
-        logger.info('Graphormer encoders total parameters: {}'.format(total_params))
-        backbone_total_params = sum(p.numel() for p in backbone.parameters())
-        logger.info('Backbone total parameters: {}'.format(backbone_total_params))
+#         trans_encoder = torch.nn.Sequential(*trans_encoder)
+#         total_params = sum(p.numel() for p in trans_encoder.parameters())
+#         logger.info('Graphormer encoders total parameters: {}'.format(total_params))
+#         backbone_total_params = sum(p.numel() for p in backbone.parameters())
+#         logger.info('Backbone total parameters: {}'.format(backbone_total_params))
 
-        # build end-to-end Graphormer network (CNN backbone + multi-layer Graphormer encoder)
-        _model = Graphormer_Network(args, config, backbone, trans_encoder)
+#         # build end-to-end Graphormer network (CNN backbone + multi-layer Graphormer encoder)
+#         _model = Graphormer_Network(args, config, backbone, trans_encoder)
 
-        if args.resume_checkpoint!=None and args.resume_checkpoint!='None':
-            # for fine-tuning or resume training or inference, load weights from checkpoint
-            logger.info("Loading state dict from checkpoint {}".format(args.resume_checkpoint))
-            # workaround approach to load sparse tensor in graph conv.
-            state_dict = torch.load(args.resume_checkpoint)
-            _model.load_state_dict(state_dict, strict=False)
-            del state_dict
-            gc.collect()
-            torch.cuda.empty_cache()
+#         if args.resume_checkpoint!=None and args.resume_checkpoint!='None':
+#             # for fine-tuning or resume training or inference, load weights from checkpoint
+#             logger.info("Loading state dict from checkpoint {}".format(args.resume_checkpoint))
+#             # workaround approach to load sparse tensor in graph conv.
+#             state_dict = torch.load(args.resume_checkpoint)
+#             _model.load_state_dict(state_dict, strict=False)
+#             del state_dict
+#             gc.collect()
+#             torch.cuda.empty_cache()
 
 def main(args, *, train_yaml_file, num):
     args.distributed = False
@@ -612,9 +245,52 @@ def main(args, *, train_yaml_file, num):
         args, args.train_yaml,
         args.distributed, is_train=True,
         scale_factor=args.img_scale_factor)
+    max_iter = len(train_dataloader)
+    iters_per_epoch = max_iter // args.num_train_epochs
+
+    for iteration, (img_keys, images, annotations) in enumerate(train_dataloader):
+        epoch = iteration // iters_per_epoch
+        batch_size = images.size(0)
 
 
-    # mano_model = MANO().to("cpu")
+        images = images.cuda()
+        gt_2d_joints = annotations['joints_2d'].cuda()
+        gt_pose = annotations['pose'].cuda()
+        gt_betas = annotations['betas'].cuda()
+        has_mesh = annotations['has_smpl'].cuda()
+        has_3d_joints = has_mesh
+        has_2d_joints = has_mesh
+        mjm_mask = annotations['mjm_mask'].cuda()
+        mvm_mask = annotations['mvm_mask'].cuda()
+
+        # generate mesh
+        gt_vertices, gt_3d_joints = mano_model.layer(gt_pose, gt_betas)
+        gt_vertices = gt_vertices/1000.0
+        gt_3d_joints = gt_3d_joints/1000.0
+
+        gt_vertices_sub = mesh_sampler.downsample(gt_vertices)
+        # normalize gt based on hand's wrist 
+        gt_3d_root = gt_3d_joints[:,cfg.J_NAME.index('Wrist'),:]
+        gt_vertices = gt_vertices - gt_3d_root[:, None, :]
+        gt_vertices_sub = gt_vertices_sub - gt_3d_root[:, None, :]
+        gt_3d_joints = gt_3d_joints - gt_3d_root[:, None, :]
+        gt_3d_joints_with_tag = torch.ones((batch_size,gt_3d_joints.shape[1],4)).cuda()
+        gt_3d_joints_with_tag[:,:,:3] = gt_3d_joints
+
+        # prepare masks for mask vertex/joint modeling
+        mjm_mask_ = mjm_mask.expand(-1,-1,2051)
+        mvm_mask_ = mvm_mask.expand(-1,-1,2051)
+        meta_masks = torch.cat([mjm_mask_, mvm_mask_], dim=1)
+
+        visual_imgs = visualize_mesh(
+            renderer,
+            annotations['ori_img'].detach(),
+            annotations['joints_2d'].detach(),
+            pred_vertices.detach(), 
+            pred_camera.detach(),
+            pred_2d_joints_from_mesh.detach())
+
+
     # # mano_model.layer = mano_model.layer.cuda()
     # mano_layer = mano_model.layer
     # pose = meta_info.pose.unsqueeze(0)
