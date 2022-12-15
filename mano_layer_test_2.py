@@ -16,8 +16,47 @@ from PIL import Image
 
 from src.modeling._mano import MANO
 from manopth.manolayer import ManoLayer
-from src.datasets.hand_mesh_tsv import HandMeshTSVDataset, HandMeshTSVYamlDataset
+#from src.datasets.hand_mesh_tsv import HandMeshTSVDataset, HandMeshTSVYamlDataset
+from src.datasets.my_dataset import BlenderHandMeshDataset
 
+
+
+import argparse
+import datetime
+import gc
+import json
+import os
+import os.path as op
+import time
+from pathlib import Path
+
+import cv2
+import numpy as np
+import torch
+import torchvision.models as models
+from torchvision.utils import make_grid
+
+import src.modeling.data.config as cfg
+from src.datasets.build import make_batch_data_sampler, make_data_sampler
+from src.datasets.my_dataset import BlenderHandMeshDataset
+from src.modeling._mano import MANO, Mesh
+from src.modeling.bert import BertConfig, Graphormer
+from src.modeling.bert import Graphormer_Hand_Network as Graphormer_Network
+from src.modeling.hrnet.config import config as hrnet_config
+from src.modeling.hrnet.config import update_config as hrnet_update_config
+from src.modeling.hrnet.hrnet_cls_net_gridfeat import get_cls_net_gridfeat
+from src.utils.comm import all_gather, get_rank, get_world_size, is_main_process, synchronize
+from src.utils.geometric_layers import orthographic_projection
+from src.utils.logger import setup_logger
+from src.utils.metric_logger import AverageMeter
+from src.utils.metric_pampjpe import reconstruction_error
+from src.utils.miscellaneous import mkdir, set_seed
+from src.utils.renderer import (
+    Renderer,
+    visualize_reconstruction,
+    visualize_reconstruction_no_text,
+    visualize_reconstruction_test,
+)
 
 
 def show_3d_plot(axs, points3d_1, points3d_2):
@@ -83,22 +122,49 @@ def iter_meta_info(dataset_partial):
         yield MetaInfo(pose, betas, joints_2d, joints_3d)
 
 
-def main(args, *, train_yaml_file, num):
-    dataset = build_hand_dataset(train_yaml_file, args, is_train=True)
-    meta_info = list(iter_meta_info(itertools.islice(dataset, num)))[0]
-    # print(meta_info)
-    mano_model = MANO().to("cpu")
-    # mano_model.layer = mano_model.layer.cuda()
-    mano_layer = mano_model.layer
-    pose = meta_info.pose.unsqueeze(0)
-    betas = meta_info.betas.unsqueeze(0)
-    gt_vertices, gt_3d_joints = mano_model.layer(pose, betas)
 
-    # fig = plt.figure()
-    # ax = fig.add_subplot(111, projection='3d')
-    # #verts, joints = hand_info['verts'][batch_idx], hand_info['joints'][batch_idx]
-    # #if mano_faces is None:
-    visualize_data_3d(gt_vertices, gt_3d_joints)
+def make_hand_data_loader(
+    args, *, blender_ds_base_path, is_distributed=True, is_train=True, start_iter=0, scale_factor=1
+):
+    dataset = BlenderHandMeshDataset(base_path=blender_ds_base_path)
+    shuffle = True
+    images_per_gpu = args.per_gpu_train_batch_size
+    images_per_batch = images_per_gpu * get_world_size()
+    # print(f"images_per_batch: {images_per_batch}")
+    # print(f"dataset count: {len(dataset)}")
+    iters_per_batch = len(dataset) // images_per_batch
+    print(f"iters_per_batch: {iters_per_batch}")
+    num_iters = iters_per_batch * args.num_train_epochs
+    # logger.info("Train with {} images per GPU.".format(images_per_gpu))
+    # logger.info("Total batch size {}".format(images_per_batch))
+    # logger.info("Total training steps {}".format(num_iters))
+
+    sampler = make_data_sampler(dataset, shuffle, is_distributed)
+    batch_sampler = make_batch_data_sampler(sampler, images_per_gpu, num_iters, start_iter)
+    data_loader = torch.utils.data.DataLoader(
+        dataset,
+        num_workers=args.num_workers,
+        batch_sampler=batch_sampler,
+        pin_memory=True,
+    )
+    return data_loader
+
+def main(args, *, train_dataloader, num):
+    train_dataloader
+    # meta_info = list(iter_meta_info(itertools.islice(dataset, num)))[0]
+    # # print(meta_info)
+    # mano_model = MANO().to("cpu")
+    # # mano_model.layer = mano_model.layer.cuda()
+    # mano_layer = mano_model.layer
+    # pose = meta_info.pose.unsqueeze(0)
+    # betas = meta_info.betas.unsqueeze(0)
+    # gt_vertices, gt_3d_joints = mano_model.layer(pose, betas)
+
+    # # fig = plt.figure()
+    # # ax = fig.add_subplot(111, projection='3d')
+    # # #verts, joints = hand_info['verts'][batch_idx], hand_info['joints'][batch_idx]
+    # # #if mano_faces is None:
+    # visualize_data_3d(gt_vertices, gt_3d_joints)
 
 
 def parse_args():
@@ -120,10 +186,23 @@ def parse_args():
         default=1,
         # required=True,
     )
+    parser.add_argument(
+        "--blender_ds_base_path",
+        type=Path,
+        required=False,
+    )
     args = parser.parse_args()
     return args
 
 
 if __name__ == "__main__":
     args = parse_args()
-    main(args, train_yaml_file=args.train_yaml, num=args.num)
+    blender_ds_base_path = args.blender_ds_base_path
+    train_dataloader = make_hand_data_loader(
+        args,
+        blender_ds_base_path=blender_ds_base_path,
+        is_distributed=False,
+        is_train=True,
+        scale_factor=args.img_scale_factor,
+    )
+    main(args, train_dataloader, num=args.num)
