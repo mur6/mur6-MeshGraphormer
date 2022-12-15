@@ -9,17 +9,15 @@ Training and evaluation codes for
 from __future__ import absolute_import, division, print_function
 import argparse
 import os
-import os.path as op
 from pathlib import Path
-import json
-import time
-import datetime
 import torch
 import torchvision.models as models
 from torchvision.utils import make_grid
-import gc
+
 import numpy as np
-import cv2
+import matplotlib.pyplot as plt
+from PIL import Image
+
 from src.modeling.bert import BertConfig, Graphormer
 from src.modeling.bert import Graphormer_Hand_Network as Graphormer_Network
 from src.modeling._mano import MANO, Mesh
@@ -72,7 +70,7 @@ def visualize_mesh( renderer,
 def visualize_mesh_test( renderer,
                     images,
                     gt_keypoints_2d,
-                    pred_vertices, 
+                    pred_vertices,
                     pred_camera,
                     pred_keypoints_2d,
                     PAmPJPE):
@@ -94,7 +92,7 @@ def visualize_mesh_test( renderer,
         # Visualize reconstruction and detected pose
         rend_img = visualize_reconstruction_test(img, 224, gt_keypoints_2d_, vertices, pred_keypoints_2d_, cam, renderer, score)
         rend_img = rend_img.transpose(2,0,1)
-        rend_imgs.append(torch.from_numpy(rend_img))   
+        rend_imgs.append(torch.from_numpy(rend_img)) 
     rend_imgs = make_grid(rend_imgs, nrow=1)
     return rend_imgs
 
@@ -240,6 +238,31 @@ def visualize_mesh_no_text(
 #             gc.collect()
 #             torch.cuda.empty_cache()
 
+def visualize_data(image, ori_img, coords_2d=None, mano_pose=None, shape=None):
+    n_cols = 2
+    n_rows = 2
+    fig, axs = plt.subplots(n_cols, n_rows, figsize=(9, 9))
+    axs = axs.flatten()
+
+    ax = axs[0]
+    ax.set_title("coords_2d")
+    ax.imshow(image)
+    # ax.scatter(coords_2d[:, 0], coords_2d[:, 1], c="red", alpha=0.75)
+    ax = axs[1]
+    ax.set_title("ori_img")
+    ax.imshow(ori_img)
+
+    # ax = axs[2]
+    # ax.set_title("shape[10]")
+    # ax.plot(shape)
+    # start, end = ax.get_xlim()
+    # ax.xaxis.set_ticks(np.arange(0.0, 10.0, 1.0))
+    # ax.yaxis.set_ticks(np.arange(-1.5, 3.0, 0.25))
+    # ax.grid()
+    plt.tight_layout()
+    plt.show()
+
+
 def main(args, *, train_yaml_file, num):
     args.num_gpus = int(os.environ['WORLD_SIZE']) if 'WORLD_SIZE' in os.environ else 1
     # os.environ['OMP_NUM_THREADS'] = str(args.num_workers)
@@ -249,7 +272,8 @@ def main(args, *, train_yaml_file, num):
     print(f"args.distributed: {args.distributed}")
     train_dataloader = make_hand_data_loader(
         args, args.train_yaml,
-        args.distributed, is_train=True,
+        args.distributed,
+        is_train=True,
         scale_factor=args.img_scale_factor)
     max_iter = len(train_dataloader)
     iters_per_epoch = max_iter // args.num_train_epochs
@@ -270,34 +294,33 @@ def main(args, *, train_yaml_file, num):
         mjm_mask = annotations['mjm_mask']
         mvm_mask = annotations['mvm_mask']
         break
+    img = images[0].cpu().numpy().transpose(1,2,0)
+    ori_img = annotations['ori_img'][0].numpy().transpose(1,2,0)
+    joints_2d = annotations['joints_2d'][0]
+    visualize_data(img, ori_img)
+    visual_imgs = visualize_mesh(
+        renderer,
+        pred_vertices.detach(),
+        pred_camera.detach(),
+        pred_2d_joints_from_mesh.detach())
+    # # generate mesh
+    # gt_vertices, gt_3d_joints = mano_model.layer(gt_pose, gt_betas)
+    # gt_vertices = gt_vertices/1000.0
+    # gt_3d_joints = gt_3d_joints/1000.0
 
-        # # generate mesh
-        # gt_vertices, gt_3d_joints = mano_model.layer(gt_pose, gt_betas)
-        # gt_vertices = gt_vertices/1000.0
-        # gt_3d_joints = gt_3d_joints/1000.0
+    # gt_vertices_sub = mesh_sampler.downsample(gt_vertices)
+    # # normalize gt based on hand's wrist
+    # gt_3d_root = gt_3d_joints[:,cfg.J_NAME.index('Wrist'),:]
+    # gt_vertices = gt_vertices - gt_3d_root[:, None, :]
+    # gt_vertices_sub = gt_vertices_sub - gt_3d_root[:, None, :]
+    # gt_3d_joints = gt_3d_joints - gt_3d_root[:, None, :]
+    # gt_3d_joints_with_tag = torch.ones((batch_size,gt_3d_joints.shape[1],4)).cuda()
+    # gt_3d_joints_with_tag[:,:,:3] = gt_3d_joints
 
-        # gt_vertices_sub = mesh_sampler.downsample(gt_vertices)
-        # # normalize gt based on hand's wrist 
-        # gt_3d_root = gt_3d_joints[:,cfg.J_NAME.index('Wrist'),:]
-        # gt_vertices = gt_vertices - gt_3d_root[:, None, :]
-        # gt_vertices_sub = gt_vertices_sub - gt_3d_root[:, None, :]
-        # gt_3d_joints = gt_3d_joints - gt_3d_root[:, None, :]
-        # gt_3d_joints_with_tag = torch.ones((batch_size,gt_3d_joints.shape[1],4)).cuda()
-        # gt_3d_joints_with_tag[:,:,:3] = gt_3d_joints
-
-        # # prepare masks for mask vertex/joint modeling
-        # mjm_mask_ = mjm_mask.expand(-1,-1,2051)
-        # mvm_mask_ = mvm_mask.expand(-1,-1,2051)
-        # meta_masks = torch.cat([mjm_mask_, mvm_mask_], dim=1)
-
-        visual_imgs = visualize_mesh(
-            renderer,
-            annotations['ori_img'].detach(),
-            annotations['joints_2d'].detach(),
-            pred_vertices.detach(), 
-            pred_camera.detach(),
-            pred_2d_joints_from_mesh.detach())
-
+    # # prepare masks for mask vertex/joint modeling
+    # mjm_mask_ = mjm_mask.expand(-1,-1,2051)
+    # mvm_mask_ = mvm_mask.expand(-1,-1,2051)
+    # meta_masks = torch.cat([mjm_mask_, mvm_mask_], dim=1)
 
 
 
