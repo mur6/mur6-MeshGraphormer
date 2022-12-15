@@ -46,14 +46,15 @@ class MANO(nn.Module):
         self.register_buffer('joint_regressor_torch', joint_regressor_torch)
 
     def get_layer(self):
-        return ManoLayer(
-            mano_root=osp.join(self.mano_dir),
-            flat_hand_mean=True,
-            use_pca=False,
-            root_rot_mode='rotmat',
-            joint_rot_mode='rotmat',
-            robust_rot=True
-            ) # load right hand MANO model
+        # return ManoLayer(
+        #     mano_root=osp.join(self.mano_dir),
+        #     flat_hand_mean=True,
+        #     use_pca=False,
+        #     root_rot_mode='rotmat',
+        #     joint_rot_mode='rotmat',
+        #     robust_rot=True
+        #     )
+        return ManoLayer(mano_root=osp.join(self.mano_dir),flat_hand_mean=False, use_pca=False) # load right hand MANO model
 
     def get_3d_joints(self, vertices):
         """
