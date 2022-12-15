@@ -10,7 +10,7 @@ from __future__ import absolute_import, division, print_function
 import argparse
 import os
 import os.path as op
-import code
+from pathlib import Path
 import json
 import time
 import datetime
@@ -484,9 +484,9 @@ def visualize_mesh_no_text( renderer,
     return rend_imgs
 
 def parse_args():
-    
+    pass
 
-def main(args):
+def main2(args):
     global logger
     # Setup CUDA, GPU & distributed training
     args.num_gpus = int(os.environ['WORLD_SIZE']) if 'WORLD_SIZE' in os.environ else 1
@@ -630,6 +630,7 @@ def parse_args():
         default=False,
         action="store_true",
     )
+    parser.add_argument("--img_scale_factor", default=1, type=int, help="adjust image resolution.")
     parser.add_argument(
         "--train_yaml",
         type=Path,
@@ -642,6 +643,13 @@ def parse_args():
         default=1,
         # required=True,
     )
+    parser.add_argument("--per_gpu_train_batch_size", default=64, type=int, 
+                        help="Batch size per GPU/CPU for training.")
+    parser.add_argument("--per_gpu_eval_batch_size", default=64, type=int, 
+                        help="Batch size per GPU/CPU for evaluation.")
+    parser.add_argument("--num_train_epochs", default=200, type=int, 
+                        help="Total number of training epochs to perform.")
+    parser.add_argument("--num_workers", default=4, type=int, help="Workers in dataloader.")
     args = parser.parse_args()
     return args
 
