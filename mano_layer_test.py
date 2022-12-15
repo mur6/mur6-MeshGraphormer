@@ -4,26 +4,19 @@ import torch
 from src.modeling._mano import MANO
 from manopth.manolayer import ManoLayer
 
-# Mesh and SMPL utils
-
-def main():
-    mano_model = MANO().to("cpu")
-    # mano_model.layer = mano_model.layer.cuda()
-
-    for i in range(7 + 1):
-        fill_value = i * 0.1
-        print(f"fill_value={fill_value}")
-        generate_and_save(fill_value=fill_value, filename=f"mesh_gra_zero_point_{i}")
 
 
-"""
-Copyright (c) Microsoft Corporation.
-Licensed under the MIT license.
+# def main():
+#     mano_model = MANO().to("cpu")
+#     # mano_model.layer = mano_model.layer.cuda()
 
-Training and evaluation codes for 3D hand mesh reconstruction from an image
-"""
+#     for i in range(7 + 1):
+#         fill_value = i * 0.1
+#         print(f"fill_value={fill_value}")
+#         generate_and_save(fill_value=fill_value, filename=f"mesh_gra_zero_point_{i}")
 
-from __future__ import absolute_import, division, print_function
+
+
 
 import argparse
 import itertools
@@ -53,7 +46,6 @@ from src.modeling.hrnet.config import config as hrnet_config
 
 
 def build_hand_dataset(yaml_file, args, is_train=True, scale_factor=1):
-    print(yaml_file)
     if not os.path.isfile(yaml_file):
         yaml_file = os.path.join(args.data_dir, yaml_file)
         # code.interact(local=locals())
