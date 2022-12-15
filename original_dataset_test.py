@@ -98,10 +98,11 @@ def visualize_mesh_test( renderer,
     rend_imgs = make_grid(rend_imgs, nrow=1)
     return rend_imgs
 
-def visualize_mesh_no_text( renderer,
-                    images,
-                    pred_vertices, 
-                    pred_camera):
+def visualize_mesh_no_text(
+        renderer,
+        images,
+        pred_vertices,
+        pred_camera):
     """Tensorboard logging."""
     rend_imgs = []
     batch_size = pred_vertices.shape[0]
@@ -155,7 +156,7 @@ def visualize_mesh_no_text( renderer,
 #     input_feat_dim = [int(item) for item in args.input_feat_dim.split(',')]
 #     hidden_feat_dim = [int(item) for item in args.hidden_feat_dim.split(',')]
 #     output_feat_dim = input_feat_dim[1:] + [3]
-    
+
 #     # which encoder block to have graph convs
 #     which_blk_graph = [int(item) for item in args.which_gcn.split(',')]
 
@@ -173,7 +174,7 @@ def visualize_mesh_no_text( renderer,
 
 #             config.output_attentions = False
 #             config.hidden_dropout_prob = args.drop_out
-#             config.img_feature_dim = input_feat_dim[i] 
+#             config.img_feature_dim = input_feat_dim[i]
 #             config.output_feature_dim = output_feat_dim[i]
 #             args.hidden_size = hidden_feat_dim[i]
 #             args.intermediate_size = int(args.hidden_size*2)
@@ -241,10 +242,10 @@ def visualize_mesh_no_text( renderer,
 
 def main(args, *, train_yaml_file, num):
     args.num_gpus = int(os.environ['WORLD_SIZE']) if 'WORLD_SIZE' in os.environ else 1
-    #os.environ['OMP_NUM_THREADS'] = str(args.num_workers)
+    # os.environ['OMP_NUM_THREADS'] = str(args.num_workers)
     # print('set os.environ[OMP_NUM_THREADS] to {}'.format(os.environ['OMP_NUM_THREADS']))
     args.distributed = args.num_gpus > 1
-    #args.distributed = False
+    # args.distributed = False
     print(f"args.distributed: {args.distributed}")
     train_dataloader = make_hand_data_loader(
         args, args.train_yaml,
@@ -259,7 +260,7 @@ def main(args, *, train_yaml_file, num):
         batch_size = images.size(0)
         print(f"batch_size: {batch_size}")
 
-        images = images.cuda()
+        # images = images.cuda()
         gt_2d_joints = annotations['joints_2d']
         gt_pose = annotations['pose']
         gt_betas = annotations['betas']
@@ -268,6 +269,7 @@ def main(args, *, train_yaml_file, num):
         has_2d_joints = has_mesh
         mjm_mask = annotations['mjm_mask']
         mvm_mask = annotations['mvm_mask']
+        break
 
         # # generate mesh
         # gt_vertices, gt_3d_joints = mano_model.layer(gt_pose, gt_betas)
