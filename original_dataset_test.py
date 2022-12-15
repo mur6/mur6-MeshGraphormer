@@ -35,15 +35,10 @@ from src.utils.renderer import Renderer, visualize_reconstruction, visualize_rec
 from src.utils.metric_pampjpe import reconstruction_error
 from src.utils.geometric_layers import orthographic_projection
 
-
-
-
-
-
 def visualize_mesh( renderer,
                     images,
                     gt_keypoints_2d,
-                    pred_vertices, 
+                    pred_vertices,
                     pred_camera,
                     pred_keypoints_2d):
     """Tensorboard logging."""
@@ -63,38 +58,40 @@ def visualize_mesh( renderer,
         # Visualize reconstruction and detected pose
         rend_img = visualize_reconstruction(img, 224, gt_keypoints_2d_, vertices, pred_keypoints_2d_, cam, renderer)
         rend_img = rend_img.transpose(2,0,1)
-        rend_imgs.append(torch.from_numpy(rend_img))   
+        rend_imgs.append(torch.from_numpy(rend_img))
     rend_imgs = make_grid(rend_imgs, nrow=1)
     return rend_imgs
 
-def visualize_mesh_test( renderer,
-                    images,
-                    gt_keypoints_2d,
-                    pred_vertices,
-                    pred_camera,
-                    pred_keypoints_2d,
-                    PAmPJPE):
-    """Tensorboard logging."""
-    gt_keypoints_2d = gt_keypoints_2d.cpu().numpy()
-    to_lsp = list(range(21))
-    rend_imgs = []
-    batch_size = pred_vertices.shape[0]
-    # Do visualization for the first 6 images of the batch
-    for i in range(min(batch_size, 10)):
-        img = images[i].cpu().numpy().transpose(1,2,0)
-        # Get LSP keypoints from the full list of keypoints
-        gt_keypoints_2d_ = gt_keypoints_2d[i, to_lsp]
-        pred_keypoints_2d_ = pred_keypoints_2d.cpu().numpy()[i, to_lsp]
-        # Get predict vertices for the particular example
-        vertices = pred_vertices[i].cpu().numpy()
-        cam = pred_camera[i].cpu().numpy()
-        score = PAmPJPE[i]
-        # Visualize reconstruction and detected pose
-        rend_img = visualize_reconstruction_test(img, 224, gt_keypoints_2d_, vertices, pred_keypoints_2d_, cam, renderer, score)
-        rend_img = rend_img.transpose(2,0,1)
-        rend_imgs.append(torch.from_numpy(rend_img)) 
-    rend_imgs = make_grid(rend_imgs, nrow=1)
-    return rend_imgs
+# def visualize_mesh_test(
+#         renderer,
+#         images,
+#         gt_keypoints_2d,
+#         pred_vertices,
+#         pred_camera,
+#         pred_keypoints_2d,
+#         PAmPJPE
+#     ):
+#     gt_keypoints_2d = gt_keypoints_2d.cpu().numpy()
+#     to_lsp = list(range(21))
+#     rend_imgs = []
+#     batch_size = pred_vertices.shape[0]
+#     # Do visualization for the first 6 images of the batch
+#     for i in range(min(batch_size, 10)):
+#         img = images[i].cpu().numpy().transpose(1,2,0)
+#         # Get LSP keypoints from the full list of keypoints
+#         gt_keypoints_2d_ = gt_keypoints_2d[i, to_lsp]
+#         pred_keypoints_2d_ = pred_keypoints_2d.cpu().numpy()[i, to_lsp]
+#         # Get predict vertices for the particular example
+#         vertices = pred_vertices[i].cpu().numpy()
+#         cam = pred_camera[i].cpu().numpy()
+#         score = PAmPJPE[i]
+#         # Visualize reconstruction and detected pose
+#         rend_img = visualize_reconstruction_test(
+#             img, 224, gt_keypoints_2d_, vertices, pred_keypoints_2d_, cam, renderer, score)
+#         rend_img = rend_img.transpose(2, 0, 1)
+#         rend_imgs.append(torch.from_numpy(rend_img))
+#     rend_imgs = make_grid(rend_imgs, nrow=1)
+#     return rend_imgs
 
 def visualize_mesh_no_text(
         renderer,
@@ -124,7 +121,6 @@ def visualize_mesh_no_text(
 #     args.num_gpus = int(os.environ['WORLD_SIZE']) if 'WORLD_SIZE' in os.environ else 1
 #     os.environ['OMP_NUM_THREADS'] = str(args.num_workers)
 #     print('set os.environ[OMP_NUM_THREADS] to {}'.format(os.environ['OMP_NUM_THREADS']))
-    
 #     args.distributed = args.num_gpus > 1
 #     args.device = torch.device(args.device)
 #     if args.distributed:
@@ -134,7 +130,6 @@ def visualize_mesh_no_text(
 #             backend='nccl', init_method='env://'
 #         )
 #         synchronize()
-   
 #     mkdir(args.output_dir)
 #     logger = setup_logger("Graphormer", args.output_dir, get_rank())
 #     set_seed(args.seed, args.num_gpus)
@@ -196,10 +191,9 @@ def visualize_mesh_no_text(
 
 #             # init a transformer encoder and append it to a list
 #             assert config.hidden_size % config.num_attention_heads == 0
-#             model = model_class(config=config) 
+#             model = model_class(config=config)
 #             logger.info("Init model from scratch.")
 #             trans_encoder.append(model)
-        
 #         # create backbone model
 #         if args.arch=='hrnet':
 #             hrnet_yaml = 'models/hrnet/cls_hrnet_w40_sgd_lr5e-2_wd1e-4_bs32_x100.yaml'
@@ -238,16 +232,21 @@ def visualize_mesh_no_text(
 #             gc.collect()
 #             torch.cuda.empty_cache()
 
-def visualize_data(image, ori_img, coords_2d=None, mano_pose=None, shape=None):
+def visualize_data(image, ori_img, joints_2d, mano_pose=None, shape=None):
     n_cols = 2
     n_rows = 2
     fig, axs = plt.subplots(n_cols, n_rows, figsize=(9, 9))
     axs = axs.flatten()
 
     ax = axs[0]
-    ax.set_title("coords_2d")
+    ax.set_title("joints_2d")
     ax.imshow(image)
-    # ax.scatter(coords_2d[:, 0], coords_2d[:, 1], c="red", alpha=0.75)
+    print(joints_2d)
+    img_size = 224
+    #joints_2d = joints_2d * img_size
+    joints_2d = ((joints_2d[:, :2] + 1) * 0.5) * img_size
+    print(joints_2d)
+    ax.scatter(joints_2d[:, 0], joints_2d[:, 1], c="red", alpha=0.75)
     ax = axs[1]
     ax.set_title("ori_img")
     ax.imshow(ori_img)
@@ -264,6 +263,10 @@ def visualize_data(image, ori_img, coords_2d=None, mano_pose=None, shape=None):
 
 
 def main(args, *, train_yaml_file, num):
+    mano_model = MANO().to("cpu")
+    #mano_model.layer = mano_model.layer.cuda()
+    #mesh_sampler = Mesh()
+    renderer = Renderer(faces=mano_model.face)
     args.num_gpus = int(os.environ['WORLD_SIZE']) if 'WORLD_SIZE' in os.environ else 1
     # os.environ['OMP_NUM_THREADS'] = str(args.num_workers)
     # print('set os.environ[OMP_NUM_THREADS] to {}'.format(os.environ['OMP_NUM_THREADS']))
@@ -297,16 +300,37 @@ def main(args, *, train_yaml_file, num):
     img = images[0].cpu().numpy().transpose(1,2,0)
     ori_img = annotations['ori_img'][0].numpy().transpose(1,2,0)
     joints_2d = annotations['joints_2d'][0]
-    visualize_data(img, ori_img)
-    visual_imgs = visualize_mesh(
-        renderer,
-        pred_vertices.detach(),
-        pred_camera.detach(),
-        pred_2d_joints_from_mesh.detach())
-    # # generate mesh
-    # gt_vertices, gt_3d_joints = mano_model.layer(gt_pose, gt_betas)
-    # gt_vertices = gt_vertices/1000.0
-    # gt_3d_joints = gt_3d_joints/1000.0
+    # visualize_data(img, ori_img, joints_2d)
+    # generate mesh
+    gt_vertices, gt_3d_joints = mano_model.layer(gt_pose, gt_betas)
+    #gt_vertices = gt_vertices / 1000.0
+    #gt_3d_joints = gt_3d_joints / 1000.0
+
+    # visual_imgs = visualize_mesh(
+    #     renderer,
+    #     ori_img,
+    #     joints_2d,
+    # )
+    #     pred_vertices.detach(),
+    #     pred_camera.detach(),
+    #     pred_2d_joints_from_mesh.detach())
+
+    fig = plt.figure()
+    ax = fig.add_subplot(111, projection='3d')
+    #verts, joints = hand_info['verts'][batch_idx], hand_info['joints'][batch_idx]
+    #if mano_faces is None:
+    ax.scatter(gt_vertices[:, 0], gt_vertices[:, 1], gt_vertices[:, 2], alpha=0.1)
+    # ax.scatter(gt_3d_joints[:, 0], gt_3d_joints[:, 1], gt_3d_joints[:, 2], color='r')
+    plt.show()
+
+    # visual_imgs = visualize_mesh(
+    #     renderer,
+    #     annotations['ori_img'].detach(),
+    #     annotations['joints_2d'].detach(),
+    #     pred_vertices.detach(),
+    #     pred_camera.detach(),
+    #     pred_2d_joints_from_mesh.detach()
+    # )
 
     # gt_vertices_sub = mesh_sampler.downsample(gt_vertices)
     # # normalize gt based on hand's wrist
