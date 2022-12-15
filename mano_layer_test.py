@@ -68,12 +68,12 @@ MetaInfo = namedtuple("MetaInfo", "mano_pose,trans,betas,joints_2d,joints_3d")
 def iter_meta_info(dataset_partial):
     for img_key, transfromed_img, meta_data in dataset_partial:
         pose = meta_data["pose"]
-        print(f"##############: pose={pose.shape}")
-        print(pose)
+        # print(f"##############: pose={pose.shape}")
+        # print(pose)
         mano_pose, trans = pose[:45], pose[45:]
         assert mano_pose.shape == (45,)
-        print(f"##############: mano_pose={mano_pose.shape}")
-        print(mano_pose)
+        # print(f"##############: mano_pose={mano_pose.shape}")
+        # print(mano_pose)
         assert trans.shape == (3,)
         betas = meta_data["betas"]
         assert betas.shape == (10,)
@@ -85,23 +85,18 @@ def iter_meta_info(dataset_partial):
         yield MetaInfo(mano_pose, trans, betas, joints_2d, joints_3d)
 
 
-def iter_stats_dicts(dataset_partial):
-
-
-    for meta_info in iter_meta_info(dataset_partial):
-
-        yield d
 
 
 def main(args, *, train_yaml_file, num):
     dataset = build_hand_dataset(train_yaml_file, args, is_train=True)
-    dict_list = list(iter_stats_dicts(itertools.islice(dataset, num)))
-    keys = ("mano_pose", "trans", "betas", "joints_2d", "joints_3d")
-    print("[gphmer],mean,var")
-    for key in keys:
-        m = sum(d[key].mean for d in dict_list) / num
-        v = sum(d[key].var for d in dict_list) / num
-        print(f"{key},{m:.03},{v:.03}")
+    meta_info = list(iter_meta_info(itertools.islice(dataset, num)))
+    print(meta_info)
+    # keys = ("mano_pose", "trans", "betas", "joints_2d", "joints_3d")
+    # print("[gphmer],mean,var")
+    # for key in keys:
+    #     m = sum(d[key].mean for d in dict_list) / num
+    #     v = sum(d[key].var for d in dict_list) / num
+    #     print(f"{key},{m:.03},{v:.03}")
 
 
 def parse_args():
