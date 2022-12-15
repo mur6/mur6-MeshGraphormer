@@ -46,16 +46,16 @@ class BlenderHandMeshDataset(object):
     def get_annotations(self, meta_file):
         b = meta_file.read_bytes()
         d = pickle.loads(b)
-        mano_pose = d["mano_pose"] * 1.48
-        trans = d["trans"] * 0.47
+        mano_pose = d["mano_pose"]
+        trans = d["trans"]
         pose = np.concatenate([mano_pose, trans])
         pose = torch.from_numpy(pose)
-        betas = torch.from_numpy(d["shape"] * 0.93)
+        betas = torch.from_numpy(d["shape"])
         scale = d["z"]
-        coords_2d = d["coords_2d"] * 0.0133
+        coords_2d = d["coords_2d"]
         joints_2d = torch.from_numpy(coords_2d)
         joints_2d = add_ones_column(joints_2d)
-        coords_3d = d["coords_3d"] * 0.157
+        coords_3d = d["coords_3d"]
         joints_3d = torch.from_numpy(coords_3d)
         joints_3d = add_ones_column(joints_3d)
         return HandMeta(pose, betas, scale, joints_2d, joints_3d)
