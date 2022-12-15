@@ -243,7 +243,7 @@ def visualize_data(image, ori_img, joints_2d, mano_pose=None, shape=None):
     ax.imshow(image)
     print(joints_2d)
     img_size = 224
-    #joints_2d = joints_2d * img_size
+    # joints_2d = joints_2d * img_size
     joints_2d = ((joints_2d[:, :2] + 1) * 0.5) * img_size
     print(joints_2d)
     ax.scatter(joints_2d[:, 0], joints_2d[:, 1], c="red", alpha=0.75)
@@ -262,10 +262,45 @@ def visualize_data(image, ori_img, joints_2d, mano_pose=None, shape=None):
     plt.show()
 
 
+def show_3d_plot(axs, points3d_1, points3d_2):
+    # print(pred_v3d.shape, pred_v3d)
+    for i, points3d in enumerate((points3d_1, points3d_2)):
+        points3d /= 164.0
+        X, Y, Z = points3d[:, 0], points3d[:, 1], points3d[:, 2]
+        # axs.scatter(X, Y, Z, alpha=0.1)
+        if i == 0:
+            axs.scatter(X, Y, Z, alpha=0.1)
+        else:
+            axs.scatter(X, Y, Z, color='r')
+    max_range = np.array([X.max() - X.min(), Y.max() - Y.min(), Z.max() - Z.min()]).max() * 0.5
+    mid_x = (X.max() + X.min()) * 0.5
+    mid_y = (Y.max() + Y.min()) * 0.5
+    mid_z = (Z.max() + Z.min()) * 0.5
+    axs.set_xlim(mid_x - max_range, mid_x + max_range)
+    axs.set_ylim(mid_y - max_range, mid_y + max_range)
+    axs.set_zlim(mid_z - max_range, mid_z + max_range)
+
+
+def visualize_data_3d(gt_vertices_sub, gt_3d_joints):
+    # torch.set_printoptions(precision=2)
+    # print("gt_vertices_sub.shape:", gt_vertices_sub.shape)
+    # print("gt_3d_joints.shape:", gt_3d_joints.shape)
+    verts = gt_vertices_sub[0]
+    joints = gt_3d_joints[0]
+    fig = plt.figure()
+    ax = fig.add_subplot(111, projection='3d')
+    #verts, joints = hand_info['verts'][batch_idx], hand_info['joints'][batch_idx]
+    #if mano_faces is None:
+    show_3d_plot(ax, verts, joints)
+    # ax.scatter(verts[:, 0], verts[:, 1], verts[:, 2], alpha=0.1)
+    # ax.scatter(joints[:, 0], joints[:, 1], joints[:, 2], color='r')
+    plt.show()
+
+
 def main(args, *, train_yaml_file, num):
     mano_model = MANO().to("cpu")
     #mano_model.layer = mano_model.layer.cuda()
-    mesh_sampler = Mesh()
+    mesh_sampler = Mesh(device=torch.device('cpu'))
     renderer = Renderer(faces=mano_model.face)
     args.num_gpus = int(os.environ['WORLD_SIZE']) if 'WORLD_SIZE' in os.environ else 1
     # os.environ['OMP_NUM_THREADS'] = str(args.num_workers)
@@ -303,11 +338,8 @@ def main(args, *, train_yaml_file, num):
     # visualize_data(img, ori_img, joints_2d)
     # generate mesh
     gt_vertices, gt_3d_joints = mano_model.layer(gt_pose, gt_betas)
-    #gt_vertices = gt_vertices / 1000.0
-    #gt_3d_joints = gt_3d_joints / 1000.0
-    gt_vertices = gt_vertices/1000.0
-    gt_3d_joints = gt_3d_joints/1000.0
-
+    gt_vertices = gt_vertices / 1000.0
+    gt_3d_joints = gt_3d_joints / 1000.0
     gt_vertices_sub = mesh_sampler.downsample(gt_vertices)
     # normalize gt based on hand's wrist
     gt_3d_root = gt_3d_joints[:,cfg.J_NAME.index('Wrist'),:]
@@ -316,7 +348,6 @@ def main(args, *, train_yaml_file, num):
     gt_3d_joints = gt_3d_joints - gt_3d_root[:, None, :]
     gt_3d_joints_with_tag = torch.ones((batch_size, gt_3d_joints.shape[1],4))
     gt_3d_joints_with_tag[:,:,:3] = gt_3d_joints
-
     # visual_imgs = visualize_mesh(
     #     renderer,
     #     ori_img,
@@ -325,21 +356,7 @@ def main(args, *, train_yaml_file, num):
     #     pred_vertices.detach(),
     #     pred_camera.detach(),
     #     pred_2d_joints_from_mesh.detach())
-
-    fig = plt.figure()
-    ax = fig.add_subplot(111, projection='3d')
-    #verts, joints = hand_info['verts'][batch_idx], hand_info['joints'][batch_idx]
-    #if mano_faces is None:
-    #
-    print("gt_vertices_sub:", gt_vertices_sub.shape)
-    verts = gt_vertices_sub[0]
-    ax.scatter(verts[:, 0], verts[:, 1], verts[:, 2], alpha=0.1)
-    print(gt_3d_joints.shape)
-    print(gt_3d_joints[0])
-    joints = gt_3d_joints[0]
-    ax.scatter(joints[:, 0], joints[:, 1], joints[:, 2], color='r')
-    plt.show()
-
+    visualize_data_3d(gt_vertices_sub, gt_3d_joints)
     # visual_imgs = visualize_mesh(
     #     renderer,
     #     annotations['ori_img'].detach(),
