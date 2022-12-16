@@ -62,7 +62,7 @@ from src.utils.renderer import (
 def show_3d_plot(axs, points3d_1, points3d_2):
     # print(pred_v3d.shape, pred_v3d)
     for i, points3d in enumerate((points3d_1, points3d_2)):
-        points3d /= 164.0
+        # points3d /= 164.0
         X, Y, Z = points3d[:, 0], points3d[:, 1], points3d[:, 2]
         # axs.scatter(X, Y, Z, alpha=0.1)
         if i == 0:
@@ -70,12 +70,12 @@ def show_3d_plot(axs, points3d_1, points3d_2):
         else:
             axs.scatter(X, Y, Z, color='r')
     max_range = np.array([X.max() - X.min(), Y.max() - Y.min(), Z.max() - Z.min()]).max() * 0.5
-    mid_x = (X.max() + X.min()) * 0.5
-    mid_y = (Y.max() + Y.min()) * 0.5
-    mid_z = (Z.max() + Z.min()) * 0.5
-    axs.set_xlim(mid_x - max_range, mid_x + max_range)
-    axs.set_ylim(mid_y - max_range, mid_y + max_range)
-    axs.set_zlim(mid_z - max_range, mid_z + max_range)
+    # mid_x = (X.max() + X.min()) * 0.5
+    # mid_y = (Y.max() + Y.min()) * 0.5
+    # mid_z = (Z.max() + Z.min()) * 0.5
+    # axs.set_xlim(mid_x - max_range, mid_x + max_range)
+    # axs.set_ylim(mid_y - max_range, mid_y + max_range)
+    # axs.set_zlim(mid_z - max_range, mid_z + max_range)
 
 
 def visualize_data_3d(gt_vertices_sub, gt_3d_joints):
@@ -204,7 +204,12 @@ def main(args, dataset, num):
     betas = gt_betas.unsqueeze(0)
 
     new_3d_joints = annotations['joints_3d'][:, 0:3].unsqueeze(0)
+    new_3d_joints = (new_3d_joints - new_3d_joints.mean(1)) * 1000.0
     new_vertices = annotations['verts_3d'].unsqueeze(0)
+    new_vertices = (new_vertices - new_vertices.mean(1)) * 1000.0
+
+    #new_3d_joints[:, :, 2] = 100.0
+    #new_vertices[:, :, 2] = 100.0
     print(f"new_3d_joints:{new_3d_joints.shape} new_vertices:{new_vertices.shape}")
 
     gt_vertices, gt_3d_joints = mano_model.layer(pose, betas)
@@ -225,7 +230,8 @@ def main(args, dataset, num):
     # # # fig = plt.figure()
     # # # ax = fig.add_subplot(111, projection='3d')
     # # # #verts, joints = hand_info['verts'][batch_idx], hand_info['joints'][batch_idx]
-
+    print(f"gt_vertices:min{torch.min(new_vertices)}, max={torch.max(new_vertices)}")
+    print(f"gt_3d_joints:min{torch.min(new_3d_joints)}, max={torch.max(new_3d_joints)}")
     visualize_data_3d(new_vertices, new_3d_joints)
 
 
