@@ -24,7 +24,6 @@ def get_sorted_files(folder, *, extension):
     iter = folder.glob(f"*.{extension}")
     return list(sorted(iter))
 
-
 class BlenderHandMeshDataset(object):
     def __init__(self, base_path, scale_factor=1):
         self.base_path = base_path
@@ -34,14 +33,16 @@ class BlenderHandMeshDataset(object):
         im_files = get_sorted_files(self.image_filepath, extension="jpg")
         assert len(meta_files) == len(im_files)
         self.data_length = len(meta_files)
-        self.normalize_img = transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
+        self.normalize_img = transforms.Normalize(
+            mean=[0.4917, 0.4626, 0.4153], std=[0.2401, 0.2368, 0.2520]
+        )
 
     def __len__(self):
         return self.data_length
 
     def get_image(self, image_file):
         image = Image.open(image_file)
-        return torchvision.transforms.functional.to_tensor(image)
+        return torchvision.transforms.functional.pil_to_tensor(image) / 255.0
 
     def get_annotations(self, meta_file):
         b = meta_file.read_bytes()
@@ -61,12 +62,12 @@ class BlenderHandMeshDataset(object):
         joints_3d = torch.from_numpy(coords_3d)
         # print("mean", joints_3d.mean(0))
         joints_3d = (joints_3d - joints_3d.mean(0)) * 1000.0
-        #print(f"In my dataset joints_3d[{joints_3d.shape}]:")
+        # print(f"In my dataset joints_3d[{joints_3d.shape}]:")
         joints_3d = add_ones_column(joints_3d)
         verts_3d = torch.from_numpy(d["verts_3d"])
         # print("mean", verts_3d.mean(0))
         verts_3d = (verts_3d - verts_3d.mean(0)) * 1000.0
-        #print(f"In my dataset verts_3d[{verts_3d.shape}]:")
+        # print(f"In my dataset verts_3d[{verts_3d.shape}]:")
         return HandMeta(pose, betas, scale, joints_2d, joints_3d, verts_3d)
 
     def get_metadata_dict(self):
