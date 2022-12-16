@@ -207,9 +207,6 @@ def main(args, dataset, num):
     new_3d_joints = (new_3d_joints - new_3d_joints.mean(1)) * 1000.0
     new_vertices = annotations['verts_3d'].unsqueeze(0)
     new_vertices = (new_vertices - new_vertices.mean(1)) * 1000.0
-
-    #new_3d_joints[:, :, 2] = 100.0
-    #new_vertices[:, :, 2] = 100.0
     print(f"new_3d_joints:{new_3d_joints.shape} new_vertices:{new_vertices.shape}")
 
     gt_vertices, gt_3d_joints = mano_model.layer(pose, betas)
