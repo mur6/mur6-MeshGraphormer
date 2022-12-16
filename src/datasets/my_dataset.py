@@ -57,15 +57,14 @@ class BlenderHandMeshDataset(object):
         joints_2d = add_ones_column(joints_2d)
         coords_3d = d["coords_3d"]
         joints_3d = torch.from_numpy(coords_3d)
+        # print("mean", joints_3d.mean(0))
+        joints_3d = (joints_3d - joints_3d.mean(0)) * 1000.0
+        print(f"In my dataset joints_3d[{joints_3d.shape}]:")
         joints_3d = add_ones_column(joints_3d)
-        # Save information
-        # hand_info = {
-        #     'side': side,
-        #     'coords_2d': coords_2d.transpose().astype(np.float32),
-        #     'coords_3d': h_3d.astype(np.float32),
-        #     'verts_3d': hand_verts_3d.astype(np.float32)
-        # }
         verts_3d = torch.from_numpy(d["verts_3d"])
+        # print("mean", verts_3d.mean(0))
+        verts_3d = (verts_3d - verts_3d.mean(0)) * 1000.0
+        print(f"In my dataset verts_3d[{verts_3d.shape}]:")
         return HandMeta(pose, betas, scale, joints_2d, joints_3d, verts_3d)
 
     def get_metadata_dict(self):
