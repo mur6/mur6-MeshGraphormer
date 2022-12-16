@@ -170,8 +170,8 @@ def run(args, train_dataloader, Graphormer_model, mano_model, renderer, mesh_sam
 
         # generate mesh
         # gt_vertices, gt_3d_joints = mano_model.layer(gt_pose, gt_betas)
-        gt_vertices = annotations['verts_3d']
-        gt_3d_joints = annotations['joints_3d'][:, 0:3]
+        gt_vertices = annotations['verts_3d'].cuda()
+        gt_3d_joints = annotations['joints_3d'][:, 0:3].cuda()
         gt_vertices = gt_vertices / 1000.0
         gt_3d_joints = gt_3d_joints / 1000.0
 
