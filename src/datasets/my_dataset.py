@@ -12,7 +12,7 @@ from PIL import Image
 # from src.utils.comm import all_gather, get_rank, get_world_size, is_main_process, synchronize
 
 
-HandMeta = namedtuple("HandMeta", "pose betas scale joints_2d, joints_3d")
+HandMeta = namedtuple("HandMeta", "pose betas scale joints_2d joints_3d verts_3d")
 
 
 def add_ones_column(x):
@@ -58,7 +58,15 @@ class BlenderHandMeshDataset(object):
         coords_3d = d["coords_3d"]
         joints_3d = torch.from_numpy(coords_3d)
         joints_3d = add_ones_column(joints_3d)
-        return HandMeta(pose, betas, scale, joints_2d, joints_3d)
+        # Save information
+        # hand_info = {
+        #     'side': side,
+        #     'coords_2d': coords_2d.transpose().astype(np.float32),
+        #     'coords_3d': h_3d.astype(np.float32),
+        #     'verts_3d': hand_verts_3d.astype(np.float32)
+        # }
+        verts_3d = torch.from_numpy(d["verts_3d"])
+        return HandMeta(pose, betas, scale, joints_2d, joints_3d, verts_3d)
 
     def get_metadata_dict(self):
         meta_data = dict(
@@ -92,4 +100,5 @@ class BlenderHandMeshDataset(object):
         meta_data["joints_3d"] = hand_meta.joints_3d
         meta_data["joints_2d"] = hand_meta.joints_2d
         meta_data["scale"] = hand_meta.scale
+        meta_data["verts_3d"] = hand_meta.verts_3d
         return (img_key, transfromed_img, meta_data)
