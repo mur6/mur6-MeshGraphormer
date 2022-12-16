@@ -54,6 +54,8 @@ class BlenderHandMeshDataset(object):
         scale = d["z"]
         coords_2d = d["coords_2d"]
         joints_2d = torch.from_numpy(coords_2d)
+        joints_2d = (joints_2d / 112.0) - 1.0
+        # print(f"In my dataset joints_2d: {joints_2d}")
         joints_2d = add_ones_column(joints_2d)
         coords_3d = d["coords_3d"]
         joints_3d = torch.from_numpy(coords_3d)
