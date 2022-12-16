@@ -131,21 +131,21 @@ def visualize_data(image, ori_img, joints_2d, mano_pose=None, shape=None):
     plt.tight_layout()
     plt.show()
 
-def iter_meta_info(dataset_partial):
-    for img_key, transfromed_img, meta_data in dataset_partial:
-        pose = meta_data["pose"]
-        assert pose.shape == (48,)
-        # mano_pose, trans = pose[:45], pose[45:]
-        # assert mano_pose.shape == (45,)
-        # assert trans.shape == (3,)
-        betas = meta_data["betas"]
-        assert betas.shape == (10,)
-        joints_2d = meta_data["joints_2d"][:, 0:2]
-        assert joints_2d.shape == (21, 2)
-        joints_3d = meta_data["joints_3d"][:, 0:3]
-        assert joints_3d.shape == (21, 3)
-        # print(mano_pose.shape, trans.shape, betas.shape, joints_2d.shape, joints_3d.shape)
-        yield MetaInfo(pose, betas, joints_2d, joints_3d)
+# def iter_meta_info(dataset_partial):
+#     for img_key, transfromed_img, meta_data in dataset_partial:
+#         pose = meta_data["pose"]
+#         assert pose.shape == (48,)
+#         # mano_pose, trans = pose[:45], pose[45:]
+#         # assert mano_pose.shape == (45,)
+#         # assert trans.shape == (3,)
+#         betas = meta_data["betas"]
+#         assert betas.shape == (10,)
+#         joints_2d = meta_data["joints_2d"][:, 0:2]
+#         assert joints_2d.shape == (21, 2)
+#         joints_3d = meta_data["joints_3d"][:, 0:3]
+#         assert joints_3d.shape == (21, 3)
+#         # print(mano_pose.shape, trans.shape, betas.shape, joints_2d.shape, joints_3d.shape)
+#         yield MetaInfo(pose, betas, joints_2d, joints_3d)
 
 
 
@@ -202,6 +202,11 @@ def main(args, dataset, num):
     # generate mesh
     pose = gt_pose.unsqueeze(0)
     betas = gt_betas.unsqueeze(0)
+
+    new_3d_joints = annotations['joints_3d'][:, 0:3].unsqueeze(0)
+    new_vertices = annotations['verts_3d'].unsqueeze(0)
+    print(f"new_3d_joints:{new_3d_joints.shape} new_vertices:{new_vertices.shape}")
+
     gt_vertices, gt_3d_joints = mano_model.layer(pose, betas)
     gt_vertices = gt_vertices / 1000.0
     gt_3d_joints = gt_3d_joints / 1000.0
@@ -221,7 +226,7 @@ def main(args, dataset, num):
     # # # ax = fig.add_subplot(111, projection='3d')
     # # # #verts, joints = hand_info['verts'][batch_idx], hand_info['joints'][batch_idx]
 
-    visualize_data_3d(gt_vertices, gt_3d_joints)
+    visualize_data_3d(new_vertices, new_3d_joints)
 
 
 def parse_args():
