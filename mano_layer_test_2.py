@@ -177,7 +177,7 @@ def make_hand_data_loader(
 
 def main(args, dataset, num):
     #train_dataloader
-    img_keys, images, annotations = dataset[2]
+    img_keys, images, annotations = dataset[0]
     print(annotations.keys())
     # dict_keys(['center', 'has_2d_joints', 'has_3d_joints', 'has_smpl', 'mjm_mask', 'mvm_mask', 'ori_img', 'pose', 'betas', 'joints_3d', 'joints_2d', 'scale'])
 
@@ -216,11 +216,10 @@ def main(args, dataset, num):
     gt_3d_joints = gt_3d_joints - gt_3d_root[:, None, :]
     gt_3d_joints_with_tag = torch.ones((batch_size, gt_3d_joints.shape[1],4))
     gt_3d_joints_with_tag[:,:,:3] = gt_3d_joints
-    print(gt_vertices_sub)
+
     # # # fig = plt.figure()
     # # # ax = fig.add_subplot(111, projection='3d')
     # # # #verts, joints = hand_info['verts'][batch_idx], hand_info['joints'][batch_idx]
-
 
     visualize_data_3d(gt_vertices, gt_3d_joints)
 
