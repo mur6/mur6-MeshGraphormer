@@ -112,10 +112,9 @@ def visualize_data(image, ori_img, joints_2d, mano_pose=None, shape=None):
     ax.set_title("joints_2d")
     ax.imshow(image)
     # print(joints_2d)
-    img_size = 224
-    # joints_2d = joints_2d * img_size
-    print(f"joints_2d: {joints_2d}")
-    # joints_2d = ((joints_2d[:, :2] + 1) * 0.5) * img_size
+    # # joints_2d = joints_2d * img_size
+    # print(f"joints_2d: {joints_2d}")
+    # # joints_2d = ((joints_2d[:, :2] + 1) * 0.5) * img_size
     # print(joints_2d)
     ax.scatter(joints_2d[:, 0], joints_2d[:, 1], c="red", alpha=0.75)
     ax = axs[1]
@@ -187,7 +186,7 @@ def main(args, dataset, num):
     mano_layer = mano_model.layer
     mesh_sampler = Mesh(device=torch.device('cpu'))
 
-    gt_2d_joints = annotations['joints_2d']
+    # gt_2d_joints = annotations['joints_2d']
     gt_pose = annotations['pose']
     gt_betas = annotations['betas']
     has_mesh = annotations['has_smpl']
@@ -199,15 +198,17 @@ def main(args, dataset, num):
     img = images.numpy().transpose(1,2,0)
     ori_img = annotations['ori_img'].numpy().transpose(1,2,0)
     joints_2d = annotations['joints_2d']
+    img_size = 224
+    joints_2d = ((joints_2d + 1) * 0.5) * img_size
     visualize_data(img, ori_img, joints_2d)
     # generate mesh
     pose = gt_pose.unsqueeze(0)
     betas = gt_betas.unsqueeze(0)
 
     new_3d_joints = annotations['joints_3d'][:, 0:3].unsqueeze(0)
-    new_3d_joints = (new_3d_joints - new_3d_joints.mean(1)) * 1000.0
+    #new_3d_joints = (new_3d_joints - new_3d_joints.mean(1)) * 1000.0
     new_vertices = annotations['verts_3d'].unsqueeze(0)
-    new_vertices = (new_vertices - new_vertices.mean(1)) * 1000.0
+    #new_vertices = (new_vertices - new_vertices.mean(1)) * 1000.0
     print(f"new_3d_joints:{new_3d_joints.shape} new_vertices:{new_vertices.shape}")
 
     gt_vertices, gt_3d_joints = mano_model.layer(pose, betas)
