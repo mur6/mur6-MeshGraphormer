@@ -114,7 +114,8 @@ def visualize_data(image, ori_img, joints_2d, mano_pose=None, shape=None):
     # print(joints_2d)
     img_size = 224
     # joints_2d = joints_2d * img_size
-    joints_2d = ((joints_2d[:, :2] + 1) * 0.5) * img_size
+    print(f"joints_2d: {joints_2d}")
+    # joints_2d = ((joints_2d[:, :2] + 1) * 0.5) * img_size
     # print(joints_2d)
     ax.scatter(joints_2d[:, 0], joints_2d[:, 1], c="red", alpha=0.75)
     ax = axs[1]
