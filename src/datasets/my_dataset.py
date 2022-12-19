@@ -1,5 +1,6 @@
 import pickle
 from collections import namedtuple
+import math
 
 import numpy as np
 import torch
@@ -36,6 +37,12 @@ class BlenderHandMeshDataset(object):
         self.normalize_img = transforms.Normalize(
             mean=[0.4917, 0.4626, 0.4153], std=[0.2401, 0.2368, 0.2520]
         )
+        radian = math.pi * (1.42 / 2.0)
+        self.rot_mat = torch.FloatTensor(
+            [[ math.cos(radian), -math.sin(radian),  0.],
+            [ math.sin(radian), math.cos(radian),  0.],
+            [ 0.,  0.,  1.]]
+        )
 
     def __len__(self):
         return self.data_length
@@ -43,6 +50,14 @@ class BlenderHandMeshDataset(object):
     def get_image(self, image_file):
         image = Image.open(image_file)
         return torchvision.transforms.functional.pil_to_tensor(image) / 255.0
+
+    def adjust_3d_points(self, pts, add_column=False):
+        pts = (pts - pts.mean(0)) @ self.rot_mat
+        pts = pts * 1000.0
+        if add_column:
+            return add_ones_column(pts)
+        else:
+            return pts
 
     def get_annotations(self, meta_file):
         b = meta_file.read_bytes()
@@ -58,15 +73,15 @@ class BlenderHandMeshDataset(object):
         joints_2d = (joints_2d / 112.0) - 1.0
         # print(f"In my dataset joints_2d: {joints_2d}")
         joints_2d = add_ones_column(joints_2d)
-        coords_3d = d["coords_3d"]
-        joints_3d = torch.from_numpy(coords_3d)
+
+        joints_3d = torch.from_numpy(d["coords_3d"])
         # print("mean", joints_3d.mean(0))
-        joints_3d = (joints_3d - joints_3d.mean(0)) * 1000.0
-        # print(f"In my dataset joints_3d[{joints_3d.shape}]:")
-        joints_3d = add_ones_column(joints_3d)
+        joints_3d = self.adjust_3d_points(joints_3d, add_column=True)
+
         verts_3d = torch.from_numpy(d["verts_3d"])
         # print("mean", verts_3d.mean(0))
-        verts_3d = (verts_3d - verts_3d.mean(0)) * 1000.0
+        verts_3d = self.adjust_3d_points(verts_3d)
+
         # print(f"In my dataset verts_3d[{verts_3d.shape}]:")
         return HandMeta(pose, betas, scale, joints_2d, joints_3d, verts_3d)
 
