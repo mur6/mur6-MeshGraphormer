@@ -2,10 +2,13 @@ import pickle
 from collections import namedtuple
 import math
 
+import cv2
 import numpy as np
 import torch
 import torchvision
 import torchvision.transforms as transforms
+import albumentations as A
+from albumentations.pytorch.transforms import ToTensorV2
 from PIL import Image
 
 # from src.modeling.hrnet.config import update_config as hrnet_update_config
@@ -14,6 +17,30 @@ from PIL import Image
 
 
 HandMeta = namedtuple("HandMeta", "pose betas scale joints_2d joints_3d verts_3d")
+
+
+mean = (0.4917, 0.4626, 0.4153)
+std = (0.2401, 0.2368, 0.2520)
+
+
+noise_t = A.Compose(
+    [
+        A.Normalize(mean=mean, std=std),
+        A.GaussNoise(var_limit=0.75),
+        A.Blur(blur_limit=3),
+        # A.OpticalDistortion(),
+        # A.GridDistortion(),
+        A.OneOf(
+            [
+                A.Cutout(num_holes=40, max_h_size=4, max_w_size=4),
+                A.Cutout(num_holes=35, max_h_size=8, max_w_size=8),
+                # A.Cutout(num_holes=20, max_h_size=16, max_w_size=16),
+            ],
+            p=0.8,
+        ),
+        ToTensorV2(),
+    ]
+)
 
 
 def add_ones_column(x):
@@ -34,14 +61,14 @@ class BlenderHandMeshDataset(object):
         im_files = get_sorted_files(self.image_filepath, extension="jpg")
         assert len(meta_files) == len(im_files)
         self.data_length = len(meta_files)
-        self.normalize_img = transforms.Normalize(
-            mean=[0.4917, 0.4626, 0.4153], std=[0.2401, 0.2368, 0.2520]
-        )
+        # self.normalize_img = transforms.Normalize(
+        #     mean=[0.4917, 0.4626, 0.4153], std=[0.2401, 0.2368, 0.2520]
+        # )
         radian = math.pi * (1.42 / 2.0)
         self.rot_mat = torch.FloatTensor(
-            [[ math.cos(radian), -math.sin(radian),  0.],
-            [ math.sin(radian), math.cos(radian),  0.],
-            [ 0.,  0.,  1.]]
+            [[ math.cos(radian), -math.sin(radian), 0.],
+            [ math.sin(radian), math.cos(radian), 0.],
+            [ 0.,  0.,  1.]],
         )
 
     def __len__(self):
@@ -49,7 +76,11 @@ class BlenderHandMeshDataset(object):
 
     def get_image(self, image_file):
         image = Image.open(image_file)
-        return torchvision.transforms.functional.to_tensor(image)
+        image = cv2.imread(str(image_file))
+        image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+        original_image = torchvision.transforms.functional.to_tensor(image)
+        transfromed_img = noise_t(image=image)["image"]
+        return original_image, transfromed_img
 
     def adjust_3d_points(self, pts, add_column=False):
         pts = (pts - pts.mean(0)) @ self.rot_mat
@@ -106,8 +137,7 @@ class BlenderHandMeshDataset(object):
         # print(image_file, image_file.exists())
 
         hand_meta = self.get_annotations(meta_file)
-        img = self.get_image(image_file)
-        transfromed_img = self.normalize_img(img)
+        img, transfromed_img = self.get_image(image_file)
         img_key = image_file.name
         ##############################################
         meta_data = self.get_metadata_dict()
