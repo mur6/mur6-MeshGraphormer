@@ -39,6 +39,14 @@ def show_3d_plot(axs, points3d_1, points3d_2):
     # axs.set_zlim(mid_z - max_range, mid_z + max_range)
 
 
+def show_3d_plot_just_one(axs, points3d):
+    X, Y, Z = points3d[:, 0], points3d[:, 1], points3d[:, 2]
+    axs.scatter(X, Y, Z, color='r')
+    for i in range(len(X)):
+        #axs.text(str(i), (X[i], Y[i], Z[i]))
+        axs.text(X[i], Y[i], Z[i], str(i), color='blue')
+
+
 def visualize_data_3d(gt_vertices_sub, gt_3d_joints):
     # torch.set_printoptions(precision=2)
     # print("gt_vertices_sub.shape:", gt_vertices_sub.shape)
@@ -47,11 +55,8 @@ def visualize_data_3d(gt_vertices_sub, gt_3d_joints):
     joints = gt_3d_joints[0]
     fig = plt.figure()
     ax = fig.add_subplot(111, projection='3d')
-    #verts, joints = hand_info['verts'][batch_idx], hand_info['joints'][batch_idx]
-    #if mano_faces is None:
-    show_3d_plot(ax, verts, joints)
-    # ax.scatter(verts[:, 0], verts[:, 1], verts[:, 2], alpha=0.1)
-    # ax.scatter(joints[:, 0], joints[:, 1], joints[:, 2], color='r')
+    #show_3d_plot(ax, verts, joints)
+    show_3d_plot_just_one(ax, joints)
     plt.show()
 
 
@@ -105,7 +110,7 @@ def main(args, *, train_yaml_file, num):
     joints_2d = meta_info.joints_2d
     joints_2d = ((joints_2d + 1) * 0.5) * img_size
     ori_img = annotations["ori_img"]
-    visualize_data(ori_img.numpy().transpose(1,2,0), joints_2d)
+    #visualize_data(ori_img.numpy().transpose(1,2,0), joints_2d)
     mano_model = MANO().to("cpu")
     # mano_model.layer = mano_model.layer.cuda()
     mano_layer = mano_model.layer
@@ -115,6 +120,7 @@ def main(args, *, train_yaml_file, num):
     print(f"gt_3d_joints:{gt_3d_joints.shape} gt_vertices:{gt_vertices.shape}")
     print(f"gt_vertices:min{torch.min(gt_vertices)}, max={torch.max(gt_vertices)}")
     print(f"gt_3d_joints:min{torch.min(gt_3d_joints)}, max={torch.max(gt_3d_joints)}")
+    print("gt_3d_joints", gt_3d_joints)
 
     # fig = plt.figure()
     # ax = fig.add_subplot(111, projection='3d')
