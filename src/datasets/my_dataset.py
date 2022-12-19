@@ -49,7 +49,7 @@ class BlenderHandMeshDataset(object):
 
     def get_image(self, image_file):
         image = Image.open(image_file)
-        return torchvision.transforms.functional.pil_to_tensor(image) / 255.0
+        return torchvision.transforms.functional.to_tensor(image) / 255.0
 
     def adjust_3d_points(self, pts, add_column=False):
         pts = (pts - pts.mean(0)) @ self.rot_mat
