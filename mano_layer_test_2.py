@@ -1,5 +1,5 @@
 import argparse
-import itertools
+import math
 import os.path
 from collections import namedtuple
 from pathlib import Path
@@ -78,19 +78,32 @@ def show_3d_plot(axs, points3d_1, points3d_2):
     # axs.set_zlim(mid_z - max_range, mid_z + max_range)
 
 
+def show_3d_plot_just_one(axs, points3d, alpha=None, color=None, with_index=False):
+    X, Y, Z = points3d[:, 0], points3d[:, 1], points3d[:, 2]
+    axs.scatter(X, Y, Z, alpha=alpha, color=color)
+    if with_index:
+        for i in range(len(X)):
+            axs.text(X[i], Y[i], Z[i], str(i), color='blue')
+
+
 def visualize_data_3d(gt_vertices_sub, gt_3d_joints):
-    # torch.set_printoptions(precision=2)
-    # print("gt_vertices_sub.shape:", gt_vertices_sub.shape)
-    # print("gt_3d_joints.shape:", gt_3d_joints.shape)
     verts = gt_vertices_sub[0]
     joints = gt_3d_joints[0]
     fig = plt.figure()
     ax = fig.add_subplot(111, projection='3d')
-    #verts, joints = hand_info['verts'][batch_idx], hand_info['joints'][batch_idx]
-    #if mano_faces is None:
-    show_3d_plot(ax, verts, joints)
-    # ax.scatter(verts[:, 0], verts[:, 1], verts[:, 2], alpha=0.1)
-    # ax.scatter(joints[:, 0], joints[:, 1], joints[:, 2], color='r')
+    ax.set_xlabel('$X$')
+    ax.set_ylabel('$Y$')
+    ax.set_zlabel('Z')
+    show_3d_plot_just_one(ax, verts, alpha=0.1)
+    show_3d_plot_just_one(ax, joints, color="red", with_index=True)
+    plt.show()
+
+
+def visualize_data_3d_for_only_joints(gt_3d_joints):
+    joints = gt_3d_joints[0]
+    fig = plt.figure()
+    ax = fig.add_subplot(111, projection='3d')
+    show_3d_plot_just_one(ax, joints, with_index=True)
     plt.show()
 
 
@@ -201,19 +214,13 @@ def main(args, dataset, num):
     img_size = 224
     joints_2d = ((joints_2d + 1) * 0.5) * img_size
     visualize_data(img, ori_img, joints_2d)
-    # generate mesh
-    pose = gt_pose.unsqueeze(0)
-    betas = gt_betas.unsqueeze(0)
 
-    new_3d_joints = annotations['joints_3d'][:, 0:3].unsqueeze(0)
-    #new_3d_joints = (new_3d_joints - new_3d_joints.mean(1)) * 1000.0
-    new_vertices = annotations['verts_3d'].unsqueeze(0)
-    #new_vertices = (new_vertices - new_vertices.mean(1)) * 1000.0
-    print(f"new_3d_joints:{new_3d_joints.shape} new_vertices:{new_vertices.shape}")
+    gt_vertices = annotations['verts_3d'].unsqueeze(0)
+    gt_3d_joints = annotations['joints_3d'][:, 0:3].unsqueeze(0)
 
-    gt_vertices, gt_3d_joints = mano_model.layer(pose, betas)
     gt_vertices = gt_vertices / 1000.0
     gt_3d_joints = gt_3d_joints / 1000.0
+
     gt_vertices_sub = mesh_sampler.downsample(gt_vertices)
     # print(gt_vertices.shape, gt_3d_joints.shape)
     # normalize gt based on hand's wrist
@@ -226,12 +233,17 @@ def main(args, dataset, num):
     gt_3d_joints_with_tag = torch.ones((batch_size, gt_3d_joints.shape[1],4))
     gt_3d_joints_with_tag[:,:,:3] = gt_3d_joints
 
-    # # # fig = plt.figure()
-    # # # ax = fig.add_subplot(111, projection='3d')
-    # # # #verts, joints = hand_info['verts'][batch_idx], hand_info['joints'][batch_idx]
-    print(f"gt_vertices:min{torch.min(new_vertices)}, max={torch.max(new_vertices)}")
-    print(f"gt_3d_joints:min{torch.min(new_3d_joints)}, max={torch.max(new_3d_joints)}")
-    visualize_data_3d(new_vertices, new_3d_joints)
+    print(f"gt_3d_joints:{gt_3d_joints.shape} gt_vertices:{gt_vertices.shape}")
+    print(f"gt_vertices:min{torch.min(gt_vertices)}, max={torch.max(gt_vertices)}")
+    print(f"gt_3d_joints:min{torch.min(gt_3d_joints)}, max={torch.max(gt_3d_joints)}")
+    print("gt_3d_joints", gt_3d_joints)
+
+    # print(f"new_3d_joints:{new_3d_joints.shape} new_vertices:{new_vertices.shape}")
+    # print(f"gt_vertices:min{torch.min(new_vertices)}, max={torch.max(new_vertices)}")
+    # print(f"gt_3d_joints:min{torch.min(new_3d_joints)}, max={torch.max(new_3d_joints)}")
+    # print(new_3d_joints)
+    visualize_data_3d(gt_vertices, gt_3d_joints)
+    # visualize_data_3d_for_only_joints(new_3d_joints)
 
 
 def parse_args():
