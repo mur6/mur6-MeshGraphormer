@@ -172,7 +172,7 @@ def run(args, train_dataloader, dataset_type, Graphormer_model, mano_model, rend
             gt_vertices, gt_3d_joints = mano_model.layer(gt_pose, gt_betas)
         else:
             gt_vertices = annotations['verts_3d'].cuda()
-            gt_3d_joints = annotations['joints_3d'][:, 0:3].cuda()
+            gt_3d_joints = annotations['joints_3d'][:, :, 0:3].cuda()
         gt_vertices = gt_vertices / 1000.0
         gt_3d_joints = gt_3d_joints / 1000.0
 
