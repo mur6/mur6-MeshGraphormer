@@ -323,7 +323,7 @@ def main(args):
     elif op.isdir(args.image_file_or_path):
         # should be a path with images only
         for filename in os.listdir(args.image_file_or_path):
-            if filename.endswith(".png") or filename.endswith(".jpg") and 'pred' not in filename:
+            if filename.endswith(".png") or filename.endswith(".jpeg") and 'pred' not in filename:
                 image_list.append(args.image_file_or_path+'/'+filename) 
     else:
         raise ValueError("Cannot find images at {}".format(args.image_file_or_path))
