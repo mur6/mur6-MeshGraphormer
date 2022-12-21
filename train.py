@@ -819,7 +819,7 @@ def main(args):
     else:
         train_dataloader, dataset_type = make_train_hand_data_loader(
             args,
-            distributed=args.distributed,
+            is_distributed=args.distributed,
             scale_factor=args.img_scale_factor,
         )
         run(args, train_dataloader, dataset_type, _model, mano_model, renderer, mesh_sampler)
