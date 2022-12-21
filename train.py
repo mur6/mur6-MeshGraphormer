@@ -9,13 +9,13 @@ Training and evaluation codes for
 from __future__ import absolute_import, division, print_function
 
 import argparse
-import code
 import datetime
 import gc
 import json
 import os
 import os.path as op
 import time
+from pathlib import Path
 
 import cv2
 import numpy as np
@@ -24,7 +24,7 @@ import torchvision.models as models
 from torchvision.utils import make_grid
 
 import src.modeling.data.config as cfg
-from src.datasets.build import make_hand_data_loader
+from src.datasets.my_build import make_train_hand_data_loader
 from src.modeling._mano import MANO, Mesh
 from src.modeling.bert import BertConfig, Graphormer
 from src.modeling.bert import Graphormer_Hand_Network as Graphormer_Network
@@ -116,7 +116,7 @@ def vertices_loss(criterion_vertices, pred_vertices, gt_vertices, has_smpl):
         return torch.FloatTensor(1).fill_(0.0).cuda()
 
 
-def run(args, train_dataloader, Graphormer_model, mano_model, renderer, mesh_sampler):
+def run(args, train_dataloader, dataset_type, Graphormer_model, mano_model, renderer, mesh_sampler):
 
     max_iter = len(train_dataloader)
     iters_per_epoch = max_iter // args.num_train_epochs
@@ -168,7 +168,11 @@ def run(args, train_dataloader, Graphormer_model, mano_model, renderer, mesh_sam
         mvm_mask = annotations["mvm_mask"].cuda()
 
         # generate mesh
-        gt_vertices, gt_3d_joints = mano_model.layer(gt_pose, gt_betas)
+        if dataset_type == "freihand":
+            gt_vertices, gt_3d_joints = mano_model.layer(gt_pose, gt_betas)
+        else:
+            gt_vertices = annotations['verts_3d'].cuda()
+            gt_3d_joints = annotations['joints_3d'][:, 0:3].cuda()
         gt_vertices = gt_vertices / 1000.0
         gt_3d_joints = gt_3d_joints / 1000.0
 
@@ -559,10 +563,15 @@ def parse_args():
     )
     parser.add_argument(
         "--train_yaml",
-        default="imagenet2012/train.yaml",
-        type=str,
+        default=None,
+        type=Path,
         required=False,
-        help="Yaml file with all data for training.",
+    )
+    parser.add_argument(
+        "--blender_ds_base_path",
+        default=None,
+        type=Path,
+        required=False,
     )
     parser.add_argument(
         "--val_yaml",
@@ -808,10 +817,12 @@ def main(args):
         run_eval_and_save(args, "freihand", val_dataloader, _model, mano_model, renderer, mesh_sampler)
 
     else:
-        train_dataloader = make_hand_data_loader(
-            args, args.train_yaml, args.distributed, is_train=True, scale_factor=args.img_scale_factor
+        train_dataloader, dataset_type = make_train_hand_data_loader(
+            args,
+            distributed=args.distributed,
+            scale_factor=args.img_scale_factor,
         )
-        run(args, train_dataloader, _model, mano_model, renderer, mesh_sampler)
+        run(args, train_dataloader, dataset_type, _model, mano_model, renderer, mesh_sampler)
 
 
 if __name__ == "__main__":
