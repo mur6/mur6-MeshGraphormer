@@ -161,11 +161,11 @@ def run(args, train_dataloader, Graphormer_model, mano_model, renderer, mesh_sam
 
         # generate mesh
         gt_vertices, gt_3d_joints = mano_model.layer(gt_pose, gt_betas)
-        gt_vertices = gt_vertices/1000.0
-        gt_3d_joints = gt_3d_joints/1000.0
+        gt_vertices = gt_vertices / 1000.0
+        gt_3d_joints = gt_3d_joints / 1000.0
 
         gt_vertices_sub = mesh_sampler.downsample(gt_vertices)
-        # normalize gt based on hand's wrist 
+        # normalize gt based on hand's wrist
         gt_3d_root = gt_3d_joints[:,cfg.J_NAME.index('Wrist'),:]
         gt_vertices = gt_vertices - gt_3d_root[:, None, :]
         gt_vertices_sub = gt_vertices_sub - gt_3d_root[:, None, :]
@@ -174,10 +174,10 @@ def run(args, train_dataloader, Graphormer_model, mano_model, renderer, mesh_sam
         gt_3d_joints_with_tag[:,:,:3] = gt_3d_joints
 
         # prepare masks for mask vertex/joint modeling
-        mjm_mask_ = mjm_mask.expand(-1,-1,2051)
-        mvm_mask_ = mvm_mask.expand(-1,-1,2051)
+        mjm_mask_ = mjm_mask.expand(-1, -1, 2051)
+        mvm_mask_ = mvm_mask.expand(-1, -1, 2051)
         meta_masks = torch.cat([mjm_mask_, mvm_mask_], dim=1)
-        
+
         # forward-pass
         pred_camera, pred_3d_joints, pred_vertices_sub, pred_vertices = Graphormer_model(images, mano_model, mesh_sampler, meta_masks=meta_masks, is_train=True)
 
@@ -239,12 +239,14 @@ def run(args, train_dataloader, Graphormer_model, mano_model, renderer, mesh_sam
             aml_run.log(name='2d joint Loss', value=float(log_loss_2djoints.avg))
             aml_run.log(name='vertex Loss', value=float(log_loss_vertices.avg))
 
-            visual_imgs = visualize_mesh(   renderer,
-                                            annotations['ori_img'].detach(),
-                                            annotations['joints_2d'].detach(),
-                                            pred_vertices.detach(), 
-                                            pred_camera.detach(),
-                                            pred_2d_joints_from_mesh.detach())
+            visual_imgs = visualize_mesh(
+                renderer,
+                annotations['ori_img'].detach(),
+                annotations['joints_2d'].detach(),
+                pred_vertices.detach(),
+                pred_camera.detach(),
+                pred_2d_joints_from_mesh.detach()
+            )
             visual_imgs = visual_imgs.transpose(0,1)
             visual_imgs = visual_imgs.transpose(1,2)
             visual_imgs = np.asarray(visual_imgs)
@@ -382,7 +384,7 @@ def run_inference_hand_mesh(args, val_loader, Graphormer_model, criterion, crite
                 visual_imgs = visualize_mesh(   renderer,
                                                 annotations['ori_img'].detach(),
                                                 annotations['joints_2d'].detach(),
-                                                pred_vertices.detach(), 
+                                                pred_vertices.detach(),
                                                 pred_camera.detach(),
                                                 pred_2d_joints_from_mesh.detach())
 
