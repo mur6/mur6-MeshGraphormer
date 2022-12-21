@@ -1,13 +1,13 @@
+import math
 import pickle
 from collections import namedtuple
-import math
 
+import albumentations as A
 import cv2
 import numpy as np
 import torch
 import torchvision
 import torchvision.transforms as transforms
-import albumentations as A
 from albumentations.pytorch.transforms import ToTensorV2
 from PIL import Image
 
@@ -52,6 +52,7 @@ def get_sorted_files(folder, *, extension):
     iter = folder.glob(f"*.{extension}")
     return list(sorted(iter))
 
+
 class BlenderHandMeshDataset(object):
     def __init__(self, base_path, scale_factor=1):
         self.base_path = base_path
@@ -66,9 +67,7 @@ class BlenderHandMeshDataset(object):
         # )
         radian = math.pi * (1.42 / 2.0)
         self.rot_mat = torch.FloatTensor(
-            [[ math.cos(radian), -math.sin(radian), 0.],
-            [ math.sin(radian), math.cos(radian), 0.],
-            [ 0.,  0.,  1.]],
+            [[math.cos(radian), -math.sin(radian), 0.0], [math.sin(radian), math.cos(radian), 0.0], [0.0, 0.0, 1.0]],
         )
 
     def __len__(self):
