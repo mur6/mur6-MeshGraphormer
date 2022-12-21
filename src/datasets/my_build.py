@@ -42,6 +42,7 @@ def make_blender_data_loader(
 def make_train_hand_data_loader(args, *, is_distributed, scale_factor):
     train_yaml = args.train_yaml
     blender_ds_base_path = args.blender_ds_base_path
+    print(f"Debug: train_yaml={train_yaml}, blender_ds_base_path={blender_ds_base_path}")
     if train_yaml and blender_ds_base_path:
         raise RuntimeError(f"Both train_yaml and blender_ds_base_path are specified. Please specify just one.")
 
