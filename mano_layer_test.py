@@ -85,7 +85,7 @@ def visualize_data(ori_img, joints_2d):
 
 
 def visualize_data_simple_scatter(ori_img, joints_2d, orig_joints_2d, gt_3d_joints):
-    fig = plt.figure()
+    fig = plt.figure(figsize=(9, 9))
     ax = fig.add_subplot(221)
     ax.set_title("ori_img & joints_2d")
     ax.imshow(ori_img)

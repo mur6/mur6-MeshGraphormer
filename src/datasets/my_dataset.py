@@ -82,7 +82,8 @@ class BlenderHandMeshDataset(object):
         return original_image, transfromed_img
 
     def adjust_3d_points(self, pts, add_column=False):
-        pts = (pts - pts.mean(0)) @ self.rot_mat
+        # pts = pts - pts.mean(0)  # @ self.rot_mat
+        pts = pts @ torch.diag(torch.tensor([1.0, -1.0, 1.0]))
         pts = pts * 1000.0
         if add_column:
             return add_ones_column(pts)
