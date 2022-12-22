@@ -1,43 +1,33 @@
 import argparse
+import datetime
+import gc
+import json
 import math
+import os
 import os.path
+import os.path as op
+import time
 from collections import namedtuple
 from pathlib import Path
+
+import cv2
+import matplotlib.pyplot as plt
+import numpy as np
+import torch
+import torchvision.models as models
+from PIL import Image
+from torchvision.utils import make_grid
 
 # import matplotlib.pyplot as plt
 # from pycocotools.coco import COCO
 # from torchvision.utils import make_grid
 from tqdm import tqdm
-import numpy as np
-import torch
-import numpy as np
-import matplotlib.pyplot as plt
-from PIL import Image
-
-from src.modeling._mano import MANO
-from manopth.manolayer import ManoLayer
-#from src.datasets.hand_mesh_tsv import HandMeshTSVDataset, HandMeshTSVYamlDataset
-from src.datasets.my_dataset import BlenderHandMeshDataset
-
-
-
-import argparse
-import datetime
-import gc
-import json
-import os
-import os.path as op
-import time
-from pathlib import Path
-
-import cv2
-import numpy as np
-import torch
-import torchvision.models as models
-from torchvision.utils import make_grid
 
 import src.modeling.data.config as cfg
+from manopth.manolayer import ManoLayer
 from src.datasets.build import make_batch_data_sampler, make_data_sampler
+
+# from src.datasets.hand_mesh_tsv import HandMeshTSVDataset, HandMeshTSVYamlDataset
 from src.datasets.my_dataset import BlenderHandMeshDataset
 from src.modeling._mano import MANO, Mesh
 from src.modeling.bert import BertConfig, Graphormer
@@ -68,7 +58,7 @@ def show_3d_plot(axs, points3d_1, points3d_2):
         if i == 0:
             axs.scatter(X, Y, Z, alpha=0.1)
         else:
-            axs.scatter(X, Y, Z, color='r')
+            axs.scatter(X, Y, Z, color="r")
     max_range = np.array([X.max() - X.min(), Y.max() - Y.min(), Z.max() - Z.min()]).max() * 0.5
     # mid_x = (X.max() + X.min()) * 0.5
     # mid_y = (Y.max() + Y.min()) * 0.5
@@ -83,17 +73,17 @@ def show_3d_plot_just_one(axs, points3d, alpha=None, color=None, with_index=Fals
     axs.scatter(X, Y, Z, alpha=alpha, color=color)
     if with_index:
         for i in range(len(X)):
-            axs.text(X[i], Y[i], Z[i], str(i), color='blue')
+            axs.text(X[i], Y[i], Z[i], str(i), color="blue")
 
 
 def visualize_data_3d(gt_vertices_sub, gt_3d_joints):
     verts = gt_vertices_sub[0]
     joints = gt_3d_joints[0]
     fig = plt.figure()
-    ax = fig.add_subplot(111, projection='3d')
-    ax.set_xlabel('$X$')
-    ax.set_ylabel('$Y$')
-    ax.set_zlabel('Z')
+    ax = fig.add_subplot(111, projection="3d")
+    ax.set_xlabel("$X$")
+    ax.set_ylabel("$Y$")
+    ax.set_zlabel("Z")
     show_3d_plot_just_one(ax, verts, alpha=0.1)
     show_3d_plot_just_one(ax, joints, color="red", with_index=True)
     plt.show()
@@ -102,7 +92,7 @@ def visualize_data_3d(gt_vertices_sub, gt_3d_joints):
 def visualize_data_3d_for_only_joints(gt_3d_joints):
     joints = gt_3d_joints[0]
     fig = plt.figure()
-    ax = fig.add_subplot(111, projection='3d')
+    ax = fig.add_subplot(111, projection="3d")
     show_3d_plot_just_one(ax, joints, with_index=True)
     plt.show()
 
@@ -144,6 +134,7 @@ def visualize_data(image, ori_img, joints_2d, mano_pose=None, shape=None):
     plt.tight_layout()
     plt.show()
 
+
 # def iter_meta_info(dataset_partial):
 #     for img_key, transfromed_img, meta_data in dataset_partial:
 #         pose = meta_data["pose"]
@@ -159,7 +150,6 @@ def visualize_data(image, ori_img, joints_2d, mano_pose=None, shape=None):
 #         assert joints_3d.shape == (21, 3)
 #         # print(mano_pose.shape, trans.shape, betas.shape, joints_2d.shape, joints_3d.shape)
 #         yield MetaInfo(pose, betas, joints_2d, joints_3d)
-
 
 
 def make_hand_data_loader(
@@ -188,50 +178,82 @@ def make_hand_data_loader(
     )
     return data_loader
 
+
+def visualize_data_simple_scatter(ori_img, joints_2d, orig_joints_2d, gt_3d_joints, gt_vertices):
+    fig = plt.figure(figsize=(9, 9))
+    ax = fig.add_subplot(221)
+    ax.set_title("ori_img & joints_2d")
+    ax.imshow(ori_img)
+    ax.scatter(joints_2d[:, 0], joints_2d[:, 1], c="red", alpha=0.75)
+
+    # joints_2d = (joints_2d / 224) - 0.5
+    # scale = 0.9
+    joints_3d = gt_3d_joints[0]
+    verts = gt_vertices[0]
+
+    ax = fig.add_subplot(222)
+    ax.scatter(orig_joints_2d[:, 0], orig_joints_2d[:, 1], c="red", alpha=0.75)
+    ax.set_aspect("equal", adjustable="box")
+    ax.set(xlim=(-1, 1), ylim=(-1, 1))
+    ax.invert_yaxis()
+    ax = fig.add_subplot(223)
+    ax.scatter(joints_3d[:, 0], joints_3d[:, 1], c="red")
+    ax.scatter(verts[:, 0], verts[:, 1], alpha=0.1)
+    # show_3d_plot_just_one(ax, verts, alpha=0.1)
+
+    ax.set_aspect("equal", adjustable="box")
+    ax.set(xlim=(-0.15, 0.15), ylim=(-0.15, 0.15))
+    ax.invert_yaxis()
+    plt.tight_layout()
+    plt.show()
+
+
 def main(args, dataset, num):
-    #train_dataloader
-    img_keys, images, annotations = dataset[0]
+    # train_dataloader
+    img_keys, images, annotations = dataset[num]
     print(annotations.keys())
     # dict_keys(['center', 'has_2d_joints', 'has_3d_joints', 'has_smpl', 'mjm_mask', 'mvm_mask', 'ori_img', 'pose', 'betas', 'joints_3d', 'joints_2d', 'scale'])
 
     # # print(meta_info)
     mano_model = MANO().to("cpu")
     mano_layer = mano_model.layer
-    mesh_sampler = Mesh(device=torch.device('cpu'))
+    mesh_sampler = Mesh(device=torch.device("cpu"))
 
     # gt_2d_joints = annotations['joints_2d']
-    gt_pose = annotations['pose']
-    gt_betas = annotations['betas']
-    has_mesh = annotations['has_smpl']
+    gt_pose = annotations["pose"]
+    gt_betas = annotations["betas"]
+    has_mesh = annotations["has_smpl"]
     has_3d_joints = has_mesh
     has_2d_joints = has_mesh
-    mjm_mask = annotations['mjm_mask']
-    mvm_mask = annotations['mvm_mask']
+    mjm_mask = annotations["mjm_mask"]
+    mvm_mask = annotations["mvm_mask"]
     # gt_vertices, gt_3d_joints = mano_model.layer(pose, betas)
-    img = images.numpy().transpose(1,2,0)
-    ori_img = annotations['ori_img'].numpy().transpose(1,2,0)
-    joints_2d = annotations['joints_2d']
+    img = images.numpy().transpose(1, 2, 0)
+    ori_img = annotations["ori_img"].numpy().transpose(1, 2, 0)
+    joints_2d = annotations["joints_2d"]
+    orig_joints_2d = joints_2d
     img_size = 224
     joints_2d = ((joints_2d + 1) * 0.5) * img_size
     visualize_data(img, ori_img, joints_2d)
 
-    gt_vertices = annotations['verts_3d'].unsqueeze(0)
-    gt_3d_joints = annotations['joints_3d'][:, 0:3].unsqueeze(0)
+    gt_vertices = annotations["verts_3d"].unsqueeze(0)
+    gt_3d_joints = annotations["joints_3d"][:, 0:3].unsqueeze(0)
 
     gt_vertices = gt_vertices / 1000.0
     gt_3d_joints = gt_3d_joints / 1000.0
+    orig_3d_joints = gt_3d_joints
 
     gt_vertices_sub = mesh_sampler.downsample(gt_vertices)
     # print(gt_vertices.shape, gt_3d_joints.shape)
     # normalize gt based on hand's wrist
     batch_size = 1
 
-    gt_3d_root = gt_3d_joints[:,cfg.J_NAME.index('Wrist'),:]
+    gt_3d_root = gt_3d_joints[:, cfg.J_NAME.index("Wrist"), :]
     gt_vertices = gt_vertices - gt_3d_root[:, None, :]
     gt_vertices_sub = gt_vertices_sub - gt_3d_root[:, None, :]
     gt_3d_joints = gt_3d_joints - gt_3d_root[:, None, :]
-    gt_3d_joints_with_tag = torch.ones((batch_size, gt_3d_joints.shape[1],4))
-    gt_3d_joints_with_tag[:,:,:3] = gt_3d_joints
+    gt_3d_joints_with_tag = torch.ones((batch_size, gt_3d_joints.shape[1], 4))
+    gt_3d_joints_with_tag[:, :, :3] = gt_3d_joints
 
     print(f"gt_3d_joints:{gt_3d_joints.shape} gt_vertices:{gt_vertices.shape}")
     print(f"gt_vertices:min{torch.min(gt_vertices)}, max={torch.max(gt_vertices)}")
@@ -244,6 +266,7 @@ def main(args, dataset, num):
     # print(new_3d_joints)
     visualize_data_3d(gt_vertices, gt_3d_joints)
     # visualize_data_3d_for_only_joints(new_3d_joints)
+    visualize_data_simple_scatter(ori_img, joints_2d, orig_joints_2d, gt_3d_joints, gt_vertices)
 
 
 def parse_args():
