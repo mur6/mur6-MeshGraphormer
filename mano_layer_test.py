@@ -103,7 +103,7 @@ def visualize_data_simple_scatter(ori_img, joints_2d, orig_joints_2d, gt_3d_join
     ax = fig.add_subplot(223)
     ax.scatter(joints_3d[:, 0], joints_3d[:, 1], c="red", alpha=0.75)
     ax.set_aspect("equal", adjustable="box")
-    # ax.set(xlim=(-0.15, 0.15), ylim=(-0.15, 0.15))
+    ax.set(xlim=(0, 0.3), ylim=(-0.15, 0.15))
     ax.invert_yaxis()
     plt.tight_layout()
     plt.show()
