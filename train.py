@@ -117,7 +117,7 @@ def vertices_loss(criterion_vertices, pred_vertices, gt_vertices, has_smpl):
 
 
 def run(args, train_dataloader, dataset_type, Graphormer_model, mano_model, renderer, mesh_sampler):
-
+    device = args.device
     max_iter = len(train_dataloader)
     iters_per_epoch = max_iter // args.num_train_epochs
 

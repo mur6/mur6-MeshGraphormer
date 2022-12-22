@@ -25,9 +25,9 @@ std = (0.2401, 0.2368, 0.2520)
 
 noise_t = A.Compose(
     [
-        A.Normalize(mean=mean, std=std),
-        A.GaussNoise(var_limit=0.75),
-        A.Blur(blur_limit=3),
+        # A.Normalize(mean=mean, std=std)
+        A.GaussNoise(var_limit=0.10, p=0.5),
+        A.Blur(blur_limit=7, p=0.5),
         # A.OpticalDistortion(),
         # A.GridDistortion(),
         A.OneOf(
@@ -54,14 +54,18 @@ def get_sorted_files(folder, *, extension):
 
 
 class BlenderHandMeshDataset(object):
-    def __init__(self, base_path, scale_factor=1):
+    def __init__(self, base_path, scale_factor=1, data_length=None):
         self.base_path = base_path
         self.meta_filepath = base_path / "tmp/meta/"
         self.image_filepath = base_path / "tmp/rgb/"
         meta_files = get_sorted_files(self.meta_filepath, extension="pkl")
         im_files = get_sorted_files(self.image_filepath, extension="jpg")
         assert len(meta_files) == len(im_files)
-        self.data_length = len(meta_files)
+        if data_length is None:
+            data_length = len(meta_files)
+        else:
+            assert data_length <= len(meta_files)
+        self.data_length = data_length
         # self.normalize_img = transforms.Normalize(
         #     mean=[0.4917, 0.4626, 0.4153], std=[0.2401, 0.2368, 0.2520]
         # )
@@ -79,7 +83,7 @@ class BlenderHandMeshDataset(object):
         image = cv2.imread(str(image_file))
         image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
         original_image = torchvision.transforms.functional.to_tensor(image)
-        transfromed_img = noise_t(image=image)["image"]
+        transfromed_img = noise_t(image=image / 255)["image"]
         return original_image, transfromed_img
 
     def adjust_3d_points(self, pts, add_column=False):
