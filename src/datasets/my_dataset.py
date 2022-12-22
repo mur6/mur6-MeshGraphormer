@@ -69,6 +69,7 @@ class BlenderHandMeshDataset(object):
         self.rot_mat = torch.FloatTensor(
             [[math.cos(radian), -math.sin(radian), 0.0], [math.sin(radian), math.cos(radian), 0.0], [0.0, 0.0, 1.0]],
         )
+        self.rot_mat_2 = torch.diag(torch.FloatTensor([1.0, -1.0, -1.0]))
 
     def __len__(self):
         return self.data_length
@@ -83,7 +84,7 @@ class BlenderHandMeshDataset(object):
 
     def adjust_3d_points(self, pts, add_column=False):
         # pts = pts - pts.mean(0)  # @ self.rot_mat
-        pts = pts @ torch.diag(torch.tensor([1.0, -1.0, -1.0]))
+        pts = pts @ self.rot_mat_2
         pts = pts * 1000.0
         if add_column:
             return add_ones_column(pts)
