@@ -1,13 +1,13 @@
 {
   "python.defaultInterpreterPath": ".venv/bin/python",
-  "editor.formatOnSave": true,
+  "editor.formatOnSave": false,
   //"python.linting.pylintEnabled": false,
   "python.linting.flake8Enabled": true,
   "python.linting.lintOnSave": false,
   "python.formatting.provider": "black",
   "python.languageServer": "Pylance",
   "editor.codeActionsOnSave": {
-    "source.organizeImports": true
+    "source.organizeImports": false
   },
   "workbench.colorCustomizations": {
     "activityBar.activeBackground": "#05f658",
