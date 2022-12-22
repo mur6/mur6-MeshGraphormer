@@ -1,13 +1,13 @@
 {
   "python.defaultInterpreterPath": ".venv/bin/python",
-  "editor.formatOnSave": false,
+  "editor.formatOnSave": true,
   //"python.linting.pylintEnabled": false,
   "python.linting.flake8Enabled": true,
   "python.linting.lintOnSave": false,
   "python.formatting.provider": "black",
   "python.languageServer": "Pylance",
   "editor.codeActionsOnSave": {
-    "source.organizeImports": false
+    "source.organizeImports": true
   },
   "workbench.colorCustomizations": {
     "activityBar.activeBackground": "#05f658",
@@ -27,6 +27,6 @@
     "titleBar.activeForeground": "#e7e7e7",
     "titleBar.inactiveBackground": "#04c44699",
     "titleBar.inactiveForeground": "#e7e7e799"
-},
+  },
   "peacock.color": "#04c446"
 }
