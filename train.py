@@ -225,9 +225,9 @@ def run(args, train_dataloader, dataset_type, Graphormer_model, mano_model, rend
 
         # we empirically use hyperparameters to balance difference losses
         loss = (
-            args.joints_loss_weight * loss_3d_joints
+            args.joints_3d_loss_weight * loss_3d_joints
             + args.vertices_loss_weight * loss_vertices
-            + args.vertices_loss_weight * loss_2d_joints
+            + args.joints_2d_loss_weight * loss_2d_joints
         )
 
         # update logs
@@ -622,7 +622,9 @@ def parse_args():
     parser.add_argument("--lr", "--learning_rate", default=1e-4, type=float, help="The initial lr.")
     parser.add_argument("--num_train_epochs", default=200, type=int, help="Total number of training epochs to perform.")
     parser.add_argument("--vertices_loss_weight", default=1.0, type=float)
-    parser.add_argument("--joints_loss_weight", default=1.0, type=float)
+    parser.add_argument("--joints_3d_loss_weight", default=3.0, type=float)
+    parser.add_argument("--vertices_loss_weight", default=3.0, type=float)
+    parser.add_argument("--joints_2d_loss_weight", default=1.0, type=float)
     parser.add_argument("--vloss_w_full", default=0.5, type=float)
     parser.add_argument("--vloss_w_sub", default=0.5, type=float)
     parser.add_argument("--drop_out", default=0.1, type=float, help="Drop out ratio in BERT.")
