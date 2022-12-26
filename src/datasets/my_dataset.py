@@ -25,13 +25,15 @@ std = (0.2150, 0.2129, 0.2222)
 
 noise_t = A.Compose(
     [
-        A.OneOf(
-            [
-                A.GaussNoise(p=1.0),
-                A.Blur(p=1.0),
-            ],
-            p=0.65,
-        ),
+        # A.OneOf(
+        #     [
+        #         A.GaussNoise(p=1.0),
+        #         A.Blur(p=1.0),
+        #     ],
+        #     p=0.65,
+        # ),
+        A.GaussNoise(),
+        A.Blur(),
         # A.OpticalDistortion(),
         # A.GridDistortion(),
         A.OneOf(
