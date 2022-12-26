@@ -19,15 +19,20 @@ from PIL import Image
 HandMeta = namedtuple("HandMeta", "pose betas scale joints_2d joints_3d verts_3d")
 
 
-mean = (0.4917, 0.4626, 0.4153)
-std = (0.2401, 0.2368, 0.2520)
+mean = (0.4657, 0.4222, 0.3807)
+std = (0.2150, 0.2129, 0.2222)
 
 
 noise_t = A.Compose(
     [
         A.Normalize(mean=mean, std=std),
-        # A.GaussNoise(var_limit=0.10, p=0.5),
-        # A.Blur(blur_limit=7, p=0.5),
+        A.OneOf(
+            [
+                A.GaussNoise(var_limit=0.10, p=1.0),
+                A.Blur(blur_limit=7, p=1.0),
+            ],
+            p=0.75,
+        ),
         # A.OpticalDistortion(),
         # A.GridDistortion(),
         A.OneOf(
