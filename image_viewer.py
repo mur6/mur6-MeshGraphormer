@@ -91,7 +91,10 @@ def iter_images(dataset, num):
     dataloder_it = itertools.islice(dataloader, num)
     for img_keys, images, annotations in dataloder_it:
         img = images[0]
+        print(img.mean(dim=[1,2]))
         img = img.numpy().transpose(1, 2, 0)
+        # ori_img = annotations["ori_img"]
+        # ori_img = ori_img[0].numpy().transpose(1, 2, 0)
         yield img
 
 

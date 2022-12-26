@@ -25,13 +25,12 @@ std = (0.2150, 0.2129, 0.2222)
 
 noise_t = A.Compose(
     [
-        A.Normalize(mean=mean, std=std),
         A.OneOf(
             [
-                A.GaussNoise(var_limit=0.10, p=1.0),
-                A.Blur(blur_limit=7, p=1.0),
+                A.GaussNoise(p=1.0),
+                A.Blur(p=1.0),
             ],
-            p=0.75,
+            p=0.65,
         ),
         # A.OpticalDistortion(),
         # A.GridDistortion(),
@@ -43,6 +42,8 @@ noise_t = A.Compose(
             ],
             p=0.8,
         ),
+        # A.Normalize(mean=mean, std=std),
+        A.Normalize(mean=(0,0,0), std=(1,1,1)),
         ToTensorV2(),
     ]
 )
