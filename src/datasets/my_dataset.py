@@ -44,8 +44,8 @@ noise_t = A.Compose(
             ],
             p=0.8,
         ),
-        A.Normalize(mean=mean, std=std),
-        # A.Normalize(mean=(0,0,0), std=(1,1,1)),
+        # A.Normalize(mean=mean, std=std),
+        A.Normalize(mean=0.5, std=1.0),
         ToTensorV2(),
     ]
 )
@@ -92,7 +92,8 @@ class BlenderHandMeshDataset(object):
         image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
         # print("image:", np.max(image), np.min(image))
         original_image = torchvision.transforms.functional.to_tensor(image)
-        transfromed_img = noise_t(image=image)["image"]
+        transfromed_img = noise_t(image=image)["image"] + 0.5
+        # print("transfromed_img:", torch.max(transfromed_img), torch.min(transfromed_img))
         return original_image, transfromed_img
 
     def adjust_3d_points(self, pts, add_column=False):
