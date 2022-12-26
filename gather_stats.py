@@ -71,19 +71,19 @@ def build_hand_dataset(yaml_file, args, is_train=True, scale_factor=1):
 #     )
 #     return data_loader
 
-MetaInfo = namedtuple("MetaInfo", "mano_pose,trans,betas,joints_2d,joints_3d")
+MetaInfo = namedtuple("MetaInfo", "mano_pose,trans,betas,joints_2d,joints_3d,image_mean")
 Stats = namedtuple("Stats", "mean,std,var")
 
 
 def iter_meta_info(dataset_partial):
     for img_key, transfromed_img, meta_data in dataset_partial:
         pose = meta_data["pose"]
-        print(f"##############: pose={pose.shape}")
-        print(pose)
+        # print(f"##############: pose={pose.shape}")
+        # print(pose)
         mano_pose, trans = pose[:45], pose[45:]
         assert mano_pose.shape == (45,)
-        print(f"##############: mano_pose={mano_pose.shape}")
-        print(mano_pose)
+        # print(f"##############: mano_pose={mano_pose.shape}")
+        # print(mano_pose)
         assert trans.shape == (3,)
         betas = meta_data["betas"]
         assert betas.shape == (10,)
@@ -91,8 +91,10 @@ def iter_meta_info(dataset_partial):
         assert joints_2d.shape == (21, 2)
         joints_3d = meta_data["joints_3d"][:, 0:3]
         assert joints_3d.shape == (21, 3)
+        image_mean = transfromed_img.mean(dim=[1, 2])
+        print(f"##############: transfromed_img: mean={image_mean} min={transfromed_img.min()} max={transfromed_img.max()}")
         # print(mano_pose.shape, trans.shape, betas.shape, joints_2d.shape, joints_3d.shape)
-        yield MetaInfo(mano_pose, trans, betas, joints_2d, joints_3d)
+        yield MetaInfo(mano_pose, trans, betas, joints_2d, joints_3d, image_mean)
 
 
 def iter_stats_dicts(dataset_partial):
@@ -108,6 +110,7 @@ def iter_stats_dicts(dataset_partial):
             "betas": get_stats(value=meta_info.betas),
             "joints_2d": get_stats(value=meta_info.joints_2d),
             "joints_3d": get_stats(value=meta_info.joints_3d),
+            "image_mean": get_stats(value=meta_info.image_mean),
         }
         yield d
 
@@ -116,12 +119,12 @@ def main(args, *, train_yaml_file, num):
     # device = torch.device("cpu")
     dataset = build_hand_dataset(train_yaml_file, args, is_train=True)
     dict_list = list(iter_stats_dicts(itertools.islice(dataset, num)))
-    keys = ("mano_pose", "trans", "betas", "joints_2d", "joints_3d")
-    print("[gphmer],mean,var")
+    keys = ("mano_pose", "trans", "betas", "joints_2d", "joints_3d", "image_mean")
+    print("[gphmer],mean,var,std")
     for key in keys:
         m = sum(d[key].mean for d in dict_list) / num
         v = sum(d[key].var for d in dict_list) / num
-        print(f"{key},{m:.03},{v:.03}")
+        print(f"{key},{m:.03},{v:.03},{v**0.5}")
 
 
 def parse_args():
