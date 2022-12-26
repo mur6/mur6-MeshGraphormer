@@ -42,8 +42,8 @@ noise_t = A.Compose(
             ],
             p=0.8,
         ),
-        # A.Normalize(mean=mean, std=std),
-        A.Normalize(mean=(0,0,0), std=(1,1,1)),
+        A.Normalize(mean=mean, std=std),
+        # A.Normalize(mean=(0,0,0), std=(1,1,1)),
         ToTensorV2(),
     ]
 )
@@ -88,6 +88,7 @@ class BlenderHandMeshDataset(object):
         image = Image.open(image_file)
         image = cv2.imread(str(image_file))
         image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+        # print("image:", np.max(image), np.min(image))
         original_image = torchvision.transforms.functional.to_tensor(image)
         transfromed_img = noise_t(image=image)["image"]
         return original_image, transfromed_img
