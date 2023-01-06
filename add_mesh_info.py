@@ -9,10 +9,6 @@ import numpy as np
 import torch
 from PIL import Image
 
-# import matplotlib.pyplot as plt
-# from pycocotools.coco import COCO
-# from torchvision.utils import make_grid
-from tqdm import tqdm
 
 import src.modeling.data.config as cfg
 from manopth.manolayer import ManoLayer
@@ -149,12 +145,6 @@ def main(args, *, train_yaml_file, num):
     print("gt_3d_joints", gt_3d_joints)
     visualize_data_simple_scatter(ori_img.numpy().transpose(1, 2, 0), joints_2d, orig_joints_2d, orig_3d_joints)
 
-    # fig = plt.figure()
-    # ax = fig.add_subplot(111, projection='3d')
-    # #verts, joints = hand_info['verts'][batch_idx], hand_info['joints'][batch_idx]
-    # #if mano_faces is None:
-
-    # visualize_data_3d(gt_vertices, gt_3d_joints)
 
 
 def parse_args():
