@@ -16,25 +16,12 @@ from src.datasets.hand_mesh_tsv import HandMeshTSVDataset, HandMeshTSVYamlDatase
 from src.modeling._mano import MANO, Mesh
 
 
-def show_3d_plot_just_one(axs, points3d, alpha=None, color=None, with_index=False):
-    X, Y, Z = points3d[:, 0], points3d[:, 1], points3d[:, 2]
-    axs.scatter(X, Y, Z, alpha=alpha, color=color)
-    if with_index:
-        for i in range(len(X)):
-            axs.text(X[i], Y[i], Z[i], str(i), color="blue")
-
-
-# def visualize_data_3d(gt_vertices_sub, gt_3d_joints):
-#     verts = gt_vertices_sub[0]
-#     joints = gt_3d_joints[0]
-#     fig = plt.figure()
-#     ax = fig.add_subplot(111, projection="3d")
-#     ax.set_xlabel("$X$")
-#     ax.set_ylabel("$Y$")
-#     ax.set_zlabel("Z")
-#     show_3d_plot_just_one(ax, verts, alpha=0.1)
-#     show_3d_plot_just_one(ax, joints, color="red", with_index=True)
-#     plt.show()
+# def show_3d_plot_just_one(axs, points3d, alpha=None, color=None, with_index=False):
+#     X, Y, Z = points3d[:, 0], points3d[:, 1], points3d[:, 2]
+#     axs.scatter(X, Y, Z, alpha=alpha, color=color)
+#     if with_index:
+#         for i in range(len(X)):
+#             axs.text(X[i], Y[i], Z[i], str(i), color="blue")
 
 
 def build_hand_dataset(yaml_file, args, is_train=True, scale_factor=1):
@@ -64,20 +51,6 @@ def iter_meta_info(dataset_partial):
         # print(mano_pose.shape, trans.shape, betas.shape, joints_2d.shape, joints_3d.shape)
         yield MetaInfo(pose, betas, joints_2d, joints_3d), meta_data
 
-
-# def visualize_data(ori_img, joints_2d):
-#     # n_cols = 2
-#     # n_rows = 2
-#     # fig, axs = plt.subplots(n_cols, n_rows, figsize=(9, 9))
-#     # axs = axs.flatten()
-
-#     fig = plt.figure()
-#     ax = fig.add_subplot(111)
-#     ax.set_title("ori_img & joints_2d")
-#     ax.imshow(ori_img)
-#     ax.scatter(joints_2d[:, 0], joints_2d[:, 1], c="red", alpha=0.75)
-#     plt.tight_layout()
-#     plt.show()
 
 
 def visualize_data_simple_scatter(ori_img, joints_2d, orig_joints_2d, gt_3d_joints):
