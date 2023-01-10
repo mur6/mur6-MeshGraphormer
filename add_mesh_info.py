@@ -77,6 +77,9 @@ def visualize_data_simple_scatter(ori_img, joints_2d, orig_joints_2d, gt_3d_join
     plt.tight_layout()
     plt.show()
 
+def adjust():
+
+
 
 def main(args, *, train_yaml_file, num):
     dataset = build_hand_dataset(train_yaml_file, args, is_train=True)
@@ -87,10 +90,8 @@ def main(args, *, train_yaml_file, num):
     joints_2d = meta_info.joints_2d
     joints_2d = ((joints_2d + 1) * 0.5) * img_size
     ori_img = annotations["ori_img"]
-    # visualize_data(ori_img.numpy().transpose(1, 2, 0), joints_2d)
 
     mano_model = MANO().to("cpu")
-    # mano_model.layer = mano_model.layer.cuda()
     mano_layer = mano_model.layer
     mesh_sampler = Mesh(device=torch.device("cpu"))
 
@@ -101,8 +102,7 @@ def main(args, *, train_yaml_file, num):
     gt_3d_joints = gt_3d_joints / 1000.0
     orig_3d_joints = gt_3d_joints
     gt_vertices_sub = mesh_sampler.downsample(gt_vertices)
-    # print(gt_vertices.shape, gt_3d_joints.shape)
-    # normalize gt based on hand's wrist
+
     batch_size = 1
 
     gt_3d_root = gt_3d_joints[:, cfg.J_NAME.index("Wrist"), :]
@@ -116,7 +116,7 @@ def main(args, *, train_yaml_file, num):
     print(f"gt_vertices:min{torch.min(gt_vertices)}, max={torch.max(gt_vertices)}")
     print(f"gt_3d_joints:min{torch.min(gt_3d_joints)}, max={torch.max(gt_3d_joints)}")
     print("gt_3d_joints", gt_3d_joints)
-    visualize_data_simple_scatter(ori_img.numpy().transpose(1, 2, 0), joints_2d, orig_joints_2d, orig_3d_joints)
+    # visualize_data_simple_scatter(ori_img.numpy().transpose(1, 2, 0), joints_2d, orig_joints_2d, orig_3d_joints)
 
 
 
