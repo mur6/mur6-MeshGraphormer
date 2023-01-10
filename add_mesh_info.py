@@ -99,7 +99,7 @@ def adjust_vertices(gt_vertices, gt_3d_joints):
 def main(args, *, train_yaml_file, num):
     dataset = build_hand_dataset(train_yaml_file, args, is_train=True)
     meta_info, annotations = list(iter_meta_info(itertools.islice(dataset, num)))[-1]
-    print(f"joints_2d: {meta_info.joints_2d}")
+
     img_size = 224
     # orig_joints_2d = meta_info.joints_2d
     joints_2d = meta_info.joints_2d
