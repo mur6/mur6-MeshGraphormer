@@ -95,26 +95,34 @@ def adjust_vertices(gt_vertices, gt_3d_joints):
     # gt_3d_joints_with_tag[:, :, :3] = gt_3d_joints
     return gt_vertices.squeeze(0), gt_vertices_sub.squeeze(0), gt_3d_joints.squeeze(0)
 
-def visualize(gt_vertices, mano_faces, ring3, ring4):
+def visualize(gt_vertices, mano_faces, ring1, ring2):
     # mesh objects can be created from existing faces and vertex data
     mesh = trimesh.Trimesh(
         vertices=gt_vertices,
         faces=mano_faces)
-    color = [102, 102, 102, 128]
+    color = [102, 102, 102, 64]
     for facet in mesh.facets:
         # for a_color in mesh.visual.face_colors[facet]:
         # print(k)
         mesh.visual.face_colors[facet] = [color, color]
-    # mesh.show()
+
     scene = trimesh.Scene()
     scene.add_geometry(mesh)
-    geom = trimesh.creation.icosphere(radius=0.005)
-    geom.visual.face_colors = [202, 2, 2, 255]
-    print(ring3, ring4)
-    # geom.apply_transform(trimesh.transformations.random_rotation_matrix())
-    # geom.center = [1, 1, 1]
-    geom.apply_translation(ring3)
-    scene.add_geometry(geom)
+
+    def create_point_geom(ring_point, color):
+        geom = trimesh.creation.icosphere(radius=0.0008)
+        if color == "red":
+            color = [202, 2, 2, 255]
+        else:
+            color = [0, 0, 200, 255]
+        geom.visual.face_colors = color
+        # print(ring3, ring4)
+        # geom.apply_transform(trimesh.transformations.random_rotation_matrix())
+        # geom.center = [1, 1, 1]
+        geom.apply_translation(ring_point)
+        return geom
+    scene.add_geometry(create_point_geom(ring1, color="red"))
+    scene.add_geometry(create_point_geom(ring2, color="blue"))
     scene.show()
 
 def main(args, *, train_yaml_file, num):
@@ -129,12 +137,6 @@ def main(args, *, train_yaml_file, num):
 
     mano_model = MANO().to("cpu")
     # mano_layer = mano_model.layer
-    # self.joints_name = ('Wrist', 'Thumb_1', 'Thumb_2', 'Thumb_3', 'Thumb_4', 'Index_1', 'Index_2', 'Index_3', 'Index_4', 'Middle_1', 'Middle_2', 'Middle_3', 'Middle_4', 
-    'Ring_1', 'Ring_2', 'Ring_3', 'Ring_4',
-    # 'Pinky_1', 'Pinky_2', 'Pinky_3', 'Pinky_4')
-    ring_3 = mano_model.joints_name.index('Ring_3')
-    ring_4 = mano_model.joints_name.index('Ring_4')
-    # 'Ring_4',
 
     pose = meta_info.pose.unsqueeze(0)
     betas = meta_info.betas.unsqueeze(0)
@@ -150,10 +152,19 @@ def main(args, *, train_yaml_file, num):
     print("gt_vertices", gt_vertices)
     mano_faces = mano_model.layer.th_faces
     print(f"mano_faces: {mano_faces.shape}")
-    print("ring_3:", joints[ring_3])
-    print("ring_4:", joints[ring_4])
+    # print("ring_3:", joints[ring_3])
+    # print("ring_nemoto:", joints[ring_nemoto])
+
+    def ring_finger_point(num):
+        ring_point = mano_model.joints_name.index(f'Ring_{num}')
+        return joints[ring_point]
+
     # visualize_data_simple_scatter(ori_img.numpy().transpose(1, 2, 0), joints_2d, orig_joints_2d, orig_3d_joints)
-    visualize(gt_vertices, mano_faces, ring3=joints[ring_3], ring4=joints[ring_4])
+    visualize(
+        gt_vertices, mano_faces,
+        ring1=ring_finger_point(1),
+        ring2=ring_finger_point(2),
+    )
 
 
 
