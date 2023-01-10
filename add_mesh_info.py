@@ -7,6 +7,7 @@ from pathlib import Path
 import trimesh
 import matplotlib.pyplot as plt
 import numpy as np
+import numpy.linalg
 import torch
 from PIL import Image
 
@@ -15,13 +16,26 @@ from manopth.manolayer import ManoLayer
 from src.datasets.hand_mesh_tsv import HandMeshTSVDataset, HandMeshTSVYamlDataset
 from src.modeling._mano import MANO, Mesh
 
+import numpy as np
+from scipy.spatial import ConvexHull
+from scipy.spatial.distance import euclidean
+from sklearn.decomposition import PCA
 
-# def show_3d_plot_just_one(axs, points3d, alpha=None, color=None, with_index=False):
-#     X, Y, Z = points3d[:, 0], points3d[:, 1], points3d[:, 2]
-#     axs.scatter(X, Y, Z, alpha=alpha, color=color)
-#     if with_index:
-#         for i in range(len(X)):
-#             axs.text(X[i], Y[i], Z[i], str(i), color="blue")
+def calc_ring_perimeter(ring_contact_part_mesh):
+    v = ring_contact_part_mesh.vertices[ring_contact_part_mesh.faces]
+    # メッシュを構成する三角形の重心部分を求める
+    center_points = np.mean(v, axis=1)
+    # PCAで次元削減及び２次元へ投影
+    pca = PCA(n_components=3)
+    pca.fit(center_points)
+    vert_2d = np.dot(center_points, pca.components_.T[:, :2])
+    # ConvexHullで均してから外周を測る
+    hull = ConvexHull(vert_2d)
+    vertices = hull.vertices.tolist() + [hull.vertices[0]]
+    perimeter = np.sum(
+        [euclidean(x, y) for x, y in zip(vert_2d[vertices], vert_2d[vertices][1:])]
+    )
+    return perimeter, center_points
 
 
 def build_hand_dataset(yaml_file, args, is_train=True, scale_factor=1):
@@ -108,6 +122,11 @@ def visualize(gt_vertices, mano_faces, ring1, ring2):
 
     scene = trimesh.Scene()
     scene.add_geometry(mesh)
+    ring_contact_part_mesh = calc_ring_contact_part_mesh(
+        hand_mesh=mesh, ring1_point=ring1, ring2_point=ring2
+    )
+    perimeter, center_points = calc_ring_perimeter(ring_contact_part_mesh)
+    print("center_points: ", center_points.shape)
 
     def create_point_geom(ring_point, color):
         geom = trimesh.creation.icosphere(radius=0.0008)
@@ -165,6 +184,32 @@ def main(args, *, train_yaml_file, num):
         ring1=ring_finger_point(1),
         ring2=ring_finger_point(2),
     )
+
+def calc_ring_contact_part_mesh(*, hand_mesh, ring1_point, ring2_point):
+    # カットしたい平面の起点と法線ベクトルを求める
+    plane_normal = ring2_point - ring1_point
+    plane_origin = (ring1_point + ring2_point) / 2
+    # 上記の平面とメッシュの交わる面を求める
+    _, face_index = trimesh.intersections.mesh_plane(
+        hand_mesh, plane_normal, plane_origin, return_faces=True
+    )
+    new_triangles = trimesh.Trimesh(hand_mesh.vertices, hand_mesh.faces[face_index])
+    # 起点と最も近い面(三角形)を求める
+    center_points = np.average(new_triangles.vertices[new_triangles.faces], axis=1)
+    distances = numpy.linalg.norm(
+        center_points - np.expand_dims(plane_origin, 0), axis=1
+    )
+    triangle_id = np.argmin(distances)
+    # print(f"closest triangle_id: {triangle_id}")
+    # 上記の三角形を含む、連なったグループを求める
+    closest_face_index = None
+    for face_index in trimesh.graph.connected_components(new_triangles.face_adjacency):
+        if triangle_id in face_index:
+            closest_face_index = face_index
+
+    new_face_index = new_triangles.faces[closest_face_index]
+    ring_contact_part = trimesh.Trimesh(new_triangles.vertices, new_face_index)
+    return ring_contact_part
 
 
 
