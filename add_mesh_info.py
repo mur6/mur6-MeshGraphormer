@@ -78,7 +78,7 @@ def visualize_data_simple_scatter(ori_img, joints_2d, orig_joints_2d, gt_3d_join
     plt.show()
 
 def adjust():
-
+    pass
 
 
 def main(args, *, train_yaml_file, num):
