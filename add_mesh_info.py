@@ -110,6 +110,10 @@ def visualize(gt_vertices, mano_faces, ring3, ring4):
     scene.add_geometry(mesh)
     geom = trimesh.creation.icosphere(radius=0.005)
     geom.visual.face_colors = [202, 2, 2, 255]
+    print(ring3, ring4)
+    # geom.apply_transform(trimesh.transformations.random_rotation_matrix())
+    # geom.center = [1, 1, 1]
+    geom.apply_translation(ring3)
     scene.add_geometry(geom)
     scene.show()
 
@@ -147,6 +151,7 @@ def main(args, *, train_yaml_file, num):
     mano_faces = mano_model.layer.th_faces
     print(f"mano_faces: {mano_faces.shape}")
     print("ring_3:", joints[ring_3])
+    print("ring_4:", joints[ring_4])
     # visualize_data_simple_scatter(ori_img.numpy().transpose(1, 2, 0), joints_2d, orig_joints_2d, orig_3d_joints)
     visualize(gt_vertices, mano_faces, ring3=joints[ring_3], ring4=joints[ring_4])
 
