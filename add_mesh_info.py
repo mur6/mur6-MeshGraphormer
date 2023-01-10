@@ -93,7 +93,7 @@ def adjust_vertices(gt_vertices, gt_3d_joints):
     # gt_3d_joints = gt_3d_joints - gt_3d_root[:, None, :]
     # gt_3d_joints_with_tag = torch.ones((batch_size, gt_3d_joints.shape[1], 4))
     # gt_3d_joints_with_tag[:, :, :3] = gt_3d_joints
-    return gt_vertices
+    return gt_vertices, gt_vertices_sub
 
 
 def main(args, *, train_yaml_file, num):
@@ -112,12 +112,14 @@ def main(args, *, train_yaml_file, num):
     pose = meta_info.pose.unsqueeze(0)
     betas = meta_info.betas.unsqueeze(0)
     gt_vertices, gt_3d_joints = mano_model.layer(pose, betas)
-    gt_vertices = adjust_vertices(gt_vertices, gt_3d_joints)
+    gt_vertices, gt_vertices_sub = adjust_vertices(gt_vertices, gt_3d_joints)
 
     print(f"gt_vertices:{gt_vertices.shape}")
+    print(f"gt_vertices_sub:{gt_vertices_sub.shape}")
+
     # print(f"gt_vertices:min{torch.min(gt_vertices)}, max={torch.max(gt_vertices)}")
     # print(f"gt_3d_joints:min{torch.min(gt_3d_joints)}, max={torch.max(gt_3d_joints)}")
-    print("gt_vertices", gt_vertices)
+    # print("gt_vertices", gt_vertices)
     # visualize_data_simple_scatter(ori_img.numpy().transpose(1, 2, 0), joints_2d, orig_joints_2d, orig_3d_joints)
 
 
