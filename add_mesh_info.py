@@ -127,6 +127,7 @@ def visualize(gt_vertices, mano_faces, ring1, ring2):
     )
     perimeter, center_points = calc_ring_perimeter(ring_contact_part_mesh)
     print("center_points: ", center_points.shape)
+    print(f"perimeter: {perimeter}")
 
     def create_point_geom(ring_point, color):
         geom = trimesh.creation.icosphere(radius=0.0008)
@@ -140,6 +141,7 @@ def visualize(gt_vertices, mano_faces, ring1, ring2):
         # geom.center = [1, 1, 1]
         geom.apply_translation(ring_point)
         return geom
+
     scene.add_geometry(create_point_geom(ring1, color="red"))
     scene.add_geometry(create_point_geom(ring2, color="blue"))
     scene.show()
@@ -189,6 +191,7 @@ def calc_ring_contact_part_mesh(*, hand_mesh, ring1_point, ring2_point):
     # カットしたい平面の起点と法線ベクトルを求める
     plane_normal = ring2_point - ring1_point
     plane_origin = (ring1_point + ring2_point) / 2
+    print(f"plane_normal:{plane_normal} plane_origin:{plane_origin}")
     # 上記の平面とメッシュの交わる面を求める
     _, face_index = trimesh.intersections.mesh_plane(
         hand_mesh, plane_normal, plane_origin, return_faces=True
