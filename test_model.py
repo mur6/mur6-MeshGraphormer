@@ -166,14 +166,14 @@ if __name__ == "__main__":
     # input = torch.randn(1, 768)
     # output = m(input)
     # print(output)
-    s = Path("mesh_info.json").read_text()
+    s = Path("mesh_info_15k.json").read_text()
     X, y = [], []
     for betas, perimeter in json.loads(s):
         X.append(betas)
         y.append(perimeter)
 
-    X = torch.FloatTensor(X) * 100.0
-    y = torch.FloatTensor(y) * 100.0
+    X = torch.FloatTensor(X) * 10.0
+    y = torch.FloatTensor(y) * 10.0
     X_train, X_test, y_train, y_test = train_test_split(X, y)
 
     train_dataset = TensorDataset(X_train, y_train)
