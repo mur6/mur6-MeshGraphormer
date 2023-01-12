@@ -193,8 +193,8 @@ def get_betas_and_perimeter(dataset, num):
 def main(args, *, train_yaml_file, num):
     dataset = build_hand_dataset(train_yaml_file, args, is_train=True)
     betas_and_perimeter = get_betas_and_perimeter(dataset, num)
-    s = json.dumps(list, indent=4)
-    args.output_json.write(s)
+    s = json.dumps(betas_and_perimeter, indent=4)
+    args.output_json.write_text(s)
 
 
 def calc_ring_contact_part_mesh(*, hand_mesh, ring1_point, ring2_point):
