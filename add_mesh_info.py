@@ -124,11 +124,7 @@ def create_point_geom(ring_point, color):
     return geom
 
 
-def visualize(gt_vertices, mano_faces, ring1, ring2):
-    # mesh objects can be created from existing faces and vertex data
-    mesh = trimesh.Trimesh(
-        vertices=gt_vertices,
-        faces=mano_faces)
+def visualize(mesh, ring1, ring2):
     color = [102, 102, 102, 64]
     for facet in mesh.facets:
         # for a_color in mesh.visual.face_colors[facet]:
@@ -141,9 +137,6 @@ def visualize(gt_vertices, mano_faces, ring1, ring2):
         hand_mesh=mesh, ring1_point=ring1, ring2_point=ring2
     )
     perimeter, center_points = calc_ring_perimeter(ring_contact_part_mesh)
-    print("center_points: ", center_points.shape)
-    print(f"perimeter: {perimeter}")
-
     scene.add_geometry(create_point_geom(ring1, color="red"))
     scene.add_geometry(create_point_geom(ring2, color="blue"))
     scene.show()
@@ -207,11 +200,13 @@ def main(args, *, train_yaml_file, num):
         # print(f"gt_3d_joints:min{torch.min(gt_3d_joints)}, max={torch.max(gt_3d_joints)}")
         # print("gt_vertices", gt_vertices)
         mesh = make_hand_mesh(mano_model, gt_vertices)
-        calc_perimeter_and_center_points(mesh
+        perimeter, center_points = calc_perimeter_and_center_points(
+            mesh,
             ring1=ring_finger_point_func(1),
             ring2=ring_finger_point_func(2),
         )
-        print
+        # print("center_points: ", center_points.shape)
+        # print(f"perimeter: {perimeter}")
 
 
 def calc_ring_contact_part_mesh(*, hand_mesh, ring1_point, ring2_point):
