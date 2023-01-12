@@ -109,6 +109,21 @@ def adjust_vertices(gt_vertices, gt_3d_joints):
     # gt_3d_joints_with_tag[:, :, :3] = gt_3d_joints
     return gt_vertices.squeeze(0), gt_vertices_sub.squeeze(0), gt_3d_joints.squeeze(0)
 
+
+def create_point_geom(ring_point, color):
+    geom = trimesh.creation.icosphere(radius=0.0008)
+    if color == "red":
+        color = [202, 2, 2, 255]
+    else:
+        color = [0, 0, 200, 255]
+    geom.visual.face_colors = color
+    # print(ring3, ring4)
+    # geom.apply_transform(trimesh.transformations.random_rotation_matrix())
+    # geom.center = [1, 1, 1]
+    geom.apply_translation(ring_point)
+    return geom
+
+
 def visualize(gt_vertices, mano_faces, ring1, ring2):
     # mesh objects can be created from existing faces and vertex data
     mesh = trimesh.Trimesh(
@@ -129,62 +144,75 @@ def visualize(gt_vertices, mano_faces, ring1, ring2):
     print("center_points: ", center_points.shape)
     print(f"perimeter: {perimeter}")
 
-    def create_point_geom(ring_point, color):
-        geom = trimesh.creation.icosphere(radius=0.0008)
-        if color == "red":
-            color = [202, 2, 2, 255]
-        else:
-            color = [0, 0, 200, 255]
-        geom.visual.face_colors = color
-        # print(ring3, ring4)
-        # geom.apply_transform(trimesh.transformations.random_rotation_matrix())
-        # geom.center = [1, 1, 1]
-        geom.apply_translation(ring_point)
-        return geom
-
     scene.add_geometry(create_point_geom(ring1, color="red"))
     scene.add_geometry(create_point_geom(ring2, color="blue"))
     scene.show()
 
 
+def make_joint2d_and_image(meta_info, annotations):
+    img_size = 224
+    joints_2d = meta_info.joints_2d
+    joints_2d = ((joints_2d + 1) * 0.5) * img_size
+    ori_img = annotations["ori_img"]
+    return joints_2d, ori_img
+
+
+MANO_JOINTS_NAME = (
+    'Wrist', 'Thumb_1', 'Thumb_2', 'Thumb_3', 'Thumb_4',
+    'Index_1', 'Index_2', 'Index_3', 'Index_4',
+    'Middle_1', 'Middle_2', 'Middle_3', 'Middle_4',
+    'Ring_1', 'Ring_2', 'Ring_3', 'Ring_4',
+    'Pinky_1', 'Pinky_2', 'Pinky_3', 'Pinky_4',
+)
+
+def make_gt_infos(mano_model, meta_info, annotations):
+    pose = meta_info.pose.unsqueeze(0)
+    betas = meta_info.betas.unsqueeze(0)
+    gt_vertices, gt_3d_joints = mano_model.layer(pose, betas)
+    gt_vertices, gt_vertices_sub, gt_3d_joints = adjust_vertices(gt_vertices, gt_3d_joints)
+
+    # print(f"gt_vertices: {gt_vertices.shape}")
+    # print(f"gt_vertices_sub: {gt_vertices_sub.shape}")
+    # print(f"joints: {joints.shape}")
+
+    def ring_finger_point_func(num):
+        ring_point = MANO_JOINTS_NAME.index(f'Ring_{num}')
+        return gt_3d_joints[ring_point]
+
+    return gt_vertices, gt_vertices_sub, ring_finger_point_func
+
+
+def make_hand_mesh(mano_model, gt_vertices):
+    mano_faces = mano_model.layer.th_faces
+    # mesh objects can be created from existing faces and vertex data
+    return trimesh.Trimesh(vertices=gt_vertices, faces=mano_faces)
+
+
+def calc_perimeter_and_center_points(mesh, *, ring1, ring2):
+    ring_contact_part_mesh = calc_ring_contact_part_mesh(
+        hand_mesh=mesh, ring1_point=ring1, ring2_point=ring2
+    )
+    perimeter, center_points = calc_ring_perimeter(ring_contact_part_mesh)
+    return perimeter, center_points
+
+
 def main(args, *, train_yaml_file, num):
     dataset = build_hand_dataset(train_yaml_file, args, is_train=True)
     for meta_info, annotations in iter_meta_info(itertools.islice(dataset, num)):
-        img_size = 224
-        # orig_joints_2d = meta_info.joints_2d
-        joints_2d = meta_info.joints_2d
-        joints_2d = ((joints_2d + 1) * 0.5) * img_size
-        ori_img = annotations["ori_img"]
-
+        # joints_2d, ori_img = make_joint2d_and_image(meta_info, annotations)
         mano_model = MANO().to("cpu")
         # mano_layer = mano_model.layer
-
-        pose = meta_info.pose.unsqueeze(0)
-        betas = meta_info.betas.unsqueeze(0)
-        gt_vertices, gt_3d_joints = mano_model.layer(pose, betas)
-        gt_vertices, gt_vertices_sub, joints = adjust_vertices(gt_vertices, gt_3d_joints)
-
-        print(f"gt_vertices: {gt_vertices.shape}")
-        print(f"gt_vertices_sub: {gt_vertices_sub.shape}")
-        print(f"joints: {joints.shape}")
-
+        gt_vertices, gt_vertices_sub, ring_finger_point_func = make_gt_infos(mano_model, meta_info, annotations)
         # print(f"gt_vertices:min{torch.min(gt_vertices)}, max={torch.max(gt_vertices)}")
         # print(f"gt_3d_joints:min{torch.min(gt_3d_joints)}, max={torch.max(gt_3d_joints)}")
-        print("gt_vertices", gt_vertices)
-        mano_faces = mano_model.layer.th_faces
-        print(f"mano_faces: {mano_faces.shape}")
-        # print("ring_3:", joints[ring_3])
-        # print("ring_nemoto:", joints[ring_nemoto])
+        # print("gt_vertices", gt_vertices)
+        mesh = make_hand_mesh(mano_model, gt_vertices)
+        calc_perimeter_and_center_points(mesh
+            ring1=ring_finger_point_func(1),
+            ring2=ring_finger_point_func(2),
+        )
+        print
 
-    # def ring_finger_point(num):
-    #     ring_point = mano_model.joints_name.index(f'Ring_{num}')
-    #     return joints[ring_point]
-
-    # visualize(
-    #     gt_vertices, mano_faces,
-    #     ring1=ring_finger_point(1),
-    #     ring2=ring_finger_point(2),
-    # )
 
 def calc_ring_contact_part_mesh(*, hand_mesh, ring1_point, ring2_point):
     # カットしたい平面の起点と法線ベクトルを求める
