@@ -1,6 +1,7 @@
 import argparse
 import itertools
 import os.path
+import json
 from collections import namedtuple
 from pathlib import Path
 
@@ -20,6 +21,7 @@ import numpy as np
 from scipy.spatial import ConvexHull
 from scipy.spatial.distance import euclidean
 from sklearn.decomposition import PCA
+
 
 def calc_ring_perimeter(ring_contact_part_mesh):
     v = ring_contact_part_mesh.vertices[ring_contact_part_mesh.faces]
@@ -66,30 +68,6 @@ def iter_meta_info(dataset_partial):
         yield MetaInfo(pose, betas, joints_2d, joints_3d), meta_data
 
 
-
-def visualize_data_simple_scatter(ori_img, joints_2d, orig_joints_2d, gt_3d_joints):
-    fig = plt.figure(figsize=(9, 9))
-    ax = fig.add_subplot(221)
-    ax.set_title("ori_img & joints_2d")
-    ax.imshow(ori_img)
-    ax.scatter(joints_2d[:, 0], joints_2d[:, 1], c="red", alpha=0.75)
-
-    # joints_2d = (joints_2d / 224) - 0.5
-    # scale = 0.9
-    joints_3d = gt_3d_joints[0]
-
-    ax = fig.add_subplot(222)
-    ax.scatter(orig_joints_2d[:, 0], orig_joints_2d[:, 1], c="red", alpha=0.75)
-    ax.set_aspect("equal", adjustable="box")
-    ax.set(xlim=(-1, 1), ylim=(-1, 1))
-    ax.invert_yaxis()
-    ax = fig.add_subplot(223)
-    ax.scatter(joints_3d[:, 0], joints_3d[:, 1], c="red", alpha=0.75)
-    ax.set_aspect("equal", adjustable="box")
-    ax.set(xlim=(0, 0.3), ylim=(-0.15, 0.15))
-    ax.invert_yaxis()
-    plt.tight_layout()
-    plt.show()
 
 def adjust_vertices(gt_vertices, gt_3d_joints):
     gt_vertices = gt_vertices / 1000.0
@@ -189,14 +167,13 @@ def calc_perimeter_and_center_points(mesh, *, ring1, ring2):
     return perimeter, center_points
 
 
-def main(args, *, train_yaml_file, num):
-    dataset = build_hand_dataset(train_yaml_file, args, is_train=True)
+def get_betas_and_perimeter(dataset, num):
+    betas_and_perimeter = []
     for meta_info, annotations in iter_meta_info(itertools.islice(dataset, num)):
         # joints_2d, ori_img = make_joint2d_and_image(meta_info, annotations)
         mano_model = MANO().to("cpu")
         # mano_layer = mano_model.layer
-        betas = meta_info.betas.unsqueeze(0)
-        print(f"betas: {betas}")
+        betas = tuple(meta_info.betas.tolist())
         gt_vertices, gt_vertices_sub, ring_finger_point_func = make_gt_infos(mano_model, meta_info, annotations)
         # print(f"gt_vertices:min{torch.min(gt_vertices)}, max={torch.max(gt_vertices)}")
         # print(f"gt_3d_joints:min{torch.min(gt_3d_joints)}, max={torch.max(gt_3d_joints)}")
@@ -207,8 +184,17 @@ def main(args, *, train_yaml_file, num):
             ring1=ring_finger_point_func(1),
             ring2=ring_finger_point_func(2),
         )
-        # print("center_points: ", center_points.shape)
-        print(f"perimeter: {perimeter}")
+        perimeter = round(perimeter, 6)
+        betas_and_perimeter.append((betas, perimeter))
+    betas_and_perimeter = set(betas_and_perimeter)
+    return list(betas_and_perimeter)
+
+
+def main(args, *, train_yaml_file, num):
+    dataset = build_hand_dataset(train_yaml_file, args, is_train=True)
+    betas_and_perimeter = get_betas_and_perimeter(dataset, num)
+    s = json.dumps(list, indent=4)
+    args.output_json.write(s)
 
 
 def calc_ring_contact_part_mesh(*, hand_mesh, ring1_point, ring2_point):
@@ -239,7 +225,6 @@ def calc_ring_contact_part_mesh(*, hand_mesh, ring1_point, ring2_point):
     return ring_contact_part
 
 
-
 def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument(
@@ -258,6 +243,11 @@ def parse_args():
         type=int,
         default=1,
         # required=True,
+    )
+    parser.add_argument(
+        "--output_json",
+        type=Path,
+        required=True,
     )
     args = parser.parse_args()
     return args
