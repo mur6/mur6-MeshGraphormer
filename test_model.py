@@ -47,4 +47,4 @@ if __name__ == "__main__":
     m = ModelNet()
     input = torch.randn(1, 768)
     output = m(input)
-    print(output.shape)
+    print(output)
