@@ -8,7 +8,7 @@ import numpy as np
 from matplotlib import pyplot as plt
 from sklearn.model_selection import train_test_split
 # from models import SpatialDescriptor, StructuralDescriptor, MeshConvolution
-from torch.utils.data import TensorDataset
+from torch.utils.data import TensorDataset, DataLoader
 
 class SpatialDescriptor(nn.Module):
 
@@ -38,7 +38,7 @@ class ModelNet(nn.Module):
         super().__init__()
         in_features = 10
         hidden_dim1 = 1024
-        hidden_dim2 = 32
+        hidden_dim2 = 128
         self.head = nn.Sequential(
             nn.Linear(in_features, hidden_dim1),
             nn.ReLU(True),
@@ -68,18 +68,8 @@ class Regression(nn.Module):
         x = self.linear3(x)
         return x
 
-def train(model, optimizer, E, iteration, x, y):
-    # 学習ループ
-    losses = []
-    for i in range(iteration):
-        optimizer.zero_grad()                   # 勾配情報を0に初期化
-        y_pred = model(x)
-        loss = E(y_pred.reshape(y.shape), y)
-        loss.backward()                         # 勾配の計算
-        optimizer.step()                        # 勾配の更新
-        losses.append(loss.item())              # 損失値の蓄積
-        print('epoch=', i+1, 'loss=', loss)
-    return model, losses
+# def train(model, optimizer, E, iteration, x, y):
+
 
 
 def test(model, x):
@@ -133,18 +123,40 @@ def plot(x, y, x_new, y_pred, losses):
     plt.close()
 
 
-def main(X_train, X_test, y_train, y_test):
-    net = ModelNet()
+def main(train_loader, test_loader, *, train_datasize, test_datasize, epochs=3000):
+    model = ModelNet()
     # 最適化アルゴリズムと損失関数を設定
     #optimizer = optim.RMSprop(net.parameters(), lr=0.01)
-    # optimizer = optim.AdamW(net.parameters(), lr=0.001)
-    optimizer = optim.SGD(net.parameters(), lr=0.01)
+    optimizer = optim.AdamW(model.parameters(), lr=0.001)
+    # optimizer = optim.SGD(model.parameters(), lr=0.001)
+    scheduler = optim.lr_scheduler.ExponentialLR(optimizer, gamma=0.9)
     E = nn.MSELoss()
     # トレーニング
-    net, losses = train(model=net, optimizer=optimizer, E=E, iteration=5000, x=X_train, y=y_train)
-    y_pred = test(net, X_test)
-    for gt, y in zip(y_test, y_pred):
-        print(gt, y, gt-y)
+    for epoch in range(epochs):
+        losses = []
+        current_loss = 0.0
+        for i, (x, y) in enumerate(train_loader):
+            optimizer.zero_grad()                   # 勾配情報を0に初期化
+            y_pred = model(x)
+            loss = E(y_pred.reshape(y.shape), y)
+            loss.backward()                         # 勾配の計算
+            optimizer.step()                        # 勾配の更新
+            losses.append(loss.item())              # 損失値の蓄積
+            current_loss += loss.item() * y_pred.size(0)
+
+        epoch_loss = current_loss / train_datasize
+        print(f'Train Loss: {epoch_loss:.4f}')
+        scheduler.step()
+        current_loss = 0.0
+        for x, y in test_loader:
+            y_pred = model(x)
+            loss = E(y_pred, y)
+            current_loss += loss.item() * y_pred.size(0)
+        epoch_loss = current_loss / test_datasize
+        print(f'Validation Loss: {epoch_loss:.4f}')
+        # for gt, y in zip(y_test, y_pred):
+        #     print(gt, y, gt-y)
+
     # print(X_train.shape, y_train.shape)
     # plot(X_train, y_train, X_test.data.numpy().T[1], y_pred, losses)
 
@@ -160,9 +172,16 @@ if __name__ == "__main__":
         X.append(betas)
         y.append(perimeter)
 
-    X = torch.FloatTensor(X) * 10.0
-    y = torch.FloatTensor(y) * 10.0
+    X = torch.FloatTensor(X) * 100.0
+    y = torch.FloatTensor(y) * 100.0
     X_train, X_test, y_train, y_test = train_test_split(X, y)
-    print(X_train)
-    main(X_train, X_test, y_train, y_test)
+
+    train_dataset = TensorDataset(X_train, y_train)
+    train_loader = DataLoader(train_dataset, batch_size=32, shuffle=True)
+    test_dataset = TensorDataset(X_test, y_test)
+    test_loader = DataLoader(train_dataset, batch_size=32, shuffle=False)
+    train_datasize = len(train_dataset)
+    test_datasize = len(test_dataset)
+    print(f"train_datasize={train_datasize} test_datasize={test_datasize}")
+    main(train_loader, test_loader, train_datasize=train_datasize, test_datasize=test_datasize)
 
