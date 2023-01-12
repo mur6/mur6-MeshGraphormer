@@ -37,8 +37,9 @@ class ModelNet(nn.Module):
     def __init__(self):
         super().__init__()
         in_features = 10
-        hidden_dim1 = 1024
-        hidden_dim2 = 128
+        hidden_dim1 = 128
+        hidden_dim2 = 512
+        hidden_dim3 = 64
         self.head = nn.Sequential(
             nn.Linear(in_features, hidden_dim1),
             nn.ReLU(True),
@@ -46,7 +47,10 @@ class ModelNet(nn.Module):
             nn.Linear(hidden_dim1, hidden_dim2),
             nn.ReLU(True),
             nn.Dropout(),
-            nn.Linear(hidden_dim2, 1),
+            nn.Linear(hidden_dim2, hidden_dim3),
+            nn.ReLU(True),
+            nn.Dropout(),
+            nn.Linear(hidden_dim3, 1),
         )
 
     def forward(self, input):
@@ -67,8 +71,6 @@ class Regression(nn.Module):
         x = nn.functional.relu(self.linear2(x))
         x = self.linear3(x)
         return x
-
-# def train(model, optimizer, E, iteration, x, y):
 
 
 
@@ -130,7 +132,7 @@ def main(train_loader, test_loader, *, train_datasize, test_datasize, epochs=300
     optimizer = optim.AdamW(model.parameters(), lr=0.005)
     # optimizer = optim.SGD(model.parameters(), lr=0.001)
     # scheduler = optim.lr_scheduler.ExponentialLR(optimizer, gamma=0.9)
-    scheduler = optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=30, eta_min=0.0001)
+    scheduler = optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=30, eta_min=0.001)
     E = nn.MSELoss()
     # トレーニング
     for epoch in range(epochs):
