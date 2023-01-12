@@ -149,44 +149,42 @@ def visualize(gt_vertices, mano_faces, ring1, ring2):
 
 def main(args, *, train_yaml_file, num):
     dataset = build_hand_dataset(train_yaml_file, args, is_train=True)
-    meta_info, annotations = list(iter_meta_info(itertools.islice(dataset, num)))[-1]
+    for meta_info, annotations in iter_meta_info(itertools.islice(dataset, num)):
+        img_size = 224
+        # orig_joints_2d = meta_info.joints_2d
+        joints_2d = meta_info.joints_2d
+        joints_2d = ((joints_2d + 1) * 0.5) * img_size
+        ori_img = annotations["ori_img"]
 
-    img_size = 224
-    # orig_joints_2d = meta_info.joints_2d
-    joints_2d = meta_info.joints_2d
-    joints_2d = ((joints_2d + 1) * 0.5) * img_size
-    ori_img = annotations["ori_img"]
+        mano_model = MANO().to("cpu")
+        # mano_layer = mano_model.layer
 
-    mano_model = MANO().to("cpu")
-    # mano_layer = mano_model.layer
+        pose = meta_info.pose.unsqueeze(0)
+        betas = meta_info.betas.unsqueeze(0)
+        gt_vertices, gt_3d_joints = mano_model.layer(pose, betas)
+        gt_vertices, gt_vertices_sub, joints = adjust_vertices(gt_vertices, gt_3d_joints)
 
-    pose = meta_info.pose.unsqueeze(0)
-    betas = meta_info.betas.unsqueeze(0)
-    gt_vertices, gt_3d_joints = mano_model.layer(pose, betas)
-    gt_vertices, gt_vertices_sub, joints = adjust_vertices(gt_vertices, gt_3d_joints)
+        print(f"gt_vertices: {gt_vertices.shape}")
+        print(f"gt_vertices_sub: {gt_vertices_sub.shape}")
+        print(f"joints: {joints.shape}")
 
-    print(f"gt_vertices: {gt_vertices.shape}")
-    print(f"gt_vertices_sub: {gt_vertices_sub.shape}")
-    print(f"joints: {joints.shape}")
+        # print(f"gt_vertices:min{torch.min(gt_vertices)}, max={torch.max(gt_vertices)}")
+        # print(f"gt_3d_joints:min{torch.min(gt_3d_joints)}, max={torch.max(gt_3d_joints)}")
+        print("gt_vertices", gt_vertices)
+        mano_faces = mano_model.layer.th_faces
+        print(f"mano_faces: {mano_faces.shape}")
+        # print("ring_3:", joints[ring_3])
+        # print("ring_nemoto:", joints[ring_nemoto])
 
-    # print(f"gt_vertices:min{torch.min(gt_vertices)}, max={torch.max(gt_vertices)}")
-    # print(f"gt_3d_joints:min{torch.min(gt_3d_joints)}, max={torch.max(gt_3d_joints)}")
-    print("gt_vertices", gt_vertices)
-    mano_faces = mano_model.layer.th_faces
-    print(f"mano_faces: {mano_faces.shape}")
-    # print("ring_3:", joints[ring_3])
-    # print("ring_nemoto:", joints[ring_nemoto])
+    # def ring_finger_point(num):
+    #     ring_point = mano_model.joints_name.index(f'Ring_{num}')
+    #     return joints[ring_point]
 
-    def ring_finger_point(num):
-        ring_point = mano_model.joints_name.index(f'Ring_{num}')
-        return joints[ring_point]
-
-    # visualize_data_simple_scatter(ori_img.numpy().transpose(1, 2, 0), joints_2d, orig_joints_2d, orig_3d_joints)
-    visualize(
-        gt_vertices, mano_faces,
-        ring1=ring_finger_point(1),
-        ring2=ring_finger_point(2),
-    )
+    # visualize(
+    #     gt_vertices, mano_faces,
+    #     ring1=ring_finger_point(1),
+    #     ring2=ring_finger_point(2),
+    # )
 
 def calc_ring_contact_part_mesh(*, hand_mesh, ring1_point, ring2_point):
     # カットしたい平面の起点と法線ベクトルを求める
