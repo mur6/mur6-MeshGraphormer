@@ -123,13 +123,14 @@ def plot(x, y, x_new, y_pred, losses):
     plt.close()
 
 
-def main(train_loader, test_loader, *, train_datasize, test_datasize, epochs=3000):
+def main(train_loader, test_loader, *, train_datasize, test_datasize, epochs=300):
     model = ModelNet()
     # 最適化アルゴリズムと損失関数を設定
     #optimizer = optim.RMSprop(net.parameters(), lr=0.01)
-    optimizer = optim.AdamW(model.parameters(), lr=0.001)
+    optimizer = optim.AdamW(model.parameters(), lr=0.005)
     # optimizer = optim.SGD(model.parameters(), lr=0.001)
-    scheduler = optim.lr_scheduler.ExponentialLR(optimizer, gamma=0.9)
+    # scheduler = optim.lr_scheduler.ExponentialLR(optimizer, gamma=0.9)
+    scheduler = optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=30, eta_min=0.0001)
     E = nn.MSELoss()
     # トレーニング
     for epoch in range(epochs):
@@ -138,6 +139,8 @@ def main(train_loader, test_loader, *, train_datasize, test_datasize, epochs=300
         for i, (x, y) in enumerate(train_loader):
             optimizer.zero_grad()                   # 勾配情報を0に初期化
             y_pred = model(x)
+            # print(y_pred.shape)
+            # print(y_pred.reshape(y.shape).shape)
             loss = E(y_pred.reshape(y.shape), y)
             loss.backward()                         # 勾配の計算
             optimizer.step()                        # 勾配の更新
@@ -147,15 +150,22 @@ def main(train_loader, test_loader, *, train_datasize, test_datasize, epochs=300
         epoch_loss = current_loss / train_datasize
         print(f'Train Loss: {epoch_loss:.4f}')
         scheduler.step()
-        current_loss = 0.0
-        for x, y in test_loader:
+        with torch.no_grad():
+            current_loss = 0.0
+            for x, y in test_loader:
+                y_pred = model(x)
+                loss = E(y_pred, y)
+                current_loss += loss.item() * y_pred.size(0)
+            epoch_loss = current_loss / test_datasize
+            print(f'Validation Loss: {epoch_loss:.4f}')
+
+    with torch.no_grad():
+        for x, gt_y in test_loader:
+            #print("-------")
             y_pred = model(x)
-            loss = E(y_pred, y)
-            current_loss += loss.item() * y_pred.size(0)
-        epoch_loss = current_loss / test_datasize
-        print(f'Validation Loss: {epoch_loss:.4f}')
-        # for gt, y in zip(y_test, y_pred):
-        #     print(gt, y, gt-y)
+            y_pred = y_pred.reshape(gt_y.shape)
+            print(f"gt: {gt_y[0]} pred: {y_pred[0]}")
+            #print(gt_y - y_pred)
 
     # print(X_train.shape, y_train.shape)
     # plot(X_train, y_train, X_test.data.numpy().T[1], y_pred, losses)
@@ -179,7 +189,7 @@ if __name__ == "__main__":
     train_dataset = TensorDataset(X_train, y_train)
     train_loader = DataLoader(train_dataset, batch_size=32, shuffle=True)
     test_dataset = TensorDataset(X_test, y_test)
-    test_loader = DataLoader(train_dataset, batch_size=32, shuffle=False)
+    test_loader = DataLoader(test_dataset, batch_size=32, shuffle=False)
     train_datasize = len(train_dataset)
     test_datasize = len(test_dataset)
     print(f"train_datasize={train_datasize} test_datasize={test_datasize}")
