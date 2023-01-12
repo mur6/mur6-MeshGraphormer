@@ -8,7 +8,7 @@ import numpy as np
 from matplotlib import pyplot as plt
 from sklearn.model_selection import train_test_split
 # from models import SpatialDescriptor, StructuralDescriptor, MeshConvolution
-
+from torch.utils.data import TensorDataset
 
 class SpatialDescriptor(nn.Module):
 
