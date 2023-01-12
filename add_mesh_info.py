@@ -146,6 +146,7 @@ def visualize(gt_vertices, mano_faces, ring1, ring2):
     scene.add_geometry(create_point_geom(ring2, color="blue"))
     scene.show()
 
+
 def main(args, *, train_yaml_file, num):
     dataset = build_hand_dataset(train_yaml_file, args, is_train=True)
     meta_info, annotations = list(iter_meta_info(itertools.islice(dataset, num)))[-1]
