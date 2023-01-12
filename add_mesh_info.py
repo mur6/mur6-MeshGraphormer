@@ -195,6 +195,8 @@ def main(args, *, train_yaml_file, num):
         # joints_2d, ori_img = make_joint2d_and_image(meta_info, annotations)
         mano_model = MANO().to("cpu")
         # mano_layer = mano_model.layer
+        betas = meta_info.betas.unsqueeze(0)
+        print(f"betas: {betas}")
         gt_vertices, gt_vertices_sub, ring_finger_point_func = make_gt_infos(mano_model, meta_info, annotations)
         # print(f"gt_vertices:min{torch.min(gt_vertices)}, max={torch.max(gt_vertices)}")
         # print(f"gt_3d_joints:min{torch.min(gt_3d_joints)}, max={torch.max(gt_3d_joints)}")
@@ -206,14 +208,14 @@ def main(args, *, train_yaml_file, num):
             ring2=ring_finger_point_func(2),
         )
         # print("center_points: ", center_points.shape)
-        # print(f"perimeter: {perimeter}")
+        print(f"perimeter: {perimeter}")
 
 
 def calc_ring_contact_part_mesh(*, hand_mesh, ring1_point, ring2_point):
     # カットしたい平面の起点と法線ベクトルを求める
     plane_normal = ring2_point - ring1_point
     plane_origin = (ring1_point + ring2_point) / 2
-    print(f"plane_normal:{plane_normal} plane_origin:{plane_origin}")
+    # print(f"plane_normal:{plane_normal} plane_origin:{plane_origin}")
     # 上記の平面とメッシュの交わる面を求める
     _, face_index = trimesh.intersections.mesh_plane(
         hand_mesh, plane_normal, plane_origin, return_faces=True
@@ -235,7 +237,6 @@ def calc_ring_contact_part_mesh(*, hand_mesh, ring1_point, ring2_point):
     new_face_index = new_triangles.faces[closest_face_index]
     ring_contact_part = trimesh.Trimesh(new_triangles.vertices, new_face_index)
     return ring_contact_part
-
 
 
 
