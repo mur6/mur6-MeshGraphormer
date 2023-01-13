@@ -57,24 +57,24 @@ class STN3d(nn.Module):
         return x
 
 
-if __name__ == "__main__":
-    # batch_size = 4
-    # # x = np.array([1,0,0,0,1,0,0,0,1]).astype(np.float32)
-    # # x = torch.from_numpy(x).view(1, 9).repeat(batch_size, 1)
-    # # print(x)
-    # iden = Variable(torch.eye(3, dtype=torch.float32).view(1, 9)).repeat(batch_size, 1)
-    # x = iden
-    # x = x.view(-1, 3, 3)
-    # print(x)
+# if __name__ == "__main__":
+#     # batch_size = 4
+#     # # x = np.array([1,0,0,0,1,0,0,0,1]).astype(np.float32)
+#     # # x = torch.from_numpy(x).view(1, 9).repeat(batch_size, 1)
+#     # # print(x)
+#     # iden = Variable(torch.eye(3, dtype=torch.float32).view(1, 9)).repeat(batch_size, 1)
+#     # x = iden
+#     # x = x.view(-1, 3, 3)
+#     # print(x)
 
-    m = STN3d()
-    input = torch.randn(10, 3, 768)
-    output = m(input)
-    print(output)
+#     m = STN3d()
+#     input = torch.randn(10, 3, 768)
+#     output = m(input)
+#     print(output)
 
 
 
-def exec_train(train_loader, test_loader, *, model, train_datasize, test_datasize, epochs=300):
+def exec_train(train_loader, test_loader, *, model, train_datasize, test_datasize, epochs=30):
     #optimizer = optim.RMSprop(net.parameters(), lr=0.01)
     optimizer = optim.AdamW(model.parameters(), lr=0.005)
     # optimizer = optim.SGD(model.parameters(), lr=0.001)
@@ -86,7 +86,6 @@ def exec_train(train_loader, test_loader, *, model, train_datasize, test_datasiz
         losses = []
         current_loss = 0.0
         for i, (x, y) in enumerate(train_loader):
-            print(x.shape)
             optimizer.zero_grad()                   # 勾配情報を0に初期化
             y_pred = model(x)
             # print(y_pred.shape)
@@ -139,9 +138,7 @@ def load_data(filename):
                 X.append(gt_vertices)
                 y.append(center_points)
     X = torch.FloatTensor(X)
-    print(X.shape)
     X = torch.transpose(X, 1, 2)
-    print(X.shape)
     y = torch.FloatTensor(y)
     y = torch.transpose(y, 1, 2)
     X_train, X_test, y_train, y_test = train_test_split(X, y)
