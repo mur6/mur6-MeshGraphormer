@@ -173,6 +173,7 @@ OutputInfo = namedtuple("OutputInfo", "betas, gt_vertices, perimeter, center_poi
 
 def get_output_data(dataset, num):
     output_list = []
+    count = 0
     for meta_info, annotations in iter_meta_info(itertools.islice(dataset, num)):
         # joints_2d, ori_img = make_joint2d_and_image(meta_info, annotations)
         mano_model = MANO().to("cpu")
@@ -195,6 +196,8 @@ def get_output_data(dataset, num):
                 center_points=center_points,
             )
         )
+        print(f"count: {count}")
+        count += 1
     # betas_and_perimeter = set(betas_and_perimeter)
     return output_list
 
