@@ -37,7 +37,7 @@ def calc_ring_perimeter(ring_contact_part_mesh):
     perimeter = np.sum(
         [euclidean(x, y) for x, y in zip(vert_2d[vertices], vert_2d[vertices][1:])]
     )
-    return perimeter, center_points
+    return perimeter, np.array(center_points)
 
 
 def build_hand_dataset(yaml_file, args, is_train=True, scale_factor=1):
@@ -66,7 +66,6 @@ def iter_meta_info(dataset_partial):
         assert joints_3d.shape == (21, 3)
         # print(mano_pose.shape, trans.shape, betas.shape, joints_2d.shape, joints_3d.shape)
         yield MetaInfo(pose, betas, joints_2d, joints_3d), meta_data
-
 
 
 def adjust_vertices(gt_vertices, gt_3d_joints):
@@ -164,16 +163,19 @@ def calc_perimeter_and_center_points(mesh, *, ring1, ring2):
         hand_mesh=mesh, ring1_point=ring1, ring2_point=ring2
     )
     perimeter, center_points = calc_ring_perimeter(ring_contact_part_mesh)
+    perimeter = round(perimeter, 6)
+    perimeter = np.array(perimeter)
     return perimeter, center_points
 
 
-def get_betas_and_perimeter(dataset, num):
-    betas_and_perimeter = []
+OutputInfo = namedtuple("OutputInfo", "betas, gt_vertices, perimeter, center_points")
+
+
+def get_output_data(dataset, num):
+    output_list = []
     for meta_info, annotations in iter_meta_info(itertools.islice(dataset, num)):
         # joints_2d, ori_img = make_joint2d_and_image(meta_info, annotations)
         mano_model = MANO().to("cpu")
-        # mano_layer = mano_model.layer
-        betas = tuple(meta_info.betas.tolist())
         gt_vertices, gt_vertices_sub, ring_finger_point_func = make_gt_infos(mano_model, meta_info, annotations)
         # print(f"gt_vertices:min{torch.min(gt_vertices)}, max={torch.max(gt_vertices)}")
         # print(f"gt_3d_joints:min{torch.min(gt_3d_joints)}, max={torch.max(gt_3d_joints)}")
@@ -184,17 +186,25 @@ def get_betas_and_perimeter(dataset, num):
             ring1=ring_finger_point_func(1),
             ring2=ring_finger_point_func(2),
         )
-        perimeter = round(perimeter, 6)
-        betas_and_perimeter.append((betas, perimeter))
-    betas_and_perimeter = set(betas_and_perimeter)
-    return list(betas_and_perimeter)
+        output_list.append(
+            dict(
+                betas=meta_info.betas.numpy(),
+                pose=meta_info.pose.numpy(),
+                gt_vertices=gt_vertices.numpy(),
+                perimeter=perimeter,
+                center_points=center_points,
+            )
+        )
+    # betas_and_perimeter = set(betas_and_perimeter)
+    return output_list
 
 
 def main(args, *, train_yaml_file, num):
     dataset = build_hand_dataset(train_yaml_file, args, is_train=True)
-    betas_and_perimeter = get_betas_and_perimeter(dataset, num)
-    s = json.dumps(betas_and_perimeter, indent=4)
-    args.output_json.write_text(s)
+    outputs = get_output_data(dataset, num)
+    #s = json.dumps(betas_and_perimeter, indent=4)
+    #args.output_json.write_text(s)
+    np.savez(args.output, outputs)
 
 
 def calc_ring_contact_part_mesh(*, hand_mesh, ring1_point, ring2_point):
@@ -245,7 +255,7 @@ def parse_args():
         # required=True,
     )
     parser.add_argument(
-        "--output_json",
+        "--output",
         type=Path,
         required=True,
     )
