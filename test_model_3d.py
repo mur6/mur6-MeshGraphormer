@@ -31,7 +31,7 @@ class STN3d(nn.Module):
         self.conv3 = torch.nn.Conv1d(128, 1024, 1)
         self.fc1 = nn.Linear(1024, 512)
         self.fc2 = nn.Linear(512, 256)
-        self.fc3 = nn.Linear(256, 9)
+        self.fc3 = nn.Linear(256, 3*20)
         # self.relu = nn.ReLU()
         self.bn1 = nn.BatchNorm1d(self.in_features)
         self.bn2 = nn.BatchNorm1d(128)
@@ -51,10 +51,9 @@ class STN3d(nn.Module):
         x = F.relu(self.bn4(self.fc1(x)))
         x = F.relu(self.bn5(self.fc2(x)))
         x = self.fc3(x)
-
         # iden = Variable(torch.eye(3, dtype=torch.float32).view(1, 9)).repeat(batch_size, 1)
         # x = x + iden
-        # x = x.view(-1, 3, 3)
+        x = x.view(-1, 3, 20)
         return x
 
 
@@ -75,12 +74,7 @@ if __name__ == "__main__":
 
 
 
-
-
-
-def exec_train(train_loader, test_loader, *, train_datasize, test_datasize, epochs=300):
-    model = ModelNet()
-    # 最適化アルゴリズムと損失関数を設定
+def exec_train(train_loader, test_loader, *, model, train_datasize, test_datasize, epochs=300):
     #optimizer = optim.RMSprop(net.parameters(), lr=0.01)
     optimizer = optim.AdamW(model.parameters(), lr=0.005)
     # optimizer = optim.SGD(model.parameters(), lr=0.001)
@@ -92,6 +86,7 @@ def exec_train(train_loader, test_loader, *, train_datasize, test_datasize, epoc
         losses = []
         current_loss = 0.0
         for i, (x, y) in enumerate(train_loader):
+            print(x.shape)
             optimizer.zero_grad()                   # 勾配情報を0に初期化
             y_pred = model(x)
             # print(y_pred.shape)
@@ -126,41 +121,48 @@ def exec_train(train_loader, test_loader, *, train_datasize, test_datasize, epoc
     # plot(X_train, y_train, X_test.data.numpy().T[1], y_pred, losses)
 
 
-def main():
-    s = Path("mesh_info_15k.json").read_text()
+def load_data(filename):
     X, y = [], []
-    for betas, perimeter in json.loads(s):
-        X.append(betas)
-        y.append(perimeter)
-
-    X = torch.FloatTensor(X) * 10.0
-    y = torch.FloatTensor(y) * 10.0
+    with np.load(filename, allow_pickle=True) as hand_infos:
+        for idx, val in enumerate(hand_infos["arr_0"]):
+            perimeter = val['perimeter']
+            gt_vertices = val['gt_vertices']
+            # gt_vertices = torch.from_numpy(gt_vertices)
+            # gt_vertices = torch.transpose(gt_vertices, 0, 1)
+            betas = torch.from_numpy(val['betas'])
+            pose = torch.from_numpy(val['pose'])
+            center_points = val['center_points']
+            if center_points.shape[0] == 20:
+                # print(betas.shape)
+                # print(pose.shape)
+                # print(center_points)
+                X.append(gt_vertices)
+                y.append(center_points)
+    X = torch.FloatTensor(X)
+    print(X.shape)
+    X = torch.transpose(X, 1, 2)
+    print(X.shape)
+    y = torch.FloatTensor(y)
+    y = torch.transpose(y, 1, 2)
     X_train, X_test, y_train, y_test = train_test_split(X, y)
-
     train_dataset = TensorDataset(X_train, y_train)
-    train_loader = DataLoader(train_dataset, batch_size=32, shuffle=True)
     test_dataset = TensorDataset(X_test, y_test)
+    return train_dataset, test_dataset
+
+
+def main():
+    train_dataset, test_dataset = load_data("hand_infos.npz")
+    train_loader = DataLoader(train_dataset, batch_size=32, shuffle=True)
     test_loader = DataLoader(test_dataset, batch_size=32, shuffle=False)
     train_datasize = len(train_dataset)
     test_datasize = len(test_dataset)
     print(f"train_datasize={train_datasize} test_datasize={test_datasize}")
-    exec_train(train_loader, test_loader, train_datasize=train_datasize, test_datasize=test_datasize)
-
+    exec_train(
+        train_loader, test_loader,
+        model=STN3d(),
+        train_datasize=train_datasize,
+        test_datasize=test_datasize)
 
 
 if __name__ == "__main__":
-    # m = ModelNet()
-    # input = torch.randn(1, 768)
-    # output = m(input)
-    # print(output)
-    with np.load("hand_infos.npz", allow_pickle=True) as hand_infos:
-        for val in hand_infos["arr_0"]:
-            perimeter = val['perimeter']
-            gt_vertices = torch.from_numpy(val['gt_vertices'])
-            betas = torch.from_numpy(val['betas'])
-            pose = torch.from_numpy(val['pose'])
-            center_points = torch.from_numpy(val['center_points'])
-            print(gt_vertices.shape)
-            print(betas.shape)
-            print(pose.shape)
-            print(center_points)
+    main()
