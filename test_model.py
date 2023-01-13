@@ -125,7 +125,7 @@ def plot(x, y, x_new, y_pred, losses):
     plt.close()
 
 
-def main(train_loader, test_loader, *, train_datasize, test_datasize, epochs=300):
+def exec_train(train_loader, test_loader, *, train_datasize, test_datasize, epochs=300):
     model = ModelNet()
     # 最適化アルゴリズムと損失関数を設定
     #optimizer = optim.RMSprop(net.parameters(), lr=0.01)
@@ -173,11 +173,7 @@ def main(train_loader, test_loader, *, train_datasize, test_datasize, epochs=300
     # plot(X_train, y_train, X_test.data.numpy().T[1], y_pred, losses)
 
 
-if __name__ == "__main__":
-    # m = ModelNet()
-    # input = torch.randn(1, 768)
-    # output = m(input)
-    # print(output)
+def main():
     s = Path("mesh_info_15k.json").read_text()
     X, y = [], []
     for betas, perimeter in json.loads(s):
@@ -195,5 +191,17 @@ if __name__ == "__main__":
     train_datasize = len(train_dataset)
     test_datasize = len(test_dataset)
     print(f"train_datasize={train_datasize} test_datasize={test_datasize}")
-    main(train_loader, test_loader, train_datasize=train_datasize, test_datasize=test_datasize)
+    exec_train(train_loader, test_loader, train_datasize=train_datasize, test_datasize=test_datasize)
 
+
+
+if __name__ == "__main__":
+    # m = ModelNet()
+    # input = torch.randn(1, 768)
+    # output = m(input)
+    # print(output)
+    with np.load("hand_infos.npz", allow_pickle=True) as hand_infos:
+        for v in hand_infos["arr_0"]:
+            print(v.keys())
+            perimeter = v['perimeter']
+            print(v['gt_vertices'].shape, " ", perimeter)
