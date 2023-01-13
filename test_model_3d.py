@@ -72,3 +72,95 @@ if __name__ == "__main__":
     input = torch.randn(10, 3, 768)
     output = m(input)
     print(output)
+
+
+
+
+
+
+def exec_train(train_loader, test_loader, *, train_datasize, test_datasize, epochs=300):
+    model = ModelNet()
+    # 最適化アルゴリズムと損失関数を設定
+    #optimizer = optim.RMSprop(net.parameters(), lr=0.01)
+    optimizer = optim.AdamW(model.parameters(), lr=0.005)
+    # optimizer = optim.SGD(model.parameters(), lr=0.001)
+    # scheduler = optim.lr_scheduler.ExponentialLR(optimizer, gamma=0.9)
+    scheduler = optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=30, eta_min=0.001)
+    E = nn.MSELoss()
+    # トレーニング
+    for epoch in range(epochs):
+        losses = []
+        current_loss = 0.0
+        for i, (x, y) in enumerate(train_loader):
+            optimizer.zero_grad()                   # 勾配情報を0に初期化
+            y_pred = model(x)
+            # print(y_pred.shape)
+            # print(y_pred.reshape(y.shape).shape)
+            loss = E(y_pred.reshape(y.shape), y)
+            loss.backward()                         # 勾配の計算
+            optimizer.step()                        # 勾配の更新
+            losses.append(loss.item())              # 損失値の蓄積
+            current_loss += loss.item() * y_pred.size(0)
+
+        epoch_loss = current_loss / train_datasize
+        print(f'Train Loss: {epoch_loss:.4f}')
+        scheduler.step()
+        with torch.no_grad():
+            current_loss = 0.0
+            for x, y in test_loader:
+                y_pred = model(x)
+                loss = E(y_pred, y)
+                current_loss += loss.item() * y_pred.size(0)
+            epoch_loss = current_loss / test_datasize
+            print(f'Validation Loss: {epoch_loss:.4f}')
+
+    with torch.no_grad():
+        for x, gt_y in test_loader:
+            #print("-------")
+            y_pred = model(x)
+            y_pred = y_pred.reshape(gt_y.shape)
+            print(f"gt: {gt_y[0]} pred: {y_pred[0]}")
+            #print(gt_y - y_pred)
+
+    # print(X_train.shape, y_train.shape)
+    # plot(X_train, y_train, X_test.data.numpy().T[1], y_pred, losses)
+
+
+def main():
+    s = Path("mesh_info_15k.json").read_text()
+    X, y = [], []
+    for betas, perimeter in json.loads(s):
+        X.append(betas)
+        y.append(perimeter)
+
+    X = torch.FloatTensor(X) * 10.0
+    y = torch.FloatTensor(y) * 10.0
+    X_train, X_test, y_train, y_test = train_test_split(X, y)
+
+    train_dataset = TensorDataset(X_train, y_train)
+    train_loader = DataLoader(train_dataset, batch_size=32, shuffle=True)
+    test_dataset = TensorDataset(X_test, y_test)
+    test_loader = DataLoader(test_dataset, batch_size=32, shuffle=False)
+    train_datasize = len(train_dataset)
+    test_datasize = len(test_dataset)
+    print(f"train_datasize={train_datasize} test_datasize={test_datasize}")
+    exec_train(train_loader, test_loader, train_datasize=train_datasize, test_datasize=test_datasize)
+
+
+
+if __name__ == "__main__":
+    # m = ModelNet()
+    # input = torch.randn(1, 768)
+    # output = m(input)
+    # print(output)
+    with np.load("hand_infos.npz", allow_pickle=True) as hand_infos:
+        for val in hand_infos["arr_0"]:
+            perimeter = val['perimeter']
+            gt_vertices = torch.from_numpy(val['gt_vertices'])
+            betas = torch.from_numpy(val['betas'])
+            pose = torch.from_numpy(val['pose'])
+            center_points = torch.from_numpy(val['center_points'])
+            print(gt_vertices.shape)
+            print(betas.shape)
+            print(pose.shape)
+            print(center_points)
