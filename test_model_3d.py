@@ -25,7 +25,7 @@ def save_checkpoint(model, epoch, iteration=None):
     return checkpoint_dir
 
 
-def exec_train(train_loader, test_loader, *, model, train_datasize, test_datasize, epochs=30):
+def exec_train(train_loader, test_loader, *, model, train_datasize, test_datasize, epochs=1000):
     #optimizer = optim.RMSprop(net.parameters(), lr=0.01)
     optimizer = optim.AdamW(model.parameters(), lr=0.005)
     # optimizer = optim.SGD(model.parameters(), lr=0.001)
