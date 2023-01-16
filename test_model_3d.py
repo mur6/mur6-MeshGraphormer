@@ -106,7 +106,7 @@ def load_data(filename):
     return train_dataset, test_dataset
 
 
-def main(resume_dir, input_filename):
+def main(resume_dir, input_filename, device):
     train_dataset, test_dataset = load_data(input_filename)
     train_loader = DataLoader(train_dataset, batch_size=32, shuffle=True)
     test_loader = DataLoader(test_dataset, batch_size=32, shuffle=False)
@@ -124,7 +124,7 @@ def main(resume_dir, input_filename):
             raise Exception(f"{resume_dir} is not valid directory.")
     else:
         model = PointNetfeat()
-    model.to(args.device)
+    model.to(device)
 
     exec_train(
         train_loader, test_loader,
@@ -152,4 +152,4 @@ def parse_args():
 
 if __name__ == "__main__":
     args = parse_args()
-    main(args.resume_dir, args.input_filename)
+    main(args.resume_dir, args.input_filename, args.device)
