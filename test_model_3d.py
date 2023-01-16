@@ -185,5 +185,4 @@ def parse_args():
 
 if __name__ == "__main__":
     args = parse_args()
-    # print(args.resume_dir)
     main(args.resume_dir, args.input_filename)
