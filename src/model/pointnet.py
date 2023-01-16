@@ -34,20 +34,20 @@ class STN3d(nn.Module):
         x = F.relu(self.bn1(self.conv1(x)))
         x = F.relu(self.bn2(self.conv2(x)))
         x = F.relu(self.bn3(self.conv3(x)))
-        print("STN3d 0:", x.shape)
+        # print("STN3d 0:", x.shape)
         x = torch.max(x, 2, keepdim=True)[0]
-        print("STN3d 1:", x.shape)
+        # print("STN3d 1:", x.shape)
         x = x.view(-1, self.max_out)
-        print("STN3d 2:", x.shape)
+        # print("STN3d 2:", x.shape)
         x = F.relu(self.bn4(self.fc1(x)))
-        print("STN3d 3:", x.shape)
+        # print("STN3d 3:", x.shape)
         x = F.relu(self.bn5(self.fc2(x)))
         x = self.fc3(x)
-        print("STN3d 4:", x.shape)
+        # print("STN3d 4:", x.shape)
         iden = Variable(torch.eye(3, dtype=torch.float32).view(1, 9)).repeat(batch_size, 1)
         x = x + iden
         x = x.view(-1, 3, 3)
-        print("STN3d 5:", x.shape)
+        # print("STN3d 5:", x.shape)
         return x
 
 
@@ -68,11 +68,11 @@ class PointNetfeat(nn.Module):
 
     def forward(self, x):
         n_pts = x.size()[2]
-        print(f"n_pts: {n_pts}")
+        # print(f"n_pts: {n_pts}")
         trans = self.stn(x)
-        print(f"trans: {trans.shape}")
+        # print(f"trans: {trans.shape}")
         x = x.transpose(2, 1)
-        print(f"x: {x.shape}")
+        # print(f"x: {x.shape}")
         x = torch.bmm(x, trans)
         x = x.transpose(2, 1)
         x = F.relu(self.bn1(self.conv1(x)))
@@ -89,8 +89,8 @@ class PointNetfeat(nn.Module):
         x = F.relu(self.bn2(self.conv2(x)))
         x = self.bn3(self.conv3(x))
         x = torch.max(x, 2, keepdim=True)[0]
-        print(f"x: {x.shape}")
-        x = x.view(-1, 1024)
+        # print(f"x: {x.shape}")
+        x = x.view(-1, 3, 20)
         # if self.global_feat:
         #     return x, trans, trans_feat
         # else:
