@@ -1,6 +1,7 @@
 from pathlib import Path
 import argparse
 
+import trimesh
 import torch
 import torch.nn as nn
 from torch import nn, optim
@@ -9,19 +10,28 @@ from matplotlib import pyplot as plt
 from sklearn.model_selection import train_test_split
 from torch.utils.data import TensorDataset, DataLoader
 
-import torch
-import torch.nn as nn
 import torch.nn.parallel
 import torch.utils.data
-from torch.autograd import Variable
-import numpy as np
+# from torch.autograd import Variable
 import torch.nn.functional as F
 
 from test_model_3d import load_data, STN3d
 
 
 
-
+def visualize(mesh):
+    color = [102, 102, 102, 64]
+    for facet in mesh.facets:
+        mesh.visual.face_colors[facet] = [color, color]
+    scene = trimesh.Scene()
+    scene.add_geometry(mesh)
+    # ring_contact_part_mesh = calc_ring_contact_part_mesh(
+    #     hand_mesh=mesh, ring1_point=ring1, ring2_point=ring2
+    # )
+    # perimeter, center_points = calc_ring_perimeter(ring_contact_part_mesh)
+    # scene.add_geometry(create_point_geom(ring1, color="red"))
+    # scene.add_geometry(create_point_geom(ring2, color="blue"))
+    scene.show()
 
 
 def infer(model, test_dataset):
@@ -33,7 +43,8 @@ def infer(model, test_dataset):
             print(x.shape)
             print(gt_y.shape)
             y_pred = model(x)
-            print(y_pred)
+            y_pred = y_pred.squeeze(0)
+            print(gt_y - y_pred)
             # y_pred = y_pred.reshape(gt_y.shape)
             # print(f"gt: {gt_y[0]} pred: {y_pred[0]}")
             break
