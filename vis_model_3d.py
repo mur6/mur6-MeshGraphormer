@@ -19,18 +19,22 @@ from src.modeling._mano import MANO, Mesh
 from test_model_3d import load_data, STN3d
 
 
-def visualize(mesh):
+def create_point_geom(ring_point):
+    geom = trimesh.creation.icosphere(radius=0.0008)
+    color = [202, 2, 2, 255] # red
+    geom.visual.face_colors = color
+    geom.apply_translation(ring_point)
+    return geom
+
+def visualize(*, mesh, points):
     color = [102, 102, 102, 64]
     for facet in mesh.facets:
-        mesh.visual.face_colors[facet] = [color, color]
+        #mesh.visual.face_colors[facet] = [color, color]
+        mesh.visual.face_colors[facet] = color
     scene = trimesh.Scene()
     scene.add_geometry(mesh)
-    # ring_contact_part_mesh = calc_ring_contact_part_mesh(
-    #     hand_mesh=mesh, ring1_point=ring1, ring2_point=ring2
-    # )
-    # perimeter, center_points = calc_ring_perimeter(ring_contact_part_mesh)
-    # scene.add_geometry(create_point_geom(ring1, color="red"))
-    # scene.add_geometry(create_point_geom(ring2, color="blue"))
+    for p in points:
+        scene.add_geometry(create_point_geom(p))
     scene.show()
 
 
@@ -47,17 +51,17 @@ def infer(model, test_dataset):
     with torch.no_grad():
         for x, gt_y in test_dataset:
             mesh = make_hand_mesh(x)
-            print(mesh)
             print("-------")
             x = x.unsqueeze(0)
-            print(x.shape)
-            print(gt_y.shape)
+            print(f"x: {x.shape} gt_y:{gt_y.shape}")
+            # print(gt_y.shape)
             y_pred = model(x)
             y_pred = y_pred.squeeze(0)
-            print(gt_y - y_pred)
+            points = y_pred.transpose(1, 0).numpy()
+            print(f"points: {points.shape}")
             # y_pred = y_pred.reshape(gt_y.shape)
             # print(f"gt: {gt_y[0]} pred: {y_pred[0]}")
-            visualize(mesh)
+            visualize(mesh=mesh, points=gt_y.transpose(1, 0).numpy())
             break
 
 
