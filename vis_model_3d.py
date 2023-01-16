@@ -15,8 +15,8 @@ import torch.utils.data
 # from torch.autograd import Variable
 import torch.nn.functional as F
 
+from src.modeling._mano import MANO, Mesh
 from test_model_3d import load_data, STN3d
-
 
 
 def visualize(mesh):
@@ -34,10 +34,20 @@ def visualize(mesh):
     scene.show()
 
 
+def make_hand_mesh(gt_vertices):
+    print(f"gt_vertices: {gt_vertices.shape}")
+    mano_model = MANO().to("cpu")
+    mano_faces = mano_model.layer.th_faces
+    # mesh objects can be created from existing faces and vertex data
+    return trimesh.Trimesh(vertices=gt_vertices.transpose(1, 0).numpy(), faces=mano_faces)
+
+
 def infer(model, test_dataset):
     model.eval()
     with torch.no_grad():
         for x, gt_y in test_dataset:
+            mesh = make_hand_mesh(x)
+            print(mesh)
             print("-------")
             x = x.unsqueeze(0)
             print(x.shape)
@@ -47,6 +57,7 @@ def infer(model, test_dataset):
             print(gt_y - y_pred)
             # y_pred = y_pred.reshape(gt_y.shape)
             # print(f"gt: {gt_y[0]} pred: {y_pred[0]}")
+            visualize(mesh)
             break
 
 
