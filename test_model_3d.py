@@ -164,6 +164,11 @@ def main(input_filename):
 def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument(
+        "--resume_dir",
+        type=Path,
+        #required=True,
+    )
+    parser.add_argument(
         "--input_filename",
         type=Path,
         required=True,
@@ -174,4 +179,4 @@ def parse_args():
 
 if __name__ == "__main__":
     args = parse_args()
-    main(args.input_filename)
+    main(args.resume_dir, args.input_filename)
