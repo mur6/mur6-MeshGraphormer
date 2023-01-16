@@ -45,6 +45,8 @@ class STN3d(nn.Module):
         x = self.fc3(x)
         # print("STN3d 4:", x.shape)
         iden = Variable(torch.eye(3, dtype=torch.float32).view(1, 9)).repeat(batch_size, 1)
+        if x.is_cuda:
+            iden = iden.cuda()
         x = x + iden
         x = x.view(-1, 3, 3)
         # print("STN3d 5:", x.shape)
