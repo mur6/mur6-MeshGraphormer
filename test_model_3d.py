@@ -20,9 +20,9 @@ import torch.nn.functional as F
 
 def save_checkpoint(model, epoch, iteration=None):
     output_dir = Path("output")
-    output_dir.mkdir()
+    output_dir.mkdir(exist_ok=True)
     checkpoint_dir = output_dir / f"checkpoint-{epoch}" # -{iteration}
-    checkpoint_dir.mkdir()
+    checkpoint_dir.mkdir(exist_ok=True)
     model_to_save = model.module if hasattr(model, "module") else model
 
     torch.save(model_to_save, checkpoint_dir / "model.bin")
