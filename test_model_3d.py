@@ -60,6 +60,9 @@ class STN3d(nn.Module):
         # print("2:", x.shape)
         x = F.relu(self.bn4(self.fc1(x)))
         x = F.relu(self.bn5(self.fc2(x)))
+        # else:
+        #     x = F.relu(self.fc1(x))
+        #     x = F.relu(self.fc2(x))
         x = self.fc3(x)
         # iden = Variable(torch.eye(3, dtype=torch.float32).view(1, 9)).repeat(batch_size, 1)
         # x = x + iden
