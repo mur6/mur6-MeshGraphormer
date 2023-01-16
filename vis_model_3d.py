@@ -57,13 +57,17 @@ class STN3d(nn.Module):
         return x
 
 
-def infer(*, model):
+def infer(model, test_dataset):
     with torch.no_grad():
-        for x, gt_y in test_loader:
-            #print("-------")
+        for x, gt_y in test_dataset:
+            print("-------")
+            print(x.shape)
+            print(gt_y.shape)
             y_pred = model(x)
-            y_pred = y_pred.reshape(gt_y.shape)
-            print(f"gt: {gt_y[0]} pred: {y_pred[0]}")
+            print(y_pred)
+            # y_pred = y_pred.reshape(gt_y.shape)
+            # print(f"gt: {gt_y[0]} pred: {y_pred[0]}")
+            break
 
 
 
@@ -74,7 +78,7 @@ def main(resume_dir, input_filename):
         model = torch.load(resume_dir / "model.bin")
         state_dict = torch.load(resume_dir / "state_dict.bin")
         model.load_state_dict(state_dict)
-        infer(model=model)
+        infer(model, test_dataset)
     else:
         raise Exception(f"{resume_dir} is not valid directory.")
 

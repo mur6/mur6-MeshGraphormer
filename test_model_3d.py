@@ -32,7 +32,7 @@ def save_checkpoint(model, epoch, iteration=None):
 
 
 class STN3d(nn.Module):
-    in_features = 768
+    in_features = 778
 
     def __init__(self):
         super(STN3d, self).__init__()
@@ -120,6 +120,7 @@ def load_data(filename):
         for idx, val in enumerate(hand_infos["arr_0"]):
             perimeter = val['perimeter']
             gt_vertices = val['gt_vertices']
+            print(f"gt_vertices: {gt_vertices.shape}")
             # gt_vertices = torch.from_numpy(gt_vertices)
             # gt_vertices = torch.transpose(gt_vertices, 0, 1)
             betas = torch.from_numpy(val['betas'])
