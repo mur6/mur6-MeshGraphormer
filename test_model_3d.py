@@ -1,5 +1,5 @@
 from pathlib import Path
-import json
+import argparse
 
 import torch
 import torch.nn as nn
@@ -7,10 +7,7 @@ from torch import nn, optim
 import numpy as np
 from matplotlib import pyplot as plt
 from sklearn.model_selection import train_test_split
-# from models import SpatialDescriptor, StructuralDescriptor, MeshConvolution
 from torch.utils.data import TensorDataset, DataLoader
-
-
 
 import torch
 import torch.nn as nn
@@ -19,6 +16,19 @@ import torch.utils.data
 from torch.autograd import Variable
 import numpy as np
 import torch.nn.functional as F
+
+
+def save_checkpoint(model, epoch, iteration=None):
+    output_dir = Path("output")
+    checkpoint_dir = output_dir / f"checkpoint-{epoch}" # -{iteration}
+
+    checkpoint_dir.mkdir()
+    model_to_save = model.module if hasattr(model, "module") else model
+
+    torch.save(model_to_save, checkpoint_dir / "model.bin")
+    torch.save(model_to_save.state_dict(), checkpoint_dir/ "state_dict.bin")
+    print(f"Save checkpoint to {checkpoint_dir}")
+    return checkpoint_dir
 
 
 class STN3d(nn.Module):
@@ -57,23 +67,6 @@ class STN3d(nn.Module):
         return x
 
 
-# if __name__ == "__main__":
-#     # batch_size = 4
-#     # # x = np.array([1,0,0,0,1,0,0,0,1]).astype(np.float32)
-#     # # x = torch.from_numpy(x).view(1, 9).repeat(batch_size, 1)
-#     # # print(x)
-#     # iden = Variable(torch.eye(3, dtype=torch.float32).view(1, 9)).repeat(batch_size, 1)
-#     # x = iden
-#     # x = x.view(-1, 3, 3)
-#     # print(x)
-
-#     m = STN3d()
-#     input = torch.randn(10, 3, 768)
-#     output = m(input)
-#     print(output)
-
-
-
 def exec_train(train_loader, test_loader, *, model, train_datasize, test_datasize, epochs=30):
     #optimizer = optim.RMSprop(net.parameters(), lr=0.01)
     optimizer = optim.AdamW(model.parameters(), lr=0.005)
@@ -107,7 +100,8 @@ def exec_train(train_loader, test_loader, *, model, train_datasize, test_datasiz
                 current_loss += loss.item() * y_pred.size(0)
             epoch_loss = current_loss / test_datasize
             print(f'Validation Loss: {epoch_loss:.4f}')
-
+        if (epoch + 1) % 5 == 0:
+            save_checkpoint(model, epoch+1)
     with torch.no_grad():
         for x, gt_y in test_loader:
             #print("-------")
@@ -147,19 +141,37 @@ def load_data(filename):
     return train_dataset, test_dataset
 
 
-def main():
-    train_dataset, test_dataset = load_data("hand_infos.npz")
+def main(input_filename):
+    train_dataset, test_dataset = load_data(input_filename)
     train_loader = DataLoader(train_dataset, batch_size=32, shuffle=True)
     test_loader = DataLoader(test_dataset, batch_size=32, shuffle=False)
     train_datasize = len(train_dataset)
     test_datasize = len(test_dataset)
     print(f"train_datasize={train_datasize} test_datasize={test_datasize}")
+
+    # model = STN3d()
+    model = torch.load("output/checkpoint-4/model.bin")
+    state_dict = torch.load("output/checkpoint-4/state_dict.bin")
+    model.load_state_dict(state_dict)
+
     exec_train(
         train_loader, test_loader,
-        model=STN3d(),
+        model=model,
         train_datasize=train_datasize,
         test_datasize=test_datasize)
 
 
+def parse_args():
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "--input_filename",
+        type=Path,
+        required=True,
+    )
+    args = parser.parse_args()
+    return args
+
+
 if __name__ == "__main__":
-    main()
+    args = parse_args()
+    main(args.input_filename)
