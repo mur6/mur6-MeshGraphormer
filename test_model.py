@@ -20,6 +20,8 @@ from torch.autograd import Variable
 import numpy as np
 import torch.nn.functional as F
 
+from src.model.pointnet import PointNetfeat
+
 
 class STN3d(nn.Module):
     def __init__(self):

@@ -14,8 +14,8 @@ class STN3d(nn.Module):
         super(STN3d, self).__init__()
         self.conv1 = torch.nn.Conv1d(3, 778, 1)
         self.conv2 = torch.nn.Conv1d(778, 1024, 1)
-        self.conv3 = torch.nn.Conv1d(1024, 4096, 1)
-        self.max_out = 4096
+        self.conv3 = torch.nn.Conv1d(1024, 2048, 1)
+        self.max_out = 2048
         fc1_out, fc2_out = 512, 256
         self.fc1 = nn.Linear(self.max_out, fc1_out)
         self.fc2 = nn.Linear(fc1_out, fc2_out)
@@ -23,7 +23,7 @@ class STN3d(nn.Module):
         # self.relu = nn.ReLU()
         self.bn1 = nn.BatchNorm1d(778)
         self.bn2 = nn.BatchNorm1d(1024)
-        self.bn3 = nn.BatchNorm1d(4096)
+        self.bn3 = nn.BatchNorm1d(self.max_out)
         # ---
         self.bn4 = nn.BatchNorm1d(fc1_out)
         self.bn5 = nn.BatchNorm1d(fc2_out)

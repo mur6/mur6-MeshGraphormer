@@ -9,6 +9,8 @@ from matplotlib import pyplot as plt
 from sklearn.model_selection import train_test_split
 from torch.utils.data import TensorDataset, DataLoader
 
+from src.model.pointnet import PointNetfeat
+
 
 def save_checkpoint(model, epoch, iteration=None):
     output_dir = Path("output")
@@ -115,7 +117,7 @@ def main(resume_dir, input_filename):
         else:
             raise Exception(f"{resume_dir} is not valid directory.")
     else:
-        model = STN3d()
+        model = PointNetfeat()
 
     exec_train(
         train_loader, test_loader,
