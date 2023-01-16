@@ -141,7 +141,7 @@ def load_data(filename):
     return train_dataset, test_dataset
 
 
-def main(input_filename):
+def main(resume_dir, input_filename):
     train_dataset, test_dataset = load_data(input_filename)
     train_loader = DataLoader(train_dataset, batch_size=32, shuffle=True)
     test_loader = DataLoader(test_dataset, batch_size=32, shuffle=False)
@@ -149,10 +149,16 @@ def main(input_filename):
     test_datasize = len(test_dataset)
     print(f"train_datasize={train_datasize} test_datasize={test_datasize}")
 
-    # model = STN3d()
-    model = torch.load("output/checkpoint-4/model.bin")
-    state_dict = torch.load("output/checkpoint-4/state_dict.bin")
-    model.load_state_dict(state_dict)
+    if resume_dir:
+        if (resume_dir / "model.bin").exists() and \
+            (resume_dir / "state_dict.bin").exists():
+            model = torch.load(resume_dir / "model.bin")
+            state_dict = torch.load(resume_dir / "state_dict.bin")
+            model.load_state_dict(state_dict)
+        else:
+            raise Exception(f"{resume_dir} is not valid directory.")
+    else:
+        model = STN3d()
 
     exec_train(
         train_loader, test_loader,
@@ -179,4 +185,5 @@ def parse_args():
 
 if __name__ == "__main__":
     args = parse_args()
+    # print(args.resume_dir)
     main(args.resume_dir, args.input_filename)
