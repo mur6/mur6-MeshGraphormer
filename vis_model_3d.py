@@ -16,7 +16,8 @@ import torch.utils.data
 import torch.nn.functional as F
 
 from src.modeling._mano import MANO, Mesh
-from test_model_3d import load_data, STN3d
+from src.model.pointnet import PointNetfeat
+from test_model_3d import load_data
 
 
 def create_point_geom(ring_point):
@@ -61,17 +62,17 @@ def infer(model, test_dataset):
             print(f"points: {points.shape}")
             # y_pred = y_pred.reshape(gt_y.shape)
             # print(f"gt: {gt_y[0]} pred: {y_pred[0]}")
-            visualize(mesh=mesh, points=gt_y.transpose(1, 0).numpy())
+            visualize(mesh=mesh, points=points)
+            #visualize(mesh=mesh, points=gt_y.transpose(1, 0).numpy())
             break
-
 
 
 def main(resume_dir, input_filename):
     train_dataset, test_dataset = load_data(input_filename)
     if (resume_dir / "model.bin").exists() and \
         (resume_dir / "state_dict.bin").exists():
-        model = torch.load(resume_dir / "model.bin")
-        state_dict = torch.load(resume_dir / "state_dict.bin")
+        model = torch.load(resume_dir / "model.bin", map_location=torch.device('cpu'))
+        state_dict = torch.load(resume_dir / "state_dict.bin", map_location=torch.device('cpu'))
         model.load_state_dict(state_dict)
         infer(model, test_dataset)
     else:
