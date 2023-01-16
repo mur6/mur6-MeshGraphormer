@@ -17,6 +17,8 @@ from torch.autograd import Variable
 import numpy as np
 import torch.nn.functional as F
 
+from test_model_3d import load_data
+
 
 
 class STN3d(nn.Module):
@@ -65,7 +67,8 @@ def infer(*, model):
 
 
 
-def main(resume_dir):
+def main(resume_dir, input_filename):
+    train_dataset, test_dataset = load_data(input_filename)
     if (resume_dir / "model.bin").exists() and \
         (resume_dir / "state_dict.bin").exists():
         model = torch.load(resume_dir / "model.bin")
@@ -80,6 +83,11 @@ def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "--resume_dir",
+        type=Path,
+        required=True,
+    )
+    parser.add_argument(
+        "--input_filename",
         type=Path,
         required=True,
     )
