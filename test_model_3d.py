@@ -20,8 +20,8 @@ import torch.nn.functional as F
 
 def save_checkpoint(model, epoch, iteration=None):
     output_dir = Path("output")
+    output_dir.mkdir()
     checkpoint_dir = output_dir / f"checkpoint-{epoch}" # -{iteration}
-
     checkpoint_dir.mkdir()
     model_to_save = model.module if hasattr(model, "module") else model
 
@@ -120,7 +120,7 @@ def load_data(filename):
         for idx, val in enumerate(hand_infos["arr_0"]):
             perimeter = val['perimeter']
             gt_vertices = val['gt_vertices']
-            print(f"gt_vertices: {gt_vertices.shape}")
+            # print(f"gt_vertices: {gt_vertices.shape}")
             # gt_vertices = torch.from_numpy(gt_vertices)
             # gt_vertices = torch.transpose(gt_vertices, 0, 1)
             betas = torch.from_numpy(val['betas'])
