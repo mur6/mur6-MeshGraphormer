@@ -36,7 +36,10 @@ def exec_train(train_loader, test_loader, *, model, train_datasize, test_datasiz
     for epoch in range(epochs):
         losses = []
         current_loss = 0.0
+        model.train()
         for i, (x, y) in enumerate(train_loader):
+            x = x.cuda()
+            y = y.cuda()
             optimizer.zero_grad()                   # 勾配情報を0に初期化
             y_pred = model(x)
             # print(y_pred.shape)
@@ -50,9 +53,12 @@ def exec_train(train_loader, test_loader, *, model, train_datasize, test_datasiz
         epoch_loss = current_loss / train_datasize
         print(f'Train Loss: {epoch_loss:.4f}')
         scheduler.step()
+        model.eval()
         with torch.no_grad():
             current_loss = 0.0
             for x, y in test_loader:
+                x = x.cuda()
+                y = y.cuda()
                 y_pred = model(x)
                 loss = E(y_pred, y)
                 current_loss += loss.item() * y_pred.size(0)
@@ -118,6 +124,7 @@ def main(resume_dir, input_filename):
             raise Exception(f"{resume_dir} is not valid directory.")
     else:
         model = PointNetfeat()
+    model.to(args.device)
 
     exec_train(
         train_loader, test_loader,
@@ -128,6 +135,7 @@ def main(resume_dir, input_filename):
 
 def parse_args():
     parser = argparse.ArgumentParser()
+    parser.add_argument("--device", type=str, default="cuda", help="cuda or cpu")
     parser.add_argument(
         "--resume_dir",
         type=Path,
