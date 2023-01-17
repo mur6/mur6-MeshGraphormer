@@ -16,7 +16,6 @@ def load_data(filename):
             betas = torch.from_numpy(val['betas'])
             pose = torch.from_numpy(val['pose'])
             center_points = val['center_points_3d']
-            print(center_points.shape)
             if center_points.shape[0] == 19:
                 # print(betas.shape)
                 # print(pose.shape)
