@@ -37,7 +37,7 @@ def plane_loss(vert_3d, pca_mean, pca_components):
     # print(f"{x[0]}")
     # print()
 
-    x = torch.square(x)
+    x = x * x
     # print(f"square: {x.shape}")
     # print(f"{x[0]}")
 
