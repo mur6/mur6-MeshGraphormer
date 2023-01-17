@@ -1,7 +1,7 @@
 import argparse
 import itertools
 import os.path
-import json
+import dataclasses
 from collections import namedtuple
 from pathlib import Path
 
@@ -163,7 +163,7 @@ def get_output_data(dataset, num):
             betas=meta_info.betas.numpy(),
             pose=meta_info.pose.numpy(),
             gt_vertices=gt_vertices.numpy(),
-            **r.as_dict(),
+            **dataclasses.asdict(r),
         )
         output_list.append(d)
         print(f"count: {count}")
