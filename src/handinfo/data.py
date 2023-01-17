@@ -6,7 +6,7 @@ from torch.utils.data import TensorDataset, DataLoader
 from sklearn.model_selection import train_test_split
 
 
-def _iter(*, dict_list):
+def _iter(*, dict_list, key_name="vert_3d"):
     for val in dict_list:
         perimeter = val['perimeter']
         gt_vertices = val['gt_vertices']
@@ -15,17 +15,12 @@ def _iter(*, dict_list):
         # gt_vertices = torch.transpose(gt_vertices, 0, 1)
         betas = torch.from_numpy(val['betas'])
         pose = torch.from_numpy(val['pose'])
-        center_points_3d = np.zeros((21, 3), dtype=np.float64)
-        x = val['center_points_3d']
-        center_points_3d[:x.shape[0], :] = x
-        # if center_points.shape[0] == 19:
-        #     # print(betas.shape)
-        #     # print(pose.shape)
-        #     # print(center_points)
-        #     X.append(gt_vertices)
-        #     y.append(center_points_3d)
-        yield gt_vertices, center_points_3d
-
+        y = val[key_name]
+        if y.shape != (20, 3):
+            # print(y.shape)
+            y = y[:20, :]
+        assert y.shape == (20, 3)
+        yield gt_vertices, y
 
 def load_data(filename):
     # X, y = [], []
