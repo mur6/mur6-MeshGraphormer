@@ -28,16 +28,18 @@ def calc_ring_perimeter(ring_contact_part_mesh):
     # メッシュを構成する三角形の重心部分を求める
     center_points = np.mean(v, axis=1)
     # PCAで次元削減及び２次元へ投影
-    pca = PCA(n_components=3)
-    pca.fit(center_points)
-    vert_2d = np.dot(center_points, pca.components_.T[:, :2])
+    pca = PCA(n_components=2).fit(center_points)
+    # vert_2d = np.dot(center_points, pca.components_.T[:, :2])
+    vert_2d = pca.transform(center_points)
     # ConvexHullで均してから外周を測る
     hull = ConvexHull(vert_2d)
     vertices = hull.vertices.tolist() + [hull.vertices[0]]
     perimeter = np.sum(
         [euclidean(x, y) for x, y in zip(vert_2d[vertices], vert_2d[vertices][1:])]
     )
-    return perimeter, np.array(center_points)
+    center_points_3d = pca.inverse_transform(vert_2d[vertices])
+    # print(center_points_3d)
+    return perimeter, np.array(center_points), center_points_3d
 
 
 def build_hand_dataset(yaml_file, args, is_train=True, scale_factor=1):
@@ -113,7 +115,7 @@ def visualize(mesh, ring1, ring2):
     ring_contact_part_mesh = calc_ring_contact_part_mesh(
         hand_mesh=mesh, ring1_point=ring1, ring2_point=ring2
     )
-    perimeter, center_points = calc_ring_perimeter(ring_contact_part_mesh)
+    perimeter, center_points, center_points_3d = calc_ring_perimeter(ring_contact_part_mesh)
     scene.add_geometry(create_point_geom(ring1, color="red"))
     scene.add_geometry(create_point_geom(ring2, color="blue"))
     scene.show()
@@ -162,10 +164,10 @@ def calc_perimeter_and_center_points(mesh, *, ring1, ring2):
     ring_contact_part_mesh = calc_ring_contact_part_mesh(
         hand_mesh=mesh, ring1_point=ring1, ring2_point=ring2
     )
-    perimeter, center_points = calc_ring_perimeter(ring_contact_part_mesh)
+    perimeter, center_points, center_points_3d = calc_ring_perimeter(ring_contact_part_mesh)
     perimeter = round(perimeter, 6)
     perimeter = np.array(perimeter)
-    return perimeter, center_points
+    return perimeter, center_points, center_points_3d
 
 
 OutputInfo = namedtuple("OutputInfo", "betas, gt_vertices, perimeter, center_points")
@@ -182,7 +184,7 @@ def get_output_data(dataset, num):
         # print(f"gt_3d_joints:min{torch.min(gt_3d_joints)}, max={torch.max(gt_3d_joints)}")
         # print("gt_vertices", gt_vertices)
         mesh = make_hand_mesh(mano_model, gt_vertices)
-        perimeter, center_points = calc_perimeter_and_center_points(
+        perimeter, center_points, center_points_3d = calc_perimeter_and_center_points(
             mesh,
             ring1=ring_finger_point_func(1),
             ring2=ring_finger_point_func(2),
@@ -194,6 +196,7 @@ def get_output_data(dataset, num):
                 gt_vertices=gt_vertices.numpy(),
                 perimeter=perimeter,
                 center_points=center_points,
+                center_points_3d=center_points_3d,
             )
         )
         print(f"count: {count}")
