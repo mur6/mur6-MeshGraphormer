@@ -22,24 +22,7 @@ from scipy.spatial import ConvexHull
 from scipy.spatial.distance import euclidean
 from sklearn.decomposition import PCA
 
-
-def calc_ring_perimeter(ring_contact_part_mesh):
-    v = ring_contact_part_mesh.vertices[ring_contact_part_mesh.faces]
-    # メッシュを構成する三角形の重心部分を求める
-    center_points = np.mean(v, axis=1)
-    # PCAで次元削減及び２次元へ投影
-    pca = PCA(n_components=2).fit(center_points)
-    # vert_2d = np.dot(center_points, pca.components_.T[:, :2])
-    vert_2d = pca.transform(center_points)
-    # ConvexHullで均してから外周を測る
-    hull = ConvexHull(vert_2d)
-    vertices = hull.vertices.tolist() + [hull.vertices[0]]
-    perimeter = np.sum(
-        [euclidean(x, y) for x, y in zip(vert_2d[vertices], vert_2d[vertices][1:])]
-    )
-    center_points_3d = pca.inverse_transform(vert_2d[vertices])
-    # print(center_points_3d)
-    return perimeter, np.array(center_points), center_points_3d
+from src.handinfo.ring_calc import calc_perimeter_and_center_points
 
 
 def build_hand_dataset(yaml_file, args, is_train=True, scale_factor=1):
@@ -103,32 +86,6 @@ def create_point_geom(ring_point, color):
     return geom
 
 
-def visualize(mesh, ring1, ring2):
-    color = [102, 102, 102, 64]
-    for facet in mesh.facets:
-        # for a_color in mesh.visual.face_colors[facet]:
-        # print(k)
-        mesh.visual.face_colors[facet] = [color, color]
-
-    scene = trimesh.Scene()
-    scene.add_geometry(mesh)
-    ring_contact_part_mesh = calc_ring_contact_part_mesh(
-        hand_mesh=mesh, ring1_point=ring1, ring2_point=ring2
-    )
-    perimeter, center_points, center_points_3d = calc_ring_perimeter(ring_contact_part_mesh)
-    scene.add_geometry(create_point_geom(ring1, color="red"))
-    scene.add_geometry(create_point_geom(ring2, color="blue"))
-    scene.show()
-
-
-def make_joint2d_and_image(meta_info, annotations):
-    img_size = 224
-    joints_2d = meta_info.joints_2d
-    joints_2d = ((joints_2d + 1) * 0.5) * img_size
-    ori_img = annotations["ori_img"]
-    return joints_2d, ori_img
-
-
 MANO_JOINTS_NAME = (
     'Wrist', 'Thumb_1', 'Thumb_2', 'Thumb_3', 'Thumb_4',
     'Index_1', 'Index_2', 'Index_3', 'Index_4',
@@ -154,20 +111,32 @@ def make_gt_infos(mano_model, meta_info, annotations):
     return gt_vertices, gt_vertices_sub, ring_finger_point_func
 
 
+def visualize(mesh, ring1, ring2):
+    color = [102, 102, 102, 64]
+    for facet in mesh.facets:
+        # for a_color in mesh.visual.face_colors[facet]:
+        # print(k)
+        mesh.visual.face_colors[facet] = [color, color]
+
+    scene = trimesh.Scene()
+    scene.add_geometry(mesh)
+    scene.add_geometry(create_point_geom(ring1, color="red"))
+    scene.add_geometry(create_point_geom(ring2, color="blue"))
+    scene.show()
+
+
+def make_joint2d_and_image(meta_info, annotations):
+    img_size = 224
+    joints_2d = meta_info.joints_2d
+    joints_2d = ((joints_2d + 1) * 0.5) * img_size
+    ori_img = annotations["ori_img"]
+    return joints_2d, ori_img
+
+
 def make_hand_mesh(mano_model, gt_vertices):
     mano_faces = mano_model.layer.th_faces
     # mesh objects can be created from existing faces and vertex data
     return trimesh.Trimesh(vertices=gt_vertices, faces=mano_faces)
-
-
-def calc_perimeter_and_center_points(mesh, *, ring1, ring2):
-    ring_contact_part_mesh = calc_ring_contact_part_mesh(
-        hand_mesh=mesh, ring1_point=ring1, ring2_point=ring2
-    )
-    perimeter, center_points, center_points_3d = calc_ring_perimeter(ring_contact_part_mesh)
-    perimeter = round(perimeter, 6)
-    perimeter = np.array(perimeter)
-    return perimeter, center_points, center_points_3d
 
 
 OutputInfo = namedtuple("OutputInfo", "betas, gt_vertices, perimeter, center_points")
@@ -212,33 +181,6 @@ def main(args, *, train_yaml_file, num):
     #args.output_json.write_text(s)
     np.savez(args.output, outputs)
 
-
-def calc_ring_contact_part_mesh(*, hand_mesh, ring1_point, ring2_point):
-    # カットしたい平面の起点と法線ベクトルを求める
-    plane_normal = ring2_point - ring1_point
-    plane_origin = (ring1_point + ring2_point) / 2
-    # print(f"plane_normal:{plane_normal} plane_origin:{plane_origin}")
-    # 上記の平面とメッシュの交わる面を求める
-    _, face_index = trimesh.intersections.mesh_plane(
-        hand_mesh, plane_normal, plane_origin, return_faces=True
-    )
-    new_triangles = trimesh.Trimesh(hand_mesh.vertices, hand_mesh.faces[face_index])
-    # 起点と最も近い面(三角形)を求める
-    center_points = np.average(new_triangles.vertices[new_triangles.faces], axis=1)
-    distances = numpy.linalg.norm(
-        center_points - np.expand_dims(plane_origin, 0), axis=1
-    )
-    triangle_id = np.argmin(distances)
-    # print(f"closest triangle_id: {triangle_id}")
-    # 上記の三角形を含む、連なったグループを求める
-    closest_face_index = None
-    for face_index in trimesh.graph.connected_components(new_triangles.face_adjacency):
-        if triangle_id in face_index:
-            closest_face_index = face_index
-
-    new_face_index = new_triangles.faces[closest_face_index]
-    ring_contact_part = trimesh.Trimesh(new_triangles.vertices, new_face_index)
-    return ring_contact_part
 
 
 def parse_args():
