@@ -159,17 +159,13 @@ def get_output_data(dataset, num):
             ring2=ring_finger_point_func(2),
             round_perimeter=True
         )
-        output_list.append(
-            dict(
-                betas=meta_info.betas.numpy(),
-                pose=meta_info.pose.numpy(),
-                gt_vertices=gt_vertices.numpy(),
-                perimeter=r.perimeter,
-                vert_3d=r.vert_3d,
-                center_points=r.center_points,
-                center_points_3d=r.center_points_3d,
-            )
+        d = dict(
+            betas=meta_info.betas.numpy(),
+            pose=meta_info.pose.numpy(),
+            gt_vertices=gt_vertices.numpy(),
+            **r.as_dict(),
         )
+        output_list.append(d)
         print(f"count: {count}")
         count += 1
     # betas_and_perimeter = set(betas_and_perimeter)

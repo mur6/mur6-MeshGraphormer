@@ -56,8 +56,10 @@ class RingPointsInfo:
     perimeter: float
     vert_2d: np.ndarray
     vert_3d: np.ndarray
-    center_points: int
-    center_points_3d: int
+    center_points: np.ndarray
+    center_points_3d: np.ndarray
+    pca_mean_: np.ndarray
+    pca_components_: np.ndarray
 
 
 def calc_ring_perimeter(ring_contact_part_mesh):
@@ -69,6 +71,12 @@ def calc_ring_perimeter(ring_contact_part_mesh):
     # vert_2d = np.dot(center_points, pca.components_.T[:, :2])
     vert_2d = pca.transform(center_points)
     vert_3d = pca.inverse_transform(vert_2d)
+    # print(f"pca.mean: {pca.mean_}")
+    # normal_v = np.cross(pca.components_[0], pca.components_[1])
+    # print(f"normal_v: {normal_v}")
+    # a = (vert_3d - pca.mean_) * normal_v
+    # print(a.sum(axis=1))
+
     # ConvexHullで均してから外周を測る
     hull = ConvexHull(vert_2d)
     vertices = hull.vertices.tolist() + [hull.vertices[0]]
@@ -76,7 +84,15 @@ def calc_ring_perimeter(ring_contact_part_mesh):
         [euclidean(x, y) for x, y in zip(vert_2d[vertices], vert_2d[vertices][1:])]
     )
     center_points_3d = pca.inverse_transform(vert_2d[vertices])
-    return RingPointsInfo(perimeter, vert_2d, vert_3d, np.array(center_points), center_points_3d)
+    return RingPointsInfo(
+        perimeter,
+        vert_2d=vert_2d,
+        vert_3d=vert_3d,
+        center_points=np.array(center_points),
+        center_points_3d=center_points_3d,
+        pca_mean_=pca.mean_,
+        pca_components_=pca.components_,
+        )
 
 
 def _round_perimeter(perimeter):
