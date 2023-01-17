@@ -8,7 +8,6 @@ import numpy as np
 from matplotlib import pyplot as plt
 from sklearn.model_selection import train_test_split
 from torch.utils.data import TensorDataset, DataLoader
-import torch3d
 
 
 from src.model.pointnet import PointNetfeat
@@ -91,8 +90,9 @@ def load_data(filename):
             # gt_vertices = torch.transpose(gt_vertices, 0, 1)
             betas = torch.from_numpy(val['betas'])
             pose = torch.from_numpy(val['pose'])
-            center_points = val['center_points']
-            if center_points.shape[0] == 20:
+            center_points = val['center_points_3d']
+            print(center_points.shape)
+            if center_points.shape[0] == 19:
                 # print(betas.shape)
                 # print(pose.shape)
                 # print(center_points)

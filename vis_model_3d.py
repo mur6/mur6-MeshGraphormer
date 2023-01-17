@@ -62,8 +62,8 @@ def infer(model, test_dataset):
             print(f"points: {points.shape}")
             # y_pred = y_pred.reshape(gt_y.shape)
             # print(f"gt: {gt_y[0]} pred: {y_pred[0]}")
-            visualize(mesh=mesh, points=points)
-            #visualize(mesh=mesh, points=gt_y.transpose(1, 0).numpy())
+            # visualize(mesh=mesh, points=points)
+            visualize(mesh=mesh, points=gt_y.transpose(1, 0).numpy())
             break
 
 
