@@ -153,19 +153,21 @@ def get_output_data(dataset, num):
         # print(f"gt_3d_joints:min{torch.min(gt_3d_joints)}, max={torch.max(gt_3d_joints)}")
         # print("gt_vertices", gt_vertices)
         mesh = make_hand_mesh(mano_model, gt_vertices)
-        perimeter, center_points, center_points_3d = calc_perimeter_and_center_points(
+        r = calc_perimeter_and_center_points(
             mesh,
             ring1=ring_finger_point_func(1),
             ring2=ring_finger_point_func(2),
+            round_perimeter=True
         )
         output_list.append(
             dict(
                 betas=meta_info.betas.numpy(),
                 pose=meta_info.pose.numpy(),
                 gt_vertices=gt_vertices.numpy(),
-                perimeter=perimeter,
-                center_points=center_points,
-                center_points_3d=center_points_3d,
+                perimeter=r.perimeter,
+                vert_3d=r.vert_3d,
+                center_points=r.center_points,
+                center_points_3d=r.center_points_3d,
             )
         )
         print(f"count: {count}")
