@@ -22,6 +22,7 @@ def _iter(*, dict_list, key_name="vert_3d"):
         assert y.shape == (20, 3)
         yield gt_vertices, y
 
+
 def load_data(filename):
     # X, y = [], []
     values = None
