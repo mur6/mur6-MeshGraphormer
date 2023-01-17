@@ -24,7 +24,29 @@ def save_checkpoint(model, epoch, iteration=None):
     return checkpoint_dir
 
 
-def exec_train(train_loader, test_loader, *, model, train_datasize, test_datasize, epochs=1000):
+def plane_loss(vert_3d, pca_mean, pca_components):
+    # print(vert_3d.shape, pca_mean.shape, pca_components.shape)
+    normal_v = torch.cross(pca_components[:, 0], pca_components[:, 1], dim=1).unsqueeze(1)
+    # print(f"normal_v: {normal_v.shape}")
+    vert_3d = (torch.transpose(vert_3d, 2, 1))
+    pca_mean = pca_mean.unsqueeze(1)
+
+    x = (vert_3d - pca_mean) * normal_v
+    x = torch.sum(x, dim=2)
+    # print(f"sum: {x.shape}")
+    # print(f"{x[0]}")
+    # print()
+
+    x = torch.square(x)
+    # print(f"square: {x.shape}")
+    # print(f"{x[0]}")
+
+    x = torch.sum(x) * (10 ** 13)
+    # print(x)
+    return x
+
+
+def exec_train(train_loader, test_loader, *, model, train_datasize, test_datasize, device, epochs=1000):
     #optimizer = optim.RMSprop(net.parameters(), lr=0.01)
     optimizer = optim.AdamW(model.parameters(), lr=0.005)
     # optimizer = optim.SGD(model.parameters(), lr=0.001)
@@ -36,14 +58,18 @@ def exec_train(train_loader, test_loader, *, model, train_datasize, test_datasiz
         losses = []
         current_loss = 0.0
         model.train()
-        for i, (x, y) in enumerate(train_loader):
-            x = x.cuda()
-            y = y.cuda()
+        for i, (x, y, pca_mean, pca_components) in enumerate(train_loader):
+            if device == "cuda":
+                x = x.cuda()
+                y = y.cuda()
+                pca_mean = pca_mean.cuda()
+                pca_components = pca_components.cuda()
             optimizer.zero_grad()                   # 勾配情報を0に初期化
             y_pred = model(x)
             # print(y_pred.shape)
             # print(y_pred.reshape(y.shape).shape)
-            loss = E(y_pred.reshape(y.shape), y)
+            loss_1 = E(y_pred.reshape(y.shape), y)
+            loss = loss_1 + plane_loss(y, pca_mean, pca_components)
             loss.backward()                         # 勾配の計算
             optimizer.step()                        # 勾配の更新
             losses.append(loss.item())              # 損失値の蓄積
@@ -55,9 +81,12 @@ def exec_train(train_loader, test_loader, *, model, train_datasize, test_datasiz
         model.eval()
         with torch.no_grad():
             current_loss = 0.0
-            for x, y in test_loader:
-                x = x.cuda()
-                y = y.cuda()
+            for x, y, pca_mean, pca_components in test_loader:
+                if device == "cuda":
+                    x = x.cuda()
+                    y = y.cuda()
+                    pca_mean = pca_mean.cuda()
+                    pca_components = pca_components.cuda()
                 y_pred = model(x)
                 loss = E(y_pred, y)
                 current_loss += loss.item() * y_pred.size(0)
@@ -95,18 +124,20 @@ def main(resume_dir, input_filename, device):
             raise Exception(f"{resume_dir} is not valid directory.")
     else:
         model = PointNetfeat()
-    model.to(device)
+    if device == "cuda":
+        model.to(device)
 
     exec_train(
         train_loader, test_loader,
         model=model,
         train_datasize=train_datasize,
-        test_datasize=test_datasize)
+        test_datasize=test_datasize,
+        device=device)
 
 
 def parse_args():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--device", type=str, default="cuda", help="cuda or cpu")
+    parser.add_argument("--device", type=str, default="cpu", help="cuda or cpu")
     parser.add_argument(
         "--resume_dir",
         type=Path,

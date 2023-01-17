@@ -22,8 +22,6 @@ def _iter(*, dict_list, key_name="vert_3d"):
         yield gt_vertices, vert_3d, pca_mean, pca_components
 
 
-
-
 def load_data(filename):
     # X, y = [], []
     values = None
@@ -38,7 +36,7 @@ def load_data(filename):
     X = torch.transpose(X, 1, 2)
     # print(X.shape)
 
-    X = conv_float_tensor(1)
+    y = conv_float_tensor(1)
     y = torch.transpose(y, 1, 2)
     # print(y.shape)
 
