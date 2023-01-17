@@ -1,5 +1,7 @@
 from collections import namedtuple
 from pathlib import Path
+import dataclasses
+from dataclasses import dataclass
 
 import trimesh
 import matplotlib.pyplot as plt
@@ -48,6 +50,16 @@ def _calc_ring_contact_part_mesh(*, hand_mesh, ring1_point, ring2_point):
     return ring_contact_part
 
 
+# RingPointsInfo = namedtuple("RingPointsInfo", "perimeter vert_2d vert_3d center_points center_points_3d")
+@dataclass
+class RingPointsInfo(frozen=True):
+    perimeter: float
+    vert_2d: np.ndarray
+    vert_3d: np.ndarray
+    center_points: int
+    center_points_3d: int
+
+
 def calc_ring_perimeter(ring_contact_part_mesh):
     v = ring_contact_part_mesh.vertices[ring_contact_part_mesh.faces]
     # メッシュを構成する三角形の重心部分を求める
@@ -64,8 +76,7 @@ def calc_ring_perimeter(ring_contact_part_mesh):
         [euclidean(x, y) for x, y in zip(vert_2d[vertices], vert_2d[vertices][1:])]
     )
     center_points_3d = pca.inverse_transform(vert_2d[vertices])
-    # print(center_points_3d)
-    return perimeter, vert_3d, np.array(center_points), center_points_3d
+    return RingPointsInfo(perimeter, vert_2d, vert_3d, np.array(center_points), center_points_3d)
 
 
 def _round_perimeter(perimeter):
@@ -78,7 +89,9 @@ def calc_perimeter_and_center_points(mesh, *, ring1, ring2, round_perimeter=True
     ring_contact_part_mesh = _calc_ring_contact_part_mesh(
         hand_mesh=mesh, ring1_point=ring1, ring2_point=ring2
     )
-    perimeter, vert_3d, center_points, center_points_3d = calc_ring_perimeter(ring_contact_part_mesh)
+    ring_points_info = calc_ring_perimeter(ring_contact_part_mesh)
     if round_perimeter:
-        perimeter = _round_perimeter(perimeter)
-    return perimeter, center_points, center_points_3d
+        perimeter = _round_perimeter(ring_points_info.perimeter)
+        return dataclasses.replace(ring_points_info, perimeter=perimeter)
+    else:
+        return ring_points_info
