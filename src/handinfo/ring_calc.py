@@ -51,8 +51,8 @@ def _calc_ring_contact_part_mesh(*, hand_mesh, ring1_point, ring2_point):
 
 
 # RingPointsInfo = namedtuple("RingPointsInfo", "perimeter vert_2d vert_3d center_points center_points_3d")
-@dataclass
-class RingPointsInfo(frozen=True):
+@dataclass(frozen=True)
+class RingPointsInfo:
     perimeter: float
     vert_2d: np.ndarray
     vert_3d: np.ndarray
