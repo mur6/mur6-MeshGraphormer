@@ -85,7 +85,7 @@ def exec_train(train_loader, test_loader, *, model, train_datasize, test_datasiz
         model.eval()
         with torch.no_grad():
             current_loss = 0.0
-            for x, y, pca_mean, pca_components in test_loader:
+            for x, y, pca_mean, pca_components, normal_v, perimeter in test_loader:
                 if device == "cuda":
                     x = x.cuda()
                     y = y.cuda()
