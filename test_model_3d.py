@@ -56,10 +56,10 @@ def plane_loss(vert_3d, pca_mean, pca_components):
 
 
 def all_loss(y, y_pred, x, mano_faces):
-    mesh = Meshes(verts=torch.transpose(x, 2, 1), faces=mano_faces)
+    #mesh = Meshes(verts=torch.transpose(x, 2, 1), faces=mano_faces)
     loss_1, _ = chamfer_distance(y_pred, y)
-    loss_2 = point_mesh_face_distance(mesh, Pointclouds(torch.transpose(y_pred, 2, 1)))
-    return loss_1 + loss_2
+    #loss_2 = point_mesh_face_distance(mesh, Pointclouds(torch.transpose(y_pred, 2, 1)))
+    return loss_1
 
 
 def exec_train(train_loader, test_loader, *, model, train_datasize, test_datasize, device, mano_faces, epochs=1000):
