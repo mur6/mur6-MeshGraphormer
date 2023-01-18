@@ -66,8 +66,8 @@ def exec_train(train_loader, test_loader, *, model, train_datasize, test_datasiz
     #optimizer = optim.RMSprop(net.parameters(), lr=0.01)
     if True:
         # optimizer = optim.SGD(model.parameters(), lr=0.01)
-        optimizer = optim.AdamW(model.parameters(), lr=0.02)
-        scheduler = optim.lr_scheduler.ExponentialLR(optimizer, gamma=0.95)
+        optimizer = optim.AdamW(model.parameters(), lr=0.008)
+        scheduler = optim.lr_scheduler.ExponentialLR(optimizer, gamma=0.90)
     if False:
         optimizer = optim.AdamW(model.parameters(), lr=0.005)
         scheduler = optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=30, eta_min=0.001)
