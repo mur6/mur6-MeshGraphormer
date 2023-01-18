@@ -11,7 +11,7 @@ class Simple_STN3d(nn.Module):
     in_features = 778
 
     def __init__(self):
-        super(STN3d, self).__init__()
+        super(self).__init__()
         self.conv1 = torch.nn.Conv1d(3, 778, 1)
         self.conv2 = torch.nn.Conv1d(778, 1024, 1)
         self.conv3 = torch.nn.Conv1d(1024, 2048, 1)
