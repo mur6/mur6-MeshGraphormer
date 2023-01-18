@@ -9,6 +9,12 @@ from torch.utils.data import TensorDataset, DataLoader
 
 from src.model.pointnet import PointNetfeat, Simple_STN3d
 from src.handinfo.data import load_data
+from pytorch3d.loss import (
+    chamfer_distance,
+    mesh_edge_loss,
+    mesh_laplacian_smoothing,
+    mesh_normal_consistency,
+)
 
 
 def save_checkpoint(model, epoch, iteration=None):
@@ -71,7 +77,8 @@ def exec_train(train_loader, test_loader, *, model, train_datasize, test_datasiz
             y_pred = model(x)
             # print(y_pred.reshape(y.shape).shape)
             # mean_and_normal_vec = torch.cat((pca_mean, normal_v), dim=1)
-            loss = E(y_pred, y) + plane_loss(y_pred, pca_mean, pca_components)
+            # loss = E(y_pred, y) + plane_loss(y_pred, pca_mean, pca_components)
+            loss, _ = chamfer_distance(y_pred, y)
             loss.backward()                         # 勾配の計算
             optimizer.step()                        # 勾配の更新
             losses.append(loss.item())              # 損失値の蓄積
@@ -93,7 +100,8 @@ def exec_train(train_loader, test_loader, *, model, train_datasize, test_datasiz
                     perimeter = perimeter.cuda()
                 y_pred = model(x)
                 mean_and_normal_vec = torch.cat((pca_mean, normal_v), dim=1)
-                loss = E(y_pred, y) + plane_loss(y_pred, pca_mean, pca_components)
+                # loss = E(y_pred, y) + plane_loss(y_pred, pca_mean, pca_components)
+                loss, _ = chamfer_distance(y_pred, y)
                 current_loss += loss.item() * y_pred.size(0)
             epoch_loss = current_loss / test_datasize
             print(f'Validation Loss: {epoch_loss:.4f}')
