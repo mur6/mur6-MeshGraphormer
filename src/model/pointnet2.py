@@ -107,7 +107,7 @@ class PointNetCls(nn.Module):
         x = F.relu(self.bn2(self.dropout(self.fc2(x))))
         x = self.fc3(x)
         x = x.view(-1, 3, 20)
-        return x, trans_feat
+        return x
 
 
 if __name__ == "__main__":

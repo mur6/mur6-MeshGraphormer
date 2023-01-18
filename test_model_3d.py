@@ -6,14 +6,17 @@ import torch.nn as nn
 from torch import nn, optim
 import numpy as np
 from torch.utils.data import TensorDataset, DataLoader
+from src.modeling._mano import MANO
 
 from src.model.pointnet import PointNetfeat, Simple_STN3d
+from src.model.pointnet2 import PointNetCls
 from src.handinfo.data import load_data
+from pytorch3d.structures import Meshes, Pointclouds
 from pytorch3d.loss import (
     chamfer_distance,
     mesh_edge_loss,
     mesh_laplacian_smoothing,
-    mesh_normal_consistency,
+    point_mesh_face_distance,
 )
 
 
@@ -52,7 +55,14 @@ def plane_loss(vert_3d, pca_mean, pca_components):
     return x
 
 
-def exec_train(train_loader, test_loader, *, model, train_datasize, test_datasize, device, epochs=1000):
+def all_loss(y, y_pred, x, mano_faces):
+    mesh = Meshes(verts=torch.transpose(x, 2, 1), faces=mano_faces)
+    loss_1, _ = chamfer_distance(y_pred, y)
+    loss_2 = point_mesh_face_distance(mesh, Pointclouds(torch.transpose(y_pred, 2, 1)))
+    return loss_1 + loss_2
+
+
+def exec_train(train_loader, test_loader, *, model, train_datasize, test_datasize, device, mano_faces, epochs=1000):
     #optimizer = optim.RMSprop(net.parameters(), lr=0.01)
     if False:
         optimizer = optim.SGD(model.parameters(), lr=0.01)
@@ -73,13 +83,15 @@ def exec_train(train_loader, test_loader, *, model, train_datasize, test_datasiz
                 pca_components = pca_components.cuda()
                 normal_v = normal_v.cuda()
                 perimeter = perimeter.cuda()
+            # print(f"verts: {torch.transpose(x, 2, 1).shape}")
+            # print(f"mano_faces: {mano_faces.shape}")
             # print(pca_mean.shape, normal_v.shape)
             optimizer.zero_grad()                   # 勾配情報を0に初期化
             y_pred = model(x)
-            # print(y_pred.reshape(y.shape).shape)
+            # print(f"y_pred: {y_pred.shape}")
             # mean_and_normal_vec = torch.cat((pca_mean, normal_v), dim=1)
             # loss = E(y_pred, y) + plane_loss(y_pred, pca_mean, pca_components)
-            loss, _ = chamfer_distance(y_pred, y)
+            loss = all_loss(y, y_pred, x, mano_faces)
             loss.backward()                         # 勾配の計算
             optimizer.step()                        # 勾配の更新
             losses.append(loss.item())              # 損失値の蓄積
@@ -137,16 +149,24 @@ def main(resume_dir, input_filename, device, batch_size):
         else:
             raise Exception(f"{resume_dir} is not valid directory.")
     else:
-        model = PointNetfeat()
+        model = PointNetCls()
+
+    mano_model = MANO()
+
     if device == "cuda":
         model.to(device)
+        mano_model = MANO().to(device)
+        mano_model.layer = mano_model.layer.cuda()
+    mano_faces = mano_model.layer.th_faces
+    mano_faces = mano_faces.repeat(batch_size, 1, 1)
 
     exec_train(
         train_loader, test_loader,
         model=model,
         train_datasize=train_datasize,
         test_datasize=test_datasize,
-        device=device)
+        device=device,
+        mano_faces=mano_faces)
 
 
 def parse_args():
