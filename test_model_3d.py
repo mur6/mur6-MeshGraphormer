@@ -7,7 +7,7 @@ from torch import nn, optim
 import numpy as np
 from torch.utils.data import TensorDataset, DataLoader
 
-from src.model.pointnet import PointNetfeat
+from src.model.pointnet import PointNetfeat, Simple_STN3d
 from src.handinfo.data import load_data
 
 
@@ -131,7 +131,7 @@ def main(resume_dir, input_filename, device):
         else:
             raise Exception(f"{resume_dir} is not valid directory.")
     else:
-        model = PointNetfeat()
+        model = Simple_STN3d()
     if device == "cuda":
         model.to(device)
 
