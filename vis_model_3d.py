@@ -20,22 +20,27 @@ from src.model.pointnet import PointNetfeat
 from test_model_3d import load_data
 
 
-def create_point_geom(ring_point):
+def create_point_geom(ring_point, color):
     geom = trimesh.creation.icosphere(radius=0.0008)
-    color = [202, 2, 2, 255] # red
+    if color == "red":
+        color = [202, 2, 2, 255]
+    else:
+        color = [0, 0, 200, 255]
     geom.visual.face_colors = color
     geom.apply_translation(ring_point)
     return geom
 
-def visualize(*, mesh, points):
+def visualize(*, mesh, gt_points, pred_points):
     color = [102, 102, 102, 64]
     for facet in mesh.facets:
         #mesh.visual.face_colors[facet] = [color, color]
         mesh.visual.face_colors[facet] = color
     scene = trimesh.Scene()
     scene.add_geometry(mesh)
-    for p in points:
-        scene.add_geometry(create_point_geom(p))
+    for p in gt_points:
+        scene.add_geometry(create_point_geom(p, "blue"))
+    for p in pred_points:
+        scene.add_geometry(create_point_geom(p, "red"))
     scene.show()
 
 
@@ -50,7 +55,7 @@ def make_hand_mesh(gt_vertices):
 def infer(model, test_dataset):
     model.eval()
     with torch.no_grad():
-        for x, gt_y, pca_mean, pca_components in test_dataset:
+        for x, gt_y, pca_mean, pca_components, _, _ in test_dataset:
             mesh = make_hand_mesh(x)
             print("-------")
             x = x.unsqueeze(0)
@@ -62,8 +67,7 @@ def infer(model, test_dataset):
             print(f"points: {points.shape}")
             # y_pred = y_pred.reshape(gt_y.shape)
             # print(f"gt: {gt_y[0]} pred: {y_pred[0]}")
-            visualize(mesh=mesh, points=points)
-            # visualize(mesh=mesh, points=gt_y.transpose(1, 0).numpy())
+            visualize(mesh=mesh, gt_points=gt_y.transpose(1, 0).numpy(), pred_points=points)
             break
 
 
