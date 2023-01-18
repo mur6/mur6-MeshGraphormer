@@ -55,7 +55,6 @@ def exec_train(train_loader, test_loader, *, model, train_datasize, test_datasiz
     E = nn.MSELoss()
     # トレーニング
     for epoch in range(epochs):
-        print("##########")
         losses = []
         current_loss = 0.0
         model.train()
@@ -67,12 +66,10 @@ def exec_train(train_loader, test_loader, *, model, train_datasize, test_datasiz
                 pca_components = pca_components.cuda()
                 normal_v = normal_v.cuda()
                 perimeter = perimeter.cuda()
-            print("# ----")
             # print(x.shape, y.shape)
             # print(pca_mean.shape, normal_v.shape)
             optimizer.zero_grad()                   # 勾配情報を0に初期化
             y_pred = model(x)
-            print(f"1: - {i}")
             # print(y_pred.shape)
             # print(y_pred.reshape(y.shape).shape)
             mean_and_normal_vec = torch.cat((pca_mean, normal_v), dim=1)
@@ -81,7 +78,6 @@ def exec_train(train_loader, test_loader, *, model, train_datasize, test_datasiz
             optimizer.step()                        # 勾配の更新
             losses.append(loss.item())              # 損失値の蓄積
             current_loss += loss.item() * y_pred.size(0)
-            print(f"2: - {i}")
 
         epoch_loss = current_loss / train_datasize
         print(f'Train Loss: {epoch_loss:.4f}')
