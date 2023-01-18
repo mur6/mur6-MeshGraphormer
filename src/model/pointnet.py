@@ -59,7 +59,7 @@ class PointNetfeat(nn.Module):
         self.stn = STN3d()
         self.conv1 = torch.nn.Conv1d(3, 64, 1)
         self.conv2 = torch.nn.Conv1d(64, 128, 1)
-        self.output_feature_num = 4
+        self.output_feature_num = 6
         self.conv3 = torch.nn.Conv1d(128, self.output_feature_num, 1)
         self.bn1 = nn.BatchNorm1d(64)
         self.bn2 = nn.BatchNorm1d(128)

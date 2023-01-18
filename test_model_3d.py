@@ -58,18 +58,22 @@ def exec_train(train_loader, test_loader, *, model, train_datasize, test_datasiz
         losses = []
         current_loss = 0.0
         model.train()
-        for i, (x, y, pca_mean, pca_components) in enumerate(train_loader):
+        for i, (x, y, pca_mean, pca_components, normal_v, perimeter) in enumerate(train_loader):
             if device == "cuda":
                 x = x.cuda()
                 y = y.cuda()
                 pca_mean = pca_mean.cuda()
                 pca_components = pca_components.cuda()
+                normal_v = normal_v.cuda()
+                perimeter = perimeter.cuda()
+            # print(x.shape, y.shape)
+            # print(pca_mean.shape, normal_v.shape)
             optimizer.zero_grad()                   # 勾配情報を0に初期化
             y_pred = model(x)
             # print(y_pred.shape)
             # print(y_pred.reshape(y.shape).shape)
-            loss_1 = E(y_pred.reshape(y.shape), y)
-            loss = loss_1 + plane_loss(y, pca_mean, pca_components)
+            mean_and_normal_vec = torch.cat((pca_mean, normal_v), dim=1)
+            loss = E(y_pred, mean_and_normal_vec)
             loss.backward()                         # 勾配の計算
             optimizer.step()                        # 勾配の更新
             losses.append(loss.item())              # 損失値の蓄積
@@ -87,8 +91,12 @@ def exec_train(train_loader, test_loader, *, model, train_datasize, test_datasiz
                     y = y.cuda()
                     pca_mean = pca_mean.cuda()
                     pca_components = pca_components.cuda()
+                    normal_v = normal_v.cuda()
+                    perimeter = perimeter.cuda()
                 y_pred = model(x)
-                loss = E(y_pred, y)
+                mean_and_normal_vec = torch.cat((pca_mean, normal_v), dim=1)
+                # loss = E(y_pred.reshape(y.shape), mean_and_normal_vec)
+                loss = E(y_pred, mean_and_normal_vec)
                 current_loss += loss.item() * y_pred.size(0)
             epoch_loss = current_loss / test_datasize
             print(f'Validation Loss: {epoch_loss:.4f}')
