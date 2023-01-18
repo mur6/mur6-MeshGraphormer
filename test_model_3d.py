@@ -131,7 +131,7 @@ def main(resume_dir, input_filename, device, batch_size):
         else:
             raise Exception(f"{resume_dir} is not valid directory.")
     else:
-        model = Simple_STN3d()
+        model = PointNetfeat()
     if device == "cuda":
         model.to(device)
 
