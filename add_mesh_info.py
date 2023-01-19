@@ -2,7 +2,7 @@ import argparse
 import itertools
 import os.path
 import dataclasses
-from collections import namedtuple
+from collections import namedtuple, defaultdict
 from pathlib import Path
 
 import trimesh
@@ -108,7 +108,7 @@ def make_gt_infos(mano_model, meta_info, annotations):
         ring_point = MANO_JOINTS_NAME.index(f'Ring_{num}')
         return gt_3d_joints[ring_point]
 
-    return gt_vertices, gt_vertices_sub, ring_finger_point_func
+    return gt_3d_joints, gt_vertices, gt_vertices_sub, ring_finger_point_func
 
 
 def visualize(mesh, ring1, ring2):
@@ -142,13 +142,13 @@ def make_hand_mesh(mano_model, gt_vertices):
 OutputInfo = namedtuple("OutputInfo", "betas, gt_vertices, perimeter, center_points")
 
 
-def get_output_data(dataset, num):
-    output_list = []
+def iter_output_data(dataset, num):
+    # output_list = []
     count = 0
     for meta_info, annotations in iter_meta_info(itertools.islice(dataset, num)):
         # joints_2d, ori_img = make_joint2d_and_image(meta_info, annotations)
         mano_model = MANO().to("cpu")
-        gt_vertices, gt_vertices_sub, ring_finger_point_func = make_gt_infos(mano_model, meta_info, annotations)
+        gt_3d_joints, gt_vertices, gt_vertices_sub, ring_finger_point_func = make_gt_infos(mano_model, meta_info, annotations)
         # print(f"gt_vertices:min{torch.min(gt_vertices)}, max={torch.max(gt_vertices)}")
         # print(f"gt_3d_joints:min{torch.min(gt_3d_joints)}, max={torch.max(gt_3d_joints)}")
         # print("gt_vertices", gt_vertices)
@@ -162,23 +162,30 @@ def get_output_data(dataset, num):
         d = dict(
             betas=meta_info.betas.numpy(),
             pose=meta_info.pose.numpy(),
+            gt_3d_joints=gt_3d_joints.numpy(),
             gt_vertices=gt_vertices.numpy(),
             **dataclasses.asdict(r),
         )
-        output_list.append(d)
+        yield d
         print(f"count: {count}")
         count += 1
-    # betas_and_perimeter = set(betas_and_perimeter)
-    return output_list
 
 
 def main(args, *, train_yaml_file, num):
     dataset = build_hand_dataset(train_yaml_file, args, is_train=True)
-    outputs = get_output_data(dataset, num)
-    #s = json.dumps(betas_and_perimeter, indent=4)
-    #args.output_json.write_text(s)
-    np.savez(args.output, outputs)
-
+    keys = [
+        'betas', 'pose',
+        'gt_3d_joints', 'gt_vertices',
+        'perimeter', 'vert_2d',
+        'vert_3d', 'center_points', 'center_points_3d', 'pca_mean_', 'pca_components_'
+    ]
+    output_dict = defaultdict(list)
+    for item in iter_output_data(dataset, num):
+        for key in keys:
+            output_dict[key].append(item[key])
+    for key in keys:
+        output_dict[key] = np.array(output_dict[key])
+    np.savez(args.output, **dict(output_dict))
 
 
 def parse_args():
