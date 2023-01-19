@@ -55,20 +55,22 @@ def make_hand_mesh(gt_vertices):
 def infer(model, test_dataset):
     model.eval()
     with torch.no_grad():
-        for x, gt_y, pca_mean, pca_components, _, _ in test_dataset:
+        for idx, (x, gt_y, pca_mean, pca_components, _, _) in enumerate(test_dataset):
             mesh = make_hand_mesh(x)
             print("-------")
             x = x.unsqueeze(0)
             print(f"x: {x.shape} gt_y:{gt_y.shape}")
             # print(gt_y.shape)
             y_pred = model(x)
-            y_pred = y_pred.squeeze(0)
-            points = y_pred.transpose(1, 0).numpy()
-            print(f"points: {points.shape}")
+            # print(y_pred)
+            # y_pred = y_pred.squeeze(0)
+            # points = y_pred.transpose(1, 0).numpy()
+            # print(f"points: {points.shape}")
             # y_pred = y_pred.reshape(gt_y.shape)
             # print(f"gt: {gt_y[0]} pred: {y_pred[0]}")
-            visualize(mesh=mesh, gt_points=gt_y.transpose(1, 0).numpy(), pred_points=points)
-            break
+            visualize(mesh=mesh, gt_points=gt_y.transpose(1, 0).numpy(), pred_points=y_pred.numpy())
+            if idx > 2:
+                break
 
 
 def main(resume_dir, input_filename):
