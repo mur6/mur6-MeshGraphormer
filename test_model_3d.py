@@ -6,6 +6,8 @@ import torch.nn as nn
 from torch import nn, optim
 import numpy as np
 from torch.utils.data import TensorDataset, DataLoader
+from timm.scheduler import CosineLRScheduler
+
 from src.modeling._mano import MANO
 
 from src.model.pointnet import PointNetfeat, Simple_STN3d
@@ -80,7 +82,16 @@ def exec_train(train_loader, test_loader, *, model, train_datasize, test_datasiz
     if True:
         optimizer = optim.AdamW(model.parameters(), lr=0.005)
         # optimizer = optim.SGD(model.parameters(), lr=0.005)
-        scheduler = optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=25, eta_min=0.0005)
+        # scheduler = optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=25, eta_min=0.0005)
+        scheduler = CosineLRScheduler(
+            optimizer,
+            t_initial=40,
+            cycle_limit=11,
+            cycle_decay=0.8,
+            lr_min=0.0001,
+            warmup_t=20,
+            warmup_lr_init=5e-5,
+            warmup_prefix=True)
     E = nn.MSELoss()
     # トレーニング
     for epoch in range(epochs):
