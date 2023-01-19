@@ -84,7 +84,8 @@ if __name__ == "__main__":
         'gt_vertices',
         'vert_3d',
         # 'center_points_3d',
-        'pca_mean_', 'pca_components_'
+        'pca_mean_',
+        'pca_components_'
     ]
 
     for k in keys:
