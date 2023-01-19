@@ -104,14 +104,16 @@ def exec_train(train_loader, test_loader, *, model, train_datasize, test_datasiz
             # mean_and_normal_vec = torch.cat((pca_mean, normal_v), dim=1)
             # loss = E(y_pred, y) + plane_loss(y_pred, pca_mean, pca_components)
             # loss = all_loss(y, y_pred, x, mano_faces)
-            loss = cyclic_shift_loss(E, y_pred, y)
+            # loss = cyclic_shift_loss(E, y_pred, y)
+            # print(pca_mean.shape, output.shape)
+            loss = E(pca_mean, y_pred)
             loss.backward()                         # 勾配の計算
             optimizer.step()                        # 勾配の更新
             losses.append(loss.item())              # 損失値の蓄積
             current_loss += loss.item() * y_pred.size(0)
 
         epoch_loss = current_loss / train_datasize
-        print(f'Train Loss: {epoch_loss:.4f}')
+        print(f'Train Loss: {epoch_loss:.6f}')
         scheduler.step()
         model.eval()
         with torch.no_grad():
@@ -125,13 +127,14 @@ def exec_train(train_loader, test_loader, *, model, train_datasize, test_datasiz
                     normal_v = normal_v.cuda()
                     perimeter = perimeter.cuda()
                 y_pred = model(x)
-                mean_and_normal_vec = torch.cat((pca_mean, normal_v), dim=1)
+                # mean_and_normal_vec = torch.cat((pca_mean, normal_v), dim=1)
                 # loss = E(y_pred, y) + plane_loss(y_pred, pca_mean, pca_components)
                 # loss, _ = chamfer_distance(y_pred, y)
-                loss = cyclic_shift_loss(E, y_pred, y)
+                # loss = cyclic_shift_loss(E, y_pred, y)
+                loss = E(pca_mean, y_pred)
                 current_loss += loss.item() * y_pred.size(0)
             epoch_loss = current_loss / test_datasize
-            print(f'Validation Loss: {epoch_loss:.4f}')
+            print(f'Validation Loss: {epoch_loss:.6f}')
         if (epoch + 1) % 5 == 0:
             save_checkpoint(model, epoch+1)
     with torch.no_grad():

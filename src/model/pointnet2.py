@@ -89,7 +89,7 @@ class PointNetfeat(nn.Module):
 
 
 class PointNetCls(nn.Module):
-    def __init__(self, k=20*3, feature_transform=True):
+    def __init__(self, k=3, feature_transform=True):
         super(PointNetCls, self).__init__()
         self.feature_transform = feature_transform
         self.feat = PointNetfeat(global_feat=True, feature_transform=feature_transform)
@@ -106,7 +106,7 @@ class PointNetCls(nn.Module):
         x = F.relu(self.bn1(self.fc1(x)))
         x = F.relu(self.bn2(self.dropout(self.fc2(x))))
         x = self.fc3(x)
-        x = x.view(-1, 3, 20)
+        # x = x.view(-1, 3)
         return x
 
 
