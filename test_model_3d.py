@@ -62,6 +62,15 @@ def all_loss(y, y_pred, x, mano_faces):
     return loss_1
 
 
+def cyclic_shift_loss(E, y, y_pred):
+    lis = [torch.roll(y_pred, i, dims=2) for i in range(0, y_pred.shape[2])]
+    x = torch.stack(lis, dim=0)
+    tmp_x = (x - y).pow(2).sum(dim=(1, 2, 3))
+    final_y_pred = x[torch.argmin(tmp_x)]
+    # print(answer.shape)
+    return E(final_y_pred, y)
+
+
 def exec_train(train_loader, test_loader, *, model, train_datasize, test_datasize, device, mano_faces, epochs=1000):
     #optimizer = optim.RMSprop(net.parameters(), lr=0.01)
     if False:
@@ -90,10 +99,11 @@ def exec_train(train_loader, test_loader, *, model, train_datasize, test_datasiz
             # print(pca_mean.shape, normal_v.shape)
             optimizer.zero_grad()                   # 勾配情報を0に初期化
             y_pred = model(x)
-            # print(f"y_pred: {y_pred.shape}")
+            print(f"y_pred: {y_pred.shape}")
             # mean_and_normal_vec = torch.cat((pca_mean, normal_v), dim=1)
             # loss = E(y_pred, y) + plane_loss(y_pred, pca_mean, pca_components)
-            loss = all_loss(y, y_pred, x, mano_faces)
+            # loss = all_loss(y, y_pred, x, mano_faces)
+            loss = cyclic_shift_loss(E, y_pred, y)
             loss.backward()                         # 勾配の計算
             optimizer.step()                        # 勾配の更新
             losses.append(loss.item())              # 損失値の蓄積
@@ -116,7 +126,8 @@ def exec_train(train_loader, test_loader, *, model, train_datasize, test_datasiz
                 y_pred = model(x)
                 mean_and_normal_vec = torch.cat((pca_mean, normal_v), dim=1)
                 # loss = E(y_pred, y) + plane_loss(y_pred, pca_mean, pca_components)
-                loss, _ = chamfer_distance(y_pred, y)
+                # loss, _ = chamfer_distance(y_pred, y)
+                loss = cyclic_shift_loss(E, y_pred, y)
                 current_loss += loss.item() * y_pred.size(0)
             epoch_loss = current_loss / test_datasize
             print(f'Validation Loss: {epoch_loss:.4f}')
