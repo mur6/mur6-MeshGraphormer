@@ -76,11 +76,11 @@ def exec_train(train_loader, test_loader, *, model, train_datasize, test_datasiz
     if True:
         # optimizer = optim.SGD(model.parameters(), lr=0.01)
         optimizer = optim.AdamW(model.parameters(), lr=0.009)
-        scheduler = optim.lr_scheduler.ExponentialLR(optimizer, gamma=0.95)
+        scheduler = optim.lr_scheduler.ExponentialLR(optimizer, gamma=0.85)
     if False:
         optimizer = optim.AdamW(model.parameters(), lr=0.005)
         scheduler = optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=25, eta_min=0.0005)
-    E = nn.MSELoss()
+    E = nn.MSELoss(redution='sum')
     # トレーニング
     for epoch in range(epochs):
         losses = []
