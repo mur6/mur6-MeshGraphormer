@@ -13,13 +13,13 @@ from src.modeling._mano import MANO
 from src.model.pointnet import PointNetfeat, Simple_STN3d
 from src.model.pointnet2 import PointNetCls
 from src.handinfo.data import load_data
-from pytorch3d.structures import Meshes, Pointclouds
-from pytorch3d.loss import (
-    chamfer_distance,
-    mesh_edge_loss,
-    mesh_laplacian_smoothing,
-    point_mesh_face_distance,
-)
+# from pytorch3d.structures import Meshes, Pointclouds
+# from pytorch3d.loss import (
+#     chamfer_distance,
+#     mesh_edge_loss,
+#     mesh_laplacian_smoothing,
+#     point_mesh_face_distance,
+# )
 
 
 def save_checkpoint(model, epoch, iteration=None):
