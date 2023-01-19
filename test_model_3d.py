@@ -78,8 +78,8 @@ def exec_train(train_loader, test_loader, *, model, train_datasize, test_datasiz
         optimizer = optim.AdamW(model.parameters(), lr=0.009)
         scheduler = optim.lr_scheduler.ExponentialLR(optimizer, gamma=0.85)
     if True:
-        #optimizer = optim.AdamW(model.parameters(), lr=0.005)
-        optimizer = optim.SGD(model.parameters(), lr=0.01)
+        optimizer = optim.AdamW(model.parameters(), lr=0.005)
+        # optimizer = optim.SGD(model.parameters(), lr=0.005)
         scheduler = optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=25, eta_min=0.0005)
     E = nn.MSELoss()
     # トレーニング
