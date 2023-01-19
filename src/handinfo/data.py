@@ -6,17 +6,6 @@ import torch
 from torch.utils.data import TensorDataset, DataLoader
 from sklearn.model_selection import train_test_split
 
-
-def _iter(*, dict_list, key_name="vert_3d"):
-    for val in dict_list:
-
-
-        
-
-
-        yield gt_vertices, vert_3d, pca_mean, pca_components, normal_v, perimeter
-
-
 def _load_data(filename):
     converted = {}
     with np.load(filename, allow_pickle=True) as val:
@@ -44,10 +33,14 @@ def load_data(filename):
     val = _load_data(filename)
     perimeter = val['perimeter']
     gt_vertices = val['gt_vertices']
+    gt_vertices = torch.transpose(gt_vertices, 1, 2)
     gt_3d_joints = val['gt_3d_joints']
+    gt_3d_joints = torch.transpose(gt_3d_joints, 1, 2)
     vert_3d = val['vert_3d']
+    vert_3d = torch.transpose(vert_3d, 1, 2)
     pca_mean = val['pca_mean_']
     pca_components = val['pca_components_']
+
     normal_v = torch.cross(pca_components[:, 0], pca_components[:, 1], dim=1)
     (
         gt_vertices_train, gt_vertices_test,
@@ -95,8 +88,9 @@ if __name__ == "__main__":
     ]
 
     for k in keys:
-        print(k, val[k].shape)
+        v = val[k]
+        print(k, v.shape, v.dtype)
 
     pca_components = val['pca_components_']
     normal_v = torch.cross(pca_components[:, 0], pca_components[:, 1], dim=1)
-    print(normal_v, normal_v.shape)
+    print("normal_v: ", normal_v.shape, normal_v.dtype)

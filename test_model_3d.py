@@ -93,14 +93,15 @@ def exec_train(train_loader, test_loader, *, model, train_datasize, test_datasiz
             warmup_lr_init=5e-5,
             warmup_prefix=True)
     E = nn.MSELoss()
-    # トレーニング
+
     for epoch in range(epochs):
         losses = []
         current_loss = 0.0
         model.train()
-        for i, (x, y, pca_mean, pca_components, normal_v, perimeter) in enumerate(train_loader):
+        for i, (gt_vertices, gt_3d_joints, y, pca_mean, pca_components, normal_v, perimeter) in enumerate(train_loader):
             if device == "cuda":
-                x = x.cuda()
+                gt_vertices = gt_vertices.cuda()
+                gt_3d_joints = gt_3d_joints.cuda()
                 y = y.cuda()
                 pca_mean = pca_mean.cuda()
                 pca_components = pca_components.cuda()
@@ -110,15 +111,18 @@ def exec_train(train_loader, test_loader, *, model, train_datasize, test_datasiz
             # print(f"mano_faces: {mano_faces.shape}")
             # print(pca_mean.shape, normal_v.shape)
             optimizer.zero_grad()                   # 勾配情報を0に初期化
-            y_pred = model(x)
+            y_pred = model(gt_3d_joints)
             # print(f"y_pred: {y_pred.shape}")
-            # mean_and_normal_vec = torch.cat((pca_mean, normal_v), dim=1)
+            mean_and_normal_vec = torch.cat((pca_mean, normal_v), dim=1)
+            mean_and_normal_vec = torch.tensor(mean_and_normal_vec, dtype=torch.float32)
             # loss = E(y_pred, y) + plane_loss(y_pred, pca_mean, pca_components)
             # loss = all_loss(y, y_pred, x, mano_faces)
             # loss = cyclic_shift_loss(E, y_pred, y)
             # print(pca_mean.shape, output.shape)
-            loss = E(pca_mean, y_pred)
-            loss.backward()                         # 勾配の計算
+            # print(y_pred.shape, y_pred.dtype)
+            # print(mean_and_normal_vec.shape, mean_and_normal_vec.dtype)
+            loss = E(mean_and_normal_vec, y_pred)
+            loss.backward()
             optimizer.step()                        # 勾配の更新
             losses.append(loss.item())              # 損失値の蓄積
             current_loss += loss.item() * y_pred.size(0)
@@ -129,20 +133,21 @@ def exec_train(train_loader, test_loader, *, model, train_datasize, test_datasiz
         model.eval()
         with torch.no_grad():
             current_loss = 0.0
-            for x, y, pca_mean, pca_components, normal_v, perimeter in test_loader:
+            for gt_vertices, gt_3d_joints, y, pca_mean, pca_components, normal_v, perimeter in test_loader:
                 if device == "cuda":
-                    x = x.cuda()
+                    gt_vertices = gt_vertices.cuda()
+                    gt_3d_joints = gt_3d_joints.cuda()
                     y = y.cuda()
                     pca_mean = pca_mean.cuda()
                     pca_components = pca_components.cuda()
                     normal_v = normal_v.cuda()
                     perimeter = perimeter.cuda()
-                y_pred = model(x)
-                # mean_and_normal_vec = torch.cat((pca_mean, normal_v), dim=1)
+                y_pred = model(gt_3d_joints)
+                mean_and_normal_vec = torch.cat((pca_mean, normal_v), dim=1)
                 # loss = E(y_pred, y) + plane_loss(y_pred, pca_mean, pca_components)
                 # loss, _ = chamfer_distance(y_pred, y)
                 # loss = cyclic_shift_loss(E, y_pred, y)
-                loss = E(pca_mean, y_pred)
+                loss = E(mean_and_normal_vec, y_pred)
                 current_loss += loss.item() * y_pred.size(0)
             epoch_loss = current_loss / test_datasize
             print(f'Validation Loss: {epoch_loss:.6f}')
@@ -178,6 +183,7 @@ def main(resume_dir, input_filename, device, batch_size):
             raise Exception(f"{resume_dir} is not valid directory.")
     else:
         model = PointNetCls()
+        print(f"model: {model.__class__.__name__}")
 
     mano_model = MANO()
 
