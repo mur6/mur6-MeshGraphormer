@@ -125,7 +125,7 @@ def exec_train(train_loader, test_loader, *, model, train_datasize, test_datasiz
 
         epoch_loss = current_loss / train_datasize
         print(f'Train Loss: {epoch_loss:.6f}')
-        scheduler.step()
+        scheduler.step(epoch+1)
         model.eval()
         with torch.no_grad():
             current_loss = 0.0
