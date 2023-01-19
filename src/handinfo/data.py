@@ -9,65 +9,94 @@ from sklearn.model_selection import train_test_split
 
 def _iter(*, dict_list, key_name="vert_3d"):
     for val in dict_list:
-        perimeter = val['perimeter']
-        gt_vertices = val['gt_vertices']
-        # betas = torch.from_numpy(val['betas'])
-        # pose = torch.from_numpy(val['pose'])
-        vert_3d = val['vert_3d']
-        pca_mean = val['pca_mean_']
-        pca_components = val['pca_components_']
 
-        normal_v = np.cross(pca_components[0], pca_components[1])
 
-        if vert_3d.shape != (20, 3):
-            # print(y.shape)
-            vert_3d = vert_3d[:20, :]
-        assert vert_3d.shape == (20, 3)
+        
+
+
         yield gt_vertices, vert_3d, pca_mean, pca_components, normal_v, perimeter
 
 
+def _load_data(filename):
+    converted = {}
+    with np.load(filename, allow_pickle=True) as val:
+        keys = (
+            'perimeter',
+            'gt_3d_joints',
+            'gt_vertices',
+            'pca_mean_',
+            'pca_components_'
+        )
+        for k in keys:
+            converted[k] = torch.from_numpy(val[k])
+        def _conv_vert_3d():
+            for vert_3d in val['vert_3d']:
+                if vert_3d.shape[0] > 20:
+                    vert_3d = vert_3d[:20, :]
+                assert vert_3d.shape == (20, 3)
+                yield vert_3d
+        values = list(_conv_vert_3d())
+        converted['vert_3d'] = torch.from_numpy(np.array(values))
+    return converted
+
+
 def load_data(filename):
-    # X, y = [], []
-    values = None
-    with np.load(filename, allow_pickle=True) as hand_infos:
-        values = list(_iter(dict_list=hand_infos["arr_0"]))
-
-    def conv_float_tensor(index):
-        data = list(map(operator.itemgetter(index), values))
-        return torch.FloatTensor(data)
-
-    X = conv_float_tensor(0)
-    X = torch.transpose(X, 1, 2)
-    # print(X.shape)
-
-    y = conv_float_tensor(1)
-    y = torch.transpose(y, 1, 2)
-    # print(y.shape)
-
-    pca_mean = conv_float_tensor(2)
-    pca_components = conv_float_tensor(3)
-    normal_v = conv_float_tensor(4)
-    perimeter = torch.FloatTensor([v[5].item(0) for v in values])
-
+    val = _load_data(filename)
+    perimeter = val['perimeter']
+    gt_vertices = val['gt_vertices']
+    gt_3d_joints = val['gt_3d_joints']
+    vert_3d = val['vert_3d']
+    pca_mean = val['pca_mean_']
+    pca_components = val['pca_components_']
+    normal_v = torch.cross(pca_components[:, 0], pca_components[:, 1], dim=1)
     (
-        X_train, X_test, y_train, y_test,
+        gt_vertices_train, gt_vertices_test,
+        gt_3d_joints_train, gt_3d_joints_test,
+        vert_3d_train, vert_3d_test,
         pca_mean_train, pca_mean_test,
         pca_components_train, pca_components_test,
         normal_v_train, normal_v_test,
         perimeter_train, perimeter_test,
-    ) = train_test_split(X, y, pca_mean, pca_components, normal_v, perimeter)
+    ) = train_test_split(gt_vertices, gt_3d_joints, vert_3d, pca_mean, pca_components, normal_v, perimeter)
     train_dataset = TensorDataset(
-        X_train, y_train,
+        gt_vertices_train,
+        gt_3d_joints_train,
+        vert_3d_train,
         pca_mean_train,
         pca_components_train,
         normal_v_train,
         perimeter_train,
     )
     test_dataset = TensorDataset(
-        X_test, y_test,
+        gt_vertices_test,
+        gt_3d_joints_test,
+        vert_3d_test,
         pca_mean_test,
         pca_components_test,
         normal_v_test,
         perimeter_test,
     )
     return train_dataset, test_dataset
+
+
+
+if __name__ == "__main__":
+    import sys
+    filename = sys.argv[1]
+    print(filename)
+    val = _load_data(filename)
+    keys = [
+        'perimeter',
+        'gt_3d_joints',
+        'gt_vertices',
+        'vert_3d',
+        # 'center_points_3d',
+        'pca_mean_', 'pca_components_'
+    ]
+
+    for k in keys:
+        print(k, val[k].shape)
+
+    pca_components = val['pca_components_']
+    normal_v = torch.cross(pca_components[:, 0], pca_components[:, 1], dim=1)
+    print(normal_v, normal_v.shape)
