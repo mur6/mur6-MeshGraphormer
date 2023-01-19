@@ -8,7 +8,7 @@ import torch.nn.functional as F
 
 
 class STNkd(nn.Module):
-    def __init__(self, k=64):
+    def __init__(self, k=21):
         super(STNkd, self).__init__()
         self.conv1 = torch.nn.Conv1d(k, 64, 1)
         self.conv2 = torch.nn.Conv1d(64, 128, 1)
@@ -89,7 +89,7 @@ class PointNetfeat(nn.Module):
 
 
 class PointNetCls(nn.Module):
-    def __init__(self, k=3, feature_transform=True):
+    def __init__(self, k=6, feature_transform=True):
         super(PointNetCls, self).__init__()
         self.feature_transform = feature_transform
         self.feat = PointNetfeat(global_feat=True, feature_transform=feature_transform)
@@ -106,14 +106,14 @@ class PointNetCls(nn.Module):
         x = F.relu(self.bn1(self.fc1(x)))
         x = F.relu(self.bn2(self.dropout(self.fc2(x))))
         x = self.fc3(x)
-        # x = x.view(-1, 3)
+        # x = x.view(-1, 6)
         return x
 
 
 if __name__ == "__main__":
     m = PointNetCls()
     m.eval()
-    input = torch.randn(1, 3, 778)
-    output, _ = m(input)
+    input = torch.randn(1, 3, 21)
+    output = m(input)
     print(output.shape)
     # main(args.resume_dir, args.input_filename)
