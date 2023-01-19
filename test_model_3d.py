@@ -99,7 +99,7 @@ def exec_train(train_loader, test_loader, *, model, train_datasize, test_datasiz
             # print(pca_mean.shape, normal_v.shape)
             optimizer.zero_grad()                   # 勾配情報を0に初期化
             y_pred = model(x)
-            print(f"y_pred: {y_pred.shape}")
+            # print(f"y_pred: {y_pred.shape}")
             # mean_and_normal_vec = torch.cat((pca_mean, normal_v), dim=1)
             # loss = E(y_pred, y) + plane_loss(y_pred, pca_mean, pca_components)
             # loss = all_loss(y, y_pred, x, mano_faces)
