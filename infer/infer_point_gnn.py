@@ -21,14 +21,14 @@ def train(epoch):
         data = data.to(device)
         optimizer.zero_grad()
         output = model(data)
-        print(f"output: {output.shape}")
+        # print(f"output: {output.shape}")
         batch_size = output.shape[0]
-        print(f"data.y: {data.y.shape}")
+        # print(f"data.y: {data.y.shape}")
         # print(output)
         # output = torch.flatten(output)
         # print(output)
         # loss = F.nll_loss(output, data.y)
-        print(output.dtype, data.y.dtype)
+        # print(output.dtype, data.y.dtype)
         loss = F.mse_loss(output, data.y.view(batch_size, -1).float().contiguous())
         loss.backward()
         optimizer.step()
@@ -70,5 +70,5 @@ if __name__ == '__main__':
 
     for epoch in range(1, 201):
         train(epoch)
-    #     test_acc = test(test_loader)
-    #     print(f'Epoch: {epoch:03d}, Test: {test_acc:.4f}')
+        test_acc = test(test_loader)
+        print(f'Epoch: {epoch:03d}, Test: {test_acc:.4f}')
