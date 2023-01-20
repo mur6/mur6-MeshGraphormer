@@ -84,7 +84,8 @@ def get_mano_faces(device):
     mano_faces = mano_model.layer.th_faces
     return mano_faces
 
-from torch_geometric.data import Data
+from torch_geometric.data import Data, InMemoryDataset
+
 
 def faces_to_edge_index(vertices, faces):
     mesh = trimesh.Trimesh(vertices=vertices, faces=faces)
@@ -110,8 +111,13 @@ def load_data_for_geometric(filename, device="cuda"):
     ]
     # print(vertex.shape, edge_index.shape)
     # print(pca_mean.shape)
-    train_test_split(data_list)
-
+    data_train, data_test = train_test_split(data_list)
+    # train_dataset = InMemoryDataset(".")
+    # train_dataset.data = data_train
+    # test_dataset = InMemoryDataset(".")
+    # test_dataset.data = data_test
+    # return train_dataset, test_dataset
+    return data_train, data_test
 
 
 def test1(filename):
