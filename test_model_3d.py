@@ -8,8 +8,6 @@ import numpy as np
 from torch.utils.data import TensorDataset, DataLoader
 from timm.scheduler import CosineLRScheduler
 
-from src.modeling._mano import MANO
-
 from src.model.pointnet import PointNetfeat, Simple_STN3d
 from src.model.pointnet2 import PointNetCls
 from src.handinfo.data import load_data
@@ -73,7 +71,7 @@ def cyclic_shift_loss(E, y, y_pred):
     return E(final_y_pred, y)
 
 
-def exec_train(train_loader, test_loader, *, model, train_datasize, test_datasize, device, mano_faces, epochs=1000):
+def exec_train(train_loader, test_loader, *, model, train_datasize, test_datasize, device, epochs=1000):
     #optimizer = optim.RMSprop(net.parameters(), lr=0.01)
     if False:
         # optimizer = optim.SGD(model.parameters(), lr=0.01)
@@ -186,22 +184,17 @@ def main(resume_dir, input_filename, device, batch_size):
         model = PointNetCls()
         print(f"model: {model.__class__.__name__}")
 
-    mano_model = MANO()
-
     if device == "cuda":
         model.to(device)
-        mano_model = MANO().to(device)
-        mano_model.layer = mano_model.layer.cuda()
-    mano_faces = mano_model.layer.th_faces
-    mano_faces = mano_faces.repeat(batch_size, 1, 1)
+
+    # mano_faces = mano_faces.repeat(batch_size, 1, 1)
 
     exec_train(
         train_loader, test_loader,
         model=model,
         train_datasize=train_datasize,
         test_datasize=test_datasize,
-        device=device,
-        mano_faces=mano_faces)
+        device=device)
 
 
 def parse_args():
