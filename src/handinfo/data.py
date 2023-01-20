@@ -72,11 +72,49 @@ def load_data(filename):
     return train_dataset, test_dataset
 
 
+import trimesh
+from src.modeling._mano import MANO
 
-if __name__ == "__main__":
-    import sys
-    filename = sys.argv[1]
-    print(filename)
+
+def get_mano_faces(device):
+    mano_model = MANO()
+    if device == "cuda":
+        mano_model = MANO().to(device)
+        mano_model.layer = mano_model.layer.cuda()
+    mano_faces = mano_model.layer.th_faces
+    return mano_faces
+
+from torch_geometric.data import Data
+
+def faces_to_edge_index(vertices, faces):
+    mesh = trimesh.Trimesh(vertices=vertices, faces=faces)
+    e = torch.from_numpy(mesh.edges_unique).permute(1, 0)
+    # print(e2)
+    # print(type(e), e.shape)
+    edge_index = torch.cat((e, torch.flip(e, dims=[0])), dim=1)
+    return edge_index
+
+
+def load_data_for_geometric(filename, device="cuda"):
+    val = _load_data(filename)
+    perimeter = val['perimeter']
+    gt_vertices = val['gt_vertices']
+    edge_index = faces_to_edge_index(gt_vertices[0], get_mano_faces(device))
+    # gt_3d_joints = val['gt_3d_joints']
+    pca_mean = val['pca_mean_']
+    # pca_components = val['pca_components_']
+    vertices = torch.transpose(gt_vertices, 1, 2)
+    data_list = [
+        Data(x=vertex, edge_index=edge_index, y=pca_mean[i]) \
+        for i, vertex in enumerate(vertices)
+    ]
+    # print(vertex.shape, edge_index.shape)
+    # print(pca_mean.shape)
+    train_test_split(data_list)
+
+
+
+def test1(filename):
     val = _load_data(filename)
     keys = [
         'perimeter',
@@ -95,3 +133,10 @@ if __name__ == "__main__":
     pca_components = val['pca_components_']
     normal_v = torch.cross(pca_components[:, 0], pca_components[:, 1], dim=1)
     print("normal_v: ", normal_v.shape, normal_v.dtype)
+
+
+if __name__ == "__main__":
+    import sys
+    filename = sys.argv[1]
+    print(filename)
+    load_data_for_geometric(filename, device="cpu")
