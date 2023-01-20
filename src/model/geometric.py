@@ -57,5 +57,5 @@ class Net(torch.nn.Module):
         sa2_out = self.sa2_module(*sa1_out)
         sa3_out = self.sa3_module(*sa2_out)
         x, pos, batch = sa3_out
-
-        return self.mlp(x).log_softmax(dim=-1)
+        # return self.mlp(x).log_softmax(dim=-1)
+        return self.mlp(x)
