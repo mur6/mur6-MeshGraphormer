@@ -13,7 +13,7 @@ from src.handinfo.data import load_data_for_geometric
 # from src. pointnet2_classification import GlobalSAModule, SAModule
 
 
-def train(batch_size, epoch):
+def train(epoch):
     model.train()
 
     for data in train_loader:
@@ -22,8 +22,14 @@ def train(batch_size, epoch):
         optimizer.zero_grad()
         output = model(data)
         print(f"output: {output.shape}")
+        batch_size = output.shape[0]
         print(f"data.y: {data.y.shape}")
-        loss = F.nll_loss(output, data.y.view(batch_size, -1))
+        # print(output)
+        # output = torch.flatten(output)
+        # print(output)
+        # loss = F.nll_loss(output, data.y)
+        print(output.dtype, data.y.dtype)
+        loss = F.mse_loss(output, data.y.view(batch_size, -1).float().contiguous())
         loss.backward()
         optimizer.step()
 
@@ -53,6 +59,7 @@ if __name__ == '__main__':
     # train_dataset = ModelNet(path, '10', True, transform, pre_transform)
     # test_dataset = ModelNet(path, '10', False, transform, pre_transform)
     # print(train_dataset.data)
+    batch_size = 32
     train_loader = DataLoader(train_dataset, batch_size=32, shuffle=True,
                               num_workers=6)
     test_loader = DataLoader(test_dataset, batch_size=32, shuffle=False,
