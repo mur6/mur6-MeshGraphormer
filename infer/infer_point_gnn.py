@@ -13,14 +13,17 @@ from src.handinfo.data import load_data_for_geometric
 # from src. pointnet2_classification import GlobalSAModule, SAModule
 
 
-def train(epoch):
+def train(batch_size, epoch):
     model.train()
 
     for data in train_loader:
-        print(type(data))
+        # print(type(data))
         data = data.to(device)
         optimizer.zero_grad()
-        loss = F.nll_loss(model(data), data.y)
+        output = model(data)
+        print(f"output: {output.shape}")
+        print(f"data.y: {data.y.shape}")
+        loss = F.nll_loss(output, data.y.view(batch_size, -1))
         loss.backward()
         optimizer.step()
 
