@@ -42,7 +42,8 @@ def test(loader):
         data = data.to(device)
         with torch.no_grad():
             pred = model(data).max(1)[1]
-        correct += pred.eq(data.y).sum().item()
+        batch_size = pred.shape[0]
+        correct += pred.eq(data.y.view(batch_size, -1).float()).sum().item()
     return correct / len(loader.dataset)
 
 if __name__ == '__main__':
@@ -69,6 +70,6 @@ if __name__ == '__main__':
     optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
 
     for epoch in range(1, 201):
-        train(epoch)
+        # train(epoch)
         test_acc = test(test_loader)
         print(f'Epoch: {epoch:03d}, Test: {test_acc:.4f}')
