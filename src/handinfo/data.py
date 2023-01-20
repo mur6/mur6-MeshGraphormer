@@ -108,7 +108,7 @@ def load_data_for_geometric(filename, device="cuda"):
     data_list = []
     for i, vertex in enumerate(vertices):
         d = Data(x=None, pos=vertex, edge_index=edge_index, y=pca_mean[i])
-        print(f"vertex: {vertex.shape}")
+        # print(f"vertex: {vertex.shape}")
         data_list.append(d)
     # print(vertex.shape, edge_index.shape)
     # print(pca_mean.shape)
