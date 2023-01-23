@@ -8,6 +8,8 @@ from torch_geometric.datasets import ModelNet
 from torch_geometric.loader import DataLoader
 from torch_geometric.nn import MLP, PointConv, fps, global_max_pool, radius
 
+from torch_geometric.data import Data, InMemoryDataset
+
 
 class SAModule(torch.nn.Module):
     def __init__(self, ratio, r, nn):
@@ -60,3 +62,14 @@ class Net(torch.nn.Module):
         x, pos, batch = sa3_out
         # return self.mlp(x).log_softmax(dim=-1)
         return self.mlp(x)
+
+
+if __name__ == "__main__":
+    m = Net()
+    m.eval()
+    pos = torch.randn(778, 3)
+    edge_index=torch.randint(778, (2, 4630))
+    data = Data(x=None, pos=pos, edge_index=edge_index, y=torch.zeros(3))
+    output = m(data)
+    print(output.shape)
+    # main(args.resume_dir, args.input_filename)

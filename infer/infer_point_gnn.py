@@ -41,10 +41,14 @@ def test(loader):
     for data in loader:
         data = data.to(device)
         with torch.no_grad():
-            pred = model(data).max(1)[1]
+            output = model(data)
+            # print(f"output: {output.shape}")
+            pred = output#output.max(1)[1]
         batch_size = pred.shape[0]
-        correct += pred.eq(data.y.view(batch_size, -1).float()).sum().item()
+        b = data.y.view(batch_size, -1).float()
+        correct += pred.eq(b).sum().item()
     return correct / len(loader.dataset)
+
 
 if __name__ == '__main__':
     import sys
