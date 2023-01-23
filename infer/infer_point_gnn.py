@@ -27,7 +27,7 @@ def save_checkpoint(model, epoch, iteration=None):
     return checkpoint_dir
 
 
-def train(epoch, train_datasize):
+def train(train_loader, train_datasize):
     model.train()
     losses = []
     current_loss = 0.0
@@ -53,21 +53,23 @@ def train(epoch, train_datasize):
     print(f'Train Loss: {epoch_loss:.6f}')
 
 
-def test(loader):
+def test(loader, test_datasize):
     model.eval()
 
-    correct = 0
+    current_loss = 0.0
+    # correct = 0
     for data in loader:
         data = data.to(device)
         with torch.no_grad():
             output = model(data)
             # print(f"output: {output.shape}")
-            pred = output#output.max(1)[1]
-        batch_size = pred.shape[0]
-        b = data.y.view(batch_size, -1).float()
-        correct += pred.eq(b).sum().item()
-    return correct / len(loader.dataset)
-
+        # batch_size = pred.shape[0]
+        # b = data.y.view(batch_size, -1).float()
+        # correct += pred.eq(b).sum().item()
+        loss = F.mse_loss(output, data.y.view(batch_size, -1).float().contiguous())
+        current_loss += loss.item() * output.size(0)
+    epoch_loss = current_loss / test_datasize
+    print(f'Validation Loss: {epoch_loss:.6f}')
 
 if __name__ == '__main__':
     import sys
@@ -95,7 +97,10 @@ if __name__ == '__main__':
     model = Net().to(device)
     optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
 
-    for epoch in range(1, 201):
-        train(epoch, train_datasize)
-        test_acc = test(test_loader)
-        print(f'Epoch: {epoch:03d}, Test: {test_acc:.4f}')
+    for epoch in range(1, 500 + 1):
+        train(train_loader, train_datasize)
+        test(test_loader, test_datasize)
+        # test_acc = test(test_loader)
+        # print(f'Epoch: {epoch:03d}, Test: {test_acc:.4f}')
+        if epoch % 5 == 0:
+            save_checkpoint(model, epoch)
