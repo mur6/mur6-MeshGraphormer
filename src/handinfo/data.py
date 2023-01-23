@@ -97,14 +97,13 @@ def faces_to_edge_index(vertices, faces):
     return edge_index
 
 
-
 class MyGraphDataset(InMemoryDataset):
     def __init__(self, data_list,
         transform: Optional[Callable] = None,
         pre_transform: Optional[Callable] = None
         ):
         super().__init__('.', pre_transform=pre_transform)
-        #, transform, pre_transform)
+        # transform=transform,
         self.data, self.slices = self.collate(data_list)
 
 
@@ -112,7 +111,7 @@ def load_data_for_geometric(filename, device="cuda"):
     val = _load_data(filename)
     perimeter = val['perimeter']
     gt_vertices = val['gt_vertices']
-    faces = get_mano_faces(device).clone()
+    faces = get_mano_faces(device)
     print(f"faces: {faces.shape}")
     edge_index = faces_to_edge_index(gt_vertices[0], faces)
     # gt_3d_joints = val['gt_3d_joints']
@@ -120,24 +119,24 @@ def load_data_for_geometric(filename, device="cuda"):
     # pca_components = val['pca_components_']
     vertices = gt_vertices#torch.transpose(gt_vertices, 1, 2)
     data_list = []
-    # face = torch.transpose(faces, 1, 0).contiguous()
     for i, vertex in enumerate(vertices):
         # print(f"vertex: {vertex.shape}")
+        # print(f"face: {face.shape}")
         # print(f"edge_index: {edge_index.shape} {edge_index.dtype}")
-        d = Data(x=None, pos=vertex, edge_index=edge_index, y=pca_mean[i])
+        d = Data(x=vertex, pos=vertex, edge_index=edge_index, y=pca_mean[i])
         data_list.append(d)
     # print(vertex.shape, edge_index.shape)
     # print(pca_mean.shape)
     data_train, data_test = train_test_split(data_list)
     pre_transform = T.NormalizeScale()
-    transform = T.SamplePoints(389)
+    # transform = T.SamplePoints(1024)
     train_dataset = InMemoryDataset(
         data_train,
-        transform=transform,
+        # transform=transform,
         pre_transform=pre_transform)
     test_dataset = MyGraphDataset(
         data_test,
-        transform=transform,
+        # transform=transform,
         pre_transform=pre_transform)
     #return data_train, data_test
     return train_dataset, test_dataset
