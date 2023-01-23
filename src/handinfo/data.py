@@ -107,8 +107,9 @@ def load_data_for_geometric(filename, device="cuda"):
     vertices = gt_vertices#torch.transpose(gt_vertices, 1, 2)
     data_list = []
     for i, vertex in enumerate(vertices):
-        d = Data(x=None, pos=vertex, edge_index=edge_index, y=pca_mean[i])
         # print(f"vertex: {vertex.shape}")
+        # print(f"edge_index: {edge_index.shape} {edge_index.dtype}")
+        d = Data(x=None, pos=vertex, edge_index=edge_index, y=pca_mean[i])
         data_list.append(d)
     # print(vertex.shape, edge_index.shape)
     # print(pca_mean.shape)
