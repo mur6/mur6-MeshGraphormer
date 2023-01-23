@@ -3,6 +3,8 @@ from pathlib import Path
 
 import torch
 import torch.nn.functional as F
+from torch import nn, optim
+from timm.scheduler import CosineLRScheduler
 
 import torch_geometric.transforms as T
 from torch_geometric.datasets import ModelNet
@@ -27,7 +29,7 @@ def save_checkpoint(model, epoch, iteration=None):
     return checkpoint_dir
 
 
-def train(train_loader, train_datasize):
+def train(train_loader, train_datasize, optimizer, scheduler):
     model.train()
     losses = []
     current_loss = 0.0
@@ -51,6 +53,7 @@ def train(train_loader, train_datasize):
         current_loss += loss.item() * output.size(0)
     epoch_loss = current_loss / train_datasize
     print(f'Train Loss: {epoch_loss:.6f}')
+    scheduler.step(epoch+1)
 
 
 def test(loader, test_datasize):
@@ -71,10 +74,8 @@ def test(loader, test_datasize):
     epoch_loss = current_loss / test_datasize
     print(f'Validation Loss: {epoch_loss:.6f}')
 
-if __name__ == '__main__':
-    import sys
-    filename = sys.argv[1]
-    print(filename)
+
+def main(filename):
     # path = osp.join(osp.dirname(osp.realpath(__file__)), '..',
     #                 'data/ModelNet10')
     pre_transform, transform = T.NormalizeScale(), T.SamplePoints(1024)
@@ -95,12 +96,28 @@ if __name__ == '__main__':
                              num_workers=6)
 
     model = Net().to(device)
-    optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
+    # optimizer = optim.Adam(model.parameters(), lr=0.001)
+    optimizer = torch.optim.AdamW(model.parameters(), lr=0.02)
+    # scheduler = optim.lr_scheduler.ExponentialLR(optimizer, gamma=0.85)
+    scheduler = CosineLRScheduler(
+        optimizer,
+        t_initial=40,
+        cycle_limit=11,
+        cycle_decay=0.8,
+        lr_min=0.0001,
+        warmup_t=20,
+        warmup_lr_init=5e-5,
+        warmup_prefix=True)
 
-    for epoch in range(1, 500 + 1):
-        train(train_loader, train_datasize)
+    for epoch in range(1, 1000 + 1):
+        train(train_loader, train_datasize, optimizer, scheduler)
         test(test_loader, test_datasize)
         # test_acc = test(test_loader)
         # print(f'Epoch: {epoch:03d}, Test: {test_acc:.4f}')
         if epoch % 5 == 0:
             save_checkpoint(model, epoch)
+
+if __name__ == '__main__':
+    import sys
+    filename = sys.argv[1]
+    main(filename)
