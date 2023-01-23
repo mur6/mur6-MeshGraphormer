@@ -97,17 +97,17 @@ def main(filename):
 
     model = Net().to(device)
     # optimizer = optim.Adam(model.parameters(), lr=0.001)
-    optimizer = torch.optim.AdamW(model.parameters(), lr=0.02)
-    # scheduler = optim.lr_scheduler.ExponentialLR(optimizer, gamma=0.85)
-    scheduler = CosineLRScheduler(
-        optimizer,
-        t_initial=40,
-        cycle_limit=11,
-        cycle_decay=0.8,
-        lr_min=0.0001,
-        warmup_t=20,
-        warmup_lr_init=5e-5,
-        warmup_prefix=True)
+    optimizer = torch.optim.AdamW(model.parameters(), lr=0.01)
+    scheduler = optim.lr_scheduler.ExponentialLR(optimizer, gamma=0.9)
+    # scheduler = CosineLRScheduler(
+    #     optimizer,
+    #     t_initial=40,
+    #     cycle_limit=11,
+    #     cycle_decay=0.8,
+    #     lr_min=0.0001,
+    #     warmup_t=20,
+    #     warmup_lr_init=5e-5,
+    #     warmup_prefix=True)
 
     for epoch in range(1, 1000 + 1):
         train(model, epoch, train_loader, train_datasize, optimizer, scheduler, device)
