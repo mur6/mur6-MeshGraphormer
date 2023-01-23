@@ -7,6 +7,7 @@ import torch_geometric.transforms as T
 from torch_geometric.datasets import ModelNet
 from torch_geometric.loader import DataLoader
 from torch_geometric.nn import MLP, PointConv, fps, global_max_pool, radius
+from torch_geometric.nn import knn_interpolate
 
 from torch_geometric.data import Data, InMemoryDataset
 
@@ -107,10 +108,11 @@ class Net(torch.nn.Module):
         fp2_out = self.fp2_module(*fp3_out, *sa1_out)
         x, _, _ = self.fp1_module(*fp2_out, *sa0_out)
 
-        return self.mlp(x).log_softmax(dim=-1)
+        return self.mlp(x)#.log_softmax(dim=-1)
+
 
 if __name__ == "__main__":
-    m = Net()
+    m = Net(num_classes=3)
     m.eval()
     pos = torch.randn(778, 3)
     edge_index=torch.randint(778, (2, 4630))
