@@ -97,7 +97,7 @@ def main(filename):
 
     model = Net().to(device)
     # optimizer = optim.Adam(model.parameters(), lr=0.001)
-    optimizer = torch.optim.AdamW(model.parameters(), lr=0.01)
+    optimizer = torch.optim.AdamW(model.parameters(), lr=0.005)
     scheduler = optim.lr_scheduler.ExponentialLR(optimizer, gamma=0.9)
     # scheduler = CosineLRScheduler(
     #     optimizer,
