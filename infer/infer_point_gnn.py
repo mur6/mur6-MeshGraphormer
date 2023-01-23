@@ -63,7 +63,7 @@ def test(loader, test_datasize):
         with torch.no_grad():
             output = model(data)
             # print(f"output: {output.shape}")
-        # batch_size = pred.shape[0]
+        batch_size = pred.shape[0]
         # b = data.y.view(batch_size, -1).float()
         # correct += pred.eq(b).sum().item()
         loss = F.mse_loss(output, data.y.view(batch_size, -1).float().contiguous())
