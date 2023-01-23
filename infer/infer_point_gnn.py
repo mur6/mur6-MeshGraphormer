@@ -29,7 +29,7 @@ def save_checkpoint(model, epoch, iteration=None):
     return checkpoint_dir
 
 
-def train(train_loader, train_datasize, optimizer, scheduler):
+def train(model, epoch, train_loader, train_datasize, optimizer, scheduler, device):
     model.train()
     losses = []
     current_loss = 0.0
@@ -53,10 +53,10 @@ def train(train_loader, train_datasize, optimizer, scheduler):
         current_loss += loss.item() * output.size(0)
     epoch_loss = current_loss / train_datasize
     print(f'Train Loss: {epoch_loss:.6f}')
-    scheduler.step(epoch+1)
+    scheduler.step(epoch)
 
 
-def test(loader, test_datasize):
+def test(model, loader, test_datasize, device):
     model.eval()
 
     current_loss = 0.0
@@ -110,12 +110,13 @@ def main(filename):
         warmup_prefix=True)
 
     for epoch in range(1, 1000 + 1):
-        train(train_loader, train_datasize, optimizer, scheduler)
-        test(test_loader, test_datasize)
+        train(model, epoch, train_loader, train_datasize, optimizer, scheduler, device)
+        test(model, test_loader, test_datasize, device)
         # test_acc = test(test_loader)
         # print(f'Epoch: {epoch:03d}, Test: {test_acc:.4f}')
         if epoch % 5 == 0:
             save_checkpoint(model, epoch)
+
 
 if __name__ == '__main__':
     import sys
