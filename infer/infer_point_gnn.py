@@ -13,9 +13,10 @@ from src.handinfo.data import load_data_for_geometric
 # from src. pointnet2_classification import GlobalSAModule, SAModule
 
 
-def train(epoch):
+def train(epoch, train_datasize):
     model.train()
-
+    losses = []
+    current_loss = 0.0
     for data in train_loader:
         # print(type(data))
         data = data.to(device)
@@ -32,6 +33,10 @@ def train(epoch):
         loss = F.mse_loss(output, data.y.view(batch_size, -1).float().contiguous())
         loss.backward()
         optimizer.step()
+        losses.append(loss.item()) # 損失値の蓄積
+        current_loss += loss.item() * output.size(0)
+    epoch_loss = current_loss / train_datasize
+    print(f'Train Loss: {epoch_loss:.6f}')
 
 
 def test(loader):
@@ -61,6 +66,9 @@ if __name__ == '__main__':
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
     train_dataset, test_dataset = load_data_for_geometric(filename, device)
+    train_datasize = len(train_dataset)
+    test_datasize = len(test_dataset)
+    print(f"train_datasize={train_datasize} test_datasize={test_datasize}")
     # train_dataset = ModelNet(path, '10', True, transform, pre_transform)
     # test_dataset = ModelNet(path, '10', False, transform, pre_transform)
     # print(train_dataset.data)
@@ -74,6 +82,6 @@ if __name__ == '__main__':
     optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
 
     for epoch in range(1, 201):
-        # train(epoch)
+        train(epoch, train_datasize)
         test_acc = test(test_loader)
         print(f'Epoch: {epoch:03d}, Test: {test_acc:.4f}')
