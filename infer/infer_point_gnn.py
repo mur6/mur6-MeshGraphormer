@@ -53,7 +53,7 @@ def train(model, epoch, train_loader, train_datasize, optimizer, scheduler, devi
         current_loss += loss.item() * output.size(0)
     epoch_loss = current_loss / train_datasize
     print(f'Train Loss: {epoch_loss:.6f}')
-    scheduler.step(epoch)
+    scheduler.step()
 
 
 def test(model, loader, test_datasize, device):
@@ -96,8 +96,8 @@ def main(filename):
                              num_workers=6)
 
     model = Net().to(device)
-    # optimizer = optim.Adam(model.parameters(), lr=0.001)
-    optimizer = torch.optim.AdamW(model.parameters(), lr=0.005)
+    optimizer = optim.Adam(model.parameters(), lr=0.001)
+    # optimizer = torch.optim.AdamW(model.parameters(), lr=0.005)
     scheduler = optim.lr_scheduler.ExponentialLR(optimizer, gamma=0.9)
     # scheduler = CosineLRScheduler(
     #     optimizer,
