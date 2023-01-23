@@ -130,7 +130,7 @@ def load_data_for_geometric(filename, device="cuda"):
     data_train, data_test = train_test_split(data_list)
     pre_transform = T.NormalizeScale()
     # transform = T.SamplePoints(1024)
-    train_dataset = InMemoryDataset(
+    train_dataset = MyGraphDataset(
         data_train,
         # transform=transform,
         pre_transform=pre_transform)
