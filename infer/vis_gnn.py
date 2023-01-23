@@ -50,19 +50,19 @@ def make_hand_mesh(gt_vertices):
 
 def infer(model, test_loader):
     model.eval()
-    # with torch.no_grad():
-    for idx, data in enumerate(test_loader):
-        print(data)
-        mesh = make_hand_mesh(data.pos)
-        # print("-------")
-        # x = x.unsqueeze(0)
-        # print(f"x: {x.shape} gt_y:{gt_y.shape}")
-        # print(gt_y.shape)
-        output = model(data)
-        print(output.shape)
-        # visualize_one_point(mesh=mesh, gt_points=gt_y.transpose(1, 0).numpy(), pred_points=y_pred.numpy())
-        if idx > 2:
-            break
+    with torch.no_grad():
+        for idx, data in enumerate(test_loader):
+            print(data)
+            mesh = make_hand_mesh(data.pos)
+            # print("-------")
+            # x = x.unsqueeze(0)
+            # print(f"x: {x.shape} gt_y:{gt_y.shape}")
+            # print(gt_y.shape)
+            output = model(data)
+            print(output.shape)
+            # visualize_one_point(mesh=mesh, gt_points=gt_y.transpose(1, 0).numpy(), pred_points=y_pred.numpy())
+            if idx > 2:
+                break
 
 
 def main(resume_dir, input_filename):
