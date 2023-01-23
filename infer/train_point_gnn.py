@@ -78,9 +78,6 @@ def test(model, loader, test_datasize, device):
 def main(filename):
     # path = osp.join(osp.dirname(osp.realpath(__file__)), '..',
     #                 'data/ModelNet10')
-    pre_transform = T.NormalizeScale()
-    transform = T.SamplePoints(389)
-
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
     train_dataset, test_dataset = load_data_for_geometric(filename, device)

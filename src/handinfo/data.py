@@ -1,9 +1,12 @@
 import operator
 import math
+from typing import Callable, Optional
 
 import numpy as np
 import torch
-from torch.utils.data import TensorDataset, DataLoader
+# from torch.utils.data import TensorDataset, DataLoader
+import torch_geometric.transforms as T
+from torch_geometric.data import Data, InMemoryDataset
 from sklearn.model_selection import train_test_split
 
 def _load_data(filename):
@@ -84,8 +87,6 @@ def get_mano_faces(device):
     mano_faces = mano_model.layer.th_faces
     return mano_faces
 
-from torch_geometric.data import Data, InMemoryDataset
-
 
 def faces_to_edge_index(vertices, faces):
     mesh = trimesh.Trimesh(vertices=vertices, faces=faces)
@@ -96,16 +97,30 @@ def faces_to_edge_index(vertices, faces):
     return edge_index
 
 
+
+class MyGraphDataset(InMemoryDataset):
+    def __init__(self, data_list,
+        transform: Optional[Callable] = None,
+        pre_transform: Optional[Callable] = None
+        ):
+        super().__init__('.')
+        #, transform, pre_transform)
+        self.data, self.slices = self.collate(data_list)
+
+
 def load_data_for_geometric(filename, device="cuda"):
     val = _load_data(filename)
     perimeter = val['perimeter']
     gt_vertices = val['gt_vertices']
-    edge_index = faces_to_edge_index(gt_vertices[0], get_mano_faces(device))
+    faces = get_mano_faces(device).clone()
+    print(f"faces: {faces.shape}")
+    edge_index = faces_to_edge_index(gt_vertices[0], faces)
     # gt_3d_joints = val['gt_3d_joints']
     pca_mean = val['pca_mean_']
     # pca_components = val['pca_components_']
     vertices = gt_vertices#torch.transpose(gt_vertices, 1, 2)
     data_list = []
+    # face = torch.transpose(faces, 1, 0).contiguous()
     for i, vertex in enumerate(vertices):
         # print(f"vertex: {vertex.shape}")
         # print(f"edge_index: {edge_index.shape} {edge_index.dtype}")
@@ -114,12 +129,18 @@ def load_data_for_geometric(filename, device="cuda"):
     # print(vertex.shape, edge_index.shape)
     # print(pca_mean.shape)
     data_train, data_test = train_test_split(data_list)
-    # train_dataset = InMemoryDataset(".")
-    # train_dataset.data = data_train
-    # test_dataset = InMemoryDataset(".")
-    # test_dataset.data = data_test
-    # return train_dataset, test_dataset
-    return data_train, data_test
+    pre_transform = T.NormalizeScale()
+    transform = T.SamplePoints(389)
+    train_dataset = InMemoryDataset(
+        data_train,
+        transform=transform,
+        pre_transform=pre_transform)
+    test_dataset = MyGraphDataset(
+        data_test,
+        transform=transform,
+        pre_transform=pre_transform)
+    #return data_train, data_test
+    return train_dataset, test_dataset
 
 
 def test1(filename):
