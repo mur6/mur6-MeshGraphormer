@@ -30,13 +30,15 @@ def create_point_geom(ring_point, color):
     geom.apply_translation(ring_point)
     return geom
 
-def visualize_one_point(*, mesh, gt_points, pred_points):
+
+def visualize_one_point(*, mesh, a_point):
     color = [102, 102, 102, 64]
     for facet in mesh.facets:
         #mesh.visual.face_colors[facet] = [color, color]
         mesh.visual.face_colors[facet] = color
     scene = trimesh.Scene()
     scene.add_geometry(mesh)
+    scene.add_geometry(create_point_geom(a_point, "red"))
     scene.show()
 
 
@@ -52,16 +54,12 @@ def infer(model, test_loader):
     model.eval()
     with torch.no_grad():
         for idx, data in enumerate(test_loader):
-            print(data)
             mesh = make_hand_mesh(data.pos)
-            # print("-------")
-            # x = x.unsqueeze(0)
-            # print(f"x: {x.shape} gt_y:{gt_y.shape}")
-            # print(gt_y.shape)
+            print("-------")
             output = model(data)
-            print(output.shape)
-            # visualize_one_point(mesh=mesh, gt_points=gt_y.transpose(1, 0).numpy(), pred_points=y_pred.numpy())
-            if idx > 2:
+            # print(output.shape)
+            visualize_one_point(mesh=mesh, a_point=output[0].numpy())
+            if idx == 0:
                 break
 
 
