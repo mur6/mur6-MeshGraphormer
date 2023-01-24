@@ -86,9 +86,9 @@ def main(filename):
     # print(train_dataset.data)
     batch_size = 32
     train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True,
-                              num_workers=6)
+                              num_workers=6, drop_last=True)
     test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False,
-                             num_workers=6)
+                             num_workers=6, drop_last=True)
 
     model = Net().to(device)
     optimizer = optim.Adam(model.parameters(), lr=0.001)
