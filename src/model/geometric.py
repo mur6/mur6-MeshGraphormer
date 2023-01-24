@@ -99,8 +99,10 @@ class Net(torch.nn.Module):
         # self.lin3 = torch.nn.Linear(128, num_classes)
         # self.batch_size = 2
         # self.in_channel_num = 778 * self.batch_size * 128
-        self.in_channel_num = 778 * 3 * 32
-        self.out_channel_num = 3 * 32
+        num_nodes = 778
+        hidden_dim = 3
+        self.in_channel_num = num_nodes * hidden_dim
+        self.out_channel_num = 3
         self.fc = torch.nn.Linear(self.in_channel_num, self.out_channel_num)
 
     def forward(self, data):
@@ -114,8 +116,11 @@ class Net(torch.nn.Module):
         x, _, _ = self.fp1_module(*fp2_out, *sa0_out)
 
         x = self.mlp(x)#.log_softmax(dim=-1)
+        # print(f"x1: {x.shape}")
         x = x.view(-1, self.in_channel_num)
+        # print(f"x2: {x.shape}")
         x = self.fc(x)
+        # print(f"x3: {x.shape}")
         return x
 
 
