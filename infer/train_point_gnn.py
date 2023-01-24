@@ -40,10 +40,9 @@ def train(model, epoch, train_loader, train_datasize, optimizer, scheduler, devi
         output = model(data)
         # print(f"output: {output.shape}")
         batch_size = output.shape[0]
-        # print(f"data.y: {data.y.shape}")
-        # print(output)
         # output = torch.flatten(output)
-        # print(output)
+        # print(f"output: {output.shape}")
+        # print(f"data.y: {data.y.shape}")
         # loss = F.nll_loss(output, data.y)
         # print(output.dtype, data.y.dtype)
         loss = F.mse_loss(output, data.y.view(batch_size, -1).float().contiguous())
@@ -86,12 +85,12 @@ def main(filename):
     # test_dataset = ModelNet(path, '10', False, transform, pre_transform)
     # print(train_dataset.data)
     batch_size = 32
-    train_loader = DataLoader(train_dataset, batch_size=32, shuffle=True,
+    train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True,
                               num_workers=6)
-    test_loader = DataLoader(test_dataset, batch_size=32, shuffle=False,
+    test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False,
                              num_workers=6)
 
-    model = Net(num_classes=3).to(device)
+    model = Net().to(device)
     optimizer = optim.Adam(model.parameters(), lr=0.001)
     # optimizer = torch.optim.AdamW(model.parameters(), lr=0.005)
     scheduler = optim.lr_scheduler.ExponentialLR(optimizer, gamma=0.9)
