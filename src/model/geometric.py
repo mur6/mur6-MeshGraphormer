@@ -92,14 +92,14 @@ class Net(torch.nn.Module):
         self.fp2_module = FPModule(3, MLP([256 + 128, 256, 128]))
         self.fp1_module = FPModule(3, MLP([128 + 3, 128, 128, 128]))
 
-        self.mlp = MLP([128, 128, 128], dropout=0.5, norm=None)
+        self.mlp = MLP([128, 64, 3], dropout=0.5, norm=None)
 
         # self.lin1 = torch.nn.Linear(128, 128)
         # self.lin2 = torch.nn.Linear(128, 128)
         # self.lin3 = torch.nn.Linear(128, num_classes)
         # self.batch_size = 2
         # self.in_channel_num = 778 * self.batch_size * 128
-        self.in_channel_num = 778 * 128 * 32
+        self.in_channel_num = 778 * 3 * 32
         self.out_channel_num = 3 * 32
         self.fc = torch.nn.Linear(self.in_channel_num, self.out_channel_num)
 
