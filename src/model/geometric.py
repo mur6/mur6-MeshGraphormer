@@ -97,10 +97,11 @@ class Net(torch.nn.Module):
         # self.lin1 = torch.nn.Linear(128, 128)
         # self.lin2 = torch.nn.Linear(128, 128)
         # self.lin3 = torch.nn.Linear(128, num_classes)
-        self.batch_size = 2
+        # self.batch_size = 2
         # self.in_channel_num = 778 * self.batch_size * 128
-        self.in_channel_num = 1892096
-        self.fc = torch.nn.Linear(self.in_channel_num, 3 * self.batch_size)
+        self.in_channel_num = 778 * 128 * 32
+        self.out_channel_num = 3 * 32
+        self.fc = torch.nn.Linear(self.in_channel_num, self.out_channel_num)
 
     def forward(self, data):
         sa0_out = (data.x, data.pos, data.batch)
