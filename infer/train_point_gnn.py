@@ -76,8 +76,6 @@ def test(model, loader, test_datasize, device):
 
 
 def main(filename):
-    # path = osp.join(osp.dirname(osp.realpath(__file__)), '..',
-    #                 'data/ModelNet10')
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
     train_dataset, test_dataset = load_data_for_geometric(filename, device)
@@ -93,7 +91,7 @@ def main(filename):
     test_loader = DataLoader(test_dataset, batch_size=32, shuffle=False,
                              num_workers=6)
 
-    model = Net().to(device)
+    model = Net(num_classes=3).to(device)
     optimizer = optim.Adam(model.parameters(), lr=0.001)
     # optimizer = torch.optim.AdamW(model.parameters(), lr=0.005)
     scheduler = optim.lr_scheduler.ExponentialLR(optimizer, gamma=0.9)
