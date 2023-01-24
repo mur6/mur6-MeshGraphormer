@@ -45,7 +45,9 @@ def train(model, epoch, train_loader, train_datasize, optimizer, scheduler, devi
         # print(f"data.y: {data.y.shape}")
         # loss = F.nll_loss(output, data.y)
         # print(output.dtype, data.y.dtype)
-        loss = F.mse_loss(output, data.y.view(batch_size, -1).float().contiguous())
+        gt_y = data.y.view(batch_size, -1).float().contiguous()
+        # print(f"gt_y: {gt_y.shape}")
+        loss = F.mse_loss(output, gt_y)
         loss.backward()
         optimizer.step()
         losses.append(loss.item()) # 損失値の蓄積
