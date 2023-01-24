@@ -29,8 +29,16 @@ def main_1():
     test_dataset = ShapeNet(path, category, split='test',
                             pre_transform=pre_transform)
 
-mlp = MLP([3, 778, 778, 128])
-mlp.eval()
-input = torch.randn(2, 778, 3)
-output = mlp(input)
-print(output.shape)
+def main_2():
+    mlp = MLP([3, 778, 778, 128])
+    mlp.eval()
+    input = torch.randn(2, 778, 3)
+    output = mlp(input)
+    print(output.shape)
+
+
+x = torch.arange(8*3)
+#x = torch.reshape(x, (8, 3))
+#print(x)
+x = x.view(8, -1)
+print(x)
