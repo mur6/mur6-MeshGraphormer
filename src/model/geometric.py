@@ -9,7 +9,7 @@ from torch_geometric.loader import DataLoader
 from torch_geometric.nn import MLP, PointConv, fps, global_max_pool, radius
 from torch_geometric.nn import knn_interpolate
 
-from torch_geometric.data import Data, InMemoryDataset
+from torch_geometric.data import Data, Batch, InMemoryDataset
 
 
 class SAModule(torch.nn.Module):
@@ -80,7 +80,7 @@ class FPModule(torch.nn.Module):
 
 
 class Net(torch.nn.Module):
-    def __init__(self, num_classes):
+    def __init__(self, num_classes=1):
         super().__init__()
 
         # Input channels account for both `pos` and node features.
@@ -92,11 +92,14 @@ class Net(torch.nn.Module):
         self.fp2_module = FPModule(3, MLP([256 + 128, 256, 128]))
         self.fp1_module = FPModule(3, MLP([128 + 3, 128, 128, 128]))
 
-        self.mlp = MLP([128, 128, 128, num_classes], dropout=0.5, norm=None)
+        self.mlp = MLP([128, 128, 128], dropout=0.5, norm=None)
 
-        self.lin1 = torch.nn.Linear(128, 128)
-        self.lin2 = torch.nn.Linear(128, 128)
-        self.lin3 = torch.nn.Linear(128, num_classes)
+        # self.lin1 = torch.nn.Linear(128, 128)
+        # self.lin2 = torch.nn.Linear(128, 128)
+        # self.lin3 = torch.nn.Linear(128, num_classes)
+        self.batch_size = 2
+        self.in_channel_num = 778 * self.batch_size * 128
+        self.fc = torch.nn.Linear(self.in_channel_num, 3 * self.batch_size)
 
     def forward(self, data):
         sa0_out = (data.x, data.pos, data.batch)
@@ -108,15 +111,26 @@ class Net(torch.nn.Module):
         fp2_out = self.fp2_module(*fp3_out, *sa1_out)
         x, _, _ = self.fp1_module(*fp2_out, *sa0_out)
 
-        return self.mlp(x)#.log_softmax(dim=-1)
+        x = self.mlp(x)#.log_softmax(dim=-1)
+        x = x.view(-1, self.in_channel_num)
+        x = self.fc(x)
+        return x
 
 
 if __name__ == "__main__":
     m = Net(num_classes=3)
     m.eval()
     pos = torch.randn(778, 3)
-    edge_index=torch.randint(778, (2, 4630))
-    data = Data(x=None, pos=pos, edge_index=edge_index, y=torch.zeros(3))
-    output = m(data)
-    print(output.shape)
+    edge_index = torch.randint(10, (2, 4630))
+    data = Data(x=pos, pos=pos, edge_index=edge_index, y=torch.zeros(3))
+    #DataLoader()
+    loader = DataLoader([data], batch_size=1, shuffle=False)
+    # batch = Batch.from_data_list([data])
+    # d = batch.get_example(0)
+    # print(d.batch)
+    for d in loader:
+        print(d.x.shape)
+        output = m(d)
+        print(output.shape)
+        break
     # main(args.resume_dir, args.input_filename)
