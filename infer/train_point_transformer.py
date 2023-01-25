@@ -50,7 +50,7 @@ pre_transform = T.NormalizeScale()
 
 
 
-def train(model, epoch, train_loader, train_datasize, optimizer, scheduler, device):
+def train(model, device, train_loader, train_datasize, optimizer, scheduler):
     model.train()
     losses = []
     current_loss = 0.0
@@ -75,15 +75,14 @@ def train(model, epoch, train_loader, train_datasize, optimizer, scheduler, devi
         current_loss += loss.item() * output.size(0)
     epoch_loss = current_loss / train_datasize
     print(f'Train Loss: {epoch_loss:.6f}')
-    scheduler.step()
 
 
-def test(model, loader, test_datasize, device):
+def test(model, device, test_loader, test_datasize):
     model.eval()
 
     current_loss = 0.0
     # correct = 0
-    for data in loader:
+    for data in test_loader:
         data = data.to(device)
         with torch.no_grad():
             output = model(data)
@@ -130,8 +129,8 @@ def main(filename):
     #     break
 
     for epoch in range(1, 1000 + 1):
-        train(model, epoch, train_loader, train_datasize, optimizer, scheduler, device)
-        test(model, test_loader, test_datasize, device)
+        train(model, device, train_loader, train_datasize, optimizer, scheduler)
+        test(model, device, test_loader, test_datasize)
         if epoch % 5 == 0:
             save_checkpoint(model, epoch)
         scheduler.step()
