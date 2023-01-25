@@ -14,7 +14,7 @@ from torch_geometric.nn import MLP, PointConv, fps, global_max_pool, radius
 from torch_geometric.utils import scatter
 
 from src.handinfo.data import load_data_for_geometric
-from src.model.transformer import ClassificationNet
+from src.model.transformer import ClassificationNet, SegmentationNet
 
 
 
@@ -111,11 +111,12 @@ def main(filename):
     train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, drop_last=True)
     test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False, drop_last=True)
 
-    model = ClassificationNet(
-        in_channels=3,
-        out_channels=3,
-        dim_model=[32, 64, 128, 256, 512],
-        ).to(device)
+    # model = ClassificationNet(
+    #     in_channels=3,
+    #     out_channels=3,
+    #     dim_model=[32, 64, 128, 256, 512],
+    #     ).to(device)
+    model = SegmentationNet()
     model.eval()
 
     optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
