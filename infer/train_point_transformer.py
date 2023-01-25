@@ -6,7 +6,6 @@ from torch.nn import Linear as Lin
 from torch_cluster import fps, knn_graph
 
 from timm.scheduler import CosineLRScheduler
-from torchmetrics.functional import jaccard_index
 
 import torch_geometric.transforms as T
 from torch_geometric.datasets import ModelNet
@@ -58,7 +57,7 @@ def train(model, device, train_loader, train_datasize, optimizer, scheduler):
         # print(type(data))
         data = data.to(device)
         optimizer.zero_grad()
-        output = model(data)
+        output = model(data.x, data.pos, data.batch)
         # print(f"output: {output.shape}")
         batch_size = output.shape[0]
         # output = torch.flatten(output)
@@ -94,6 +93,7 @@ def test(model, device, test_loader, test_datasize):
         current_loss += loss.item() * output.size(0)
     epoch_loss = current_loss / test_datasize
     print(f'Validation Loss: {epoch_loss:.6f}')
+
 
 def main(filename):
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
