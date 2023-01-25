@@ -259,8 +259,10 @@ class SegmentationNet(torch.nn.Module):
 
 
 
-
-
 if __name__ == '__main__':
-    net = ClassificationNet()
-    print("test")
+    model = ClassificationNet(
+        in_channels=778,
+        out_channels=3,
+        dim_model=[32, 64, 128, 256, 512],
+        )
+    print(model)
