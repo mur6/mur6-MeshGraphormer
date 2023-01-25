@@ -70,9 +70,9 @@ class TransitionDown(torch.nn.Module):
 
 
 class ClassificationNet(torch.nn.Module):
-    def __init__(self, in_channels, out_channels, dim_model, k=16):
+    def __init__(self, in_channels, out_channels, dim_model):
         super().__init__()
-        self.k = k
+        self.k = 3
 
         # dummy feature is created if there is none given
         in_channels = max(in_channels, 1)
@@ -262,4 +262,5 @@ class SegmentationNet(torch.nn.Module):
 
 
 if __name__ == '__main__':
+    net = ClassificationNet()
     print("test")
