@@ -69,61 +69,61 @@ class TransitionDown(torch.nn.Module):
         return out, sub_pos, sub_batch
 
 
-# class Net(torch.nn.Module):
-#     def __init__(self, in_channels, out_channels, dim_model, k=16):
-#         super().__init__()
-#         self.k = k
+class ClassificationNet(torch.nn.Module):
+    def __init__(self, in_channels, out_channels, dim_model, k=16):
+        super().__init__()
+        self.k = k
 
-#         # dummy feature is created if there is none given
-#         in_channels = max(in_channels, 1)
+        # dummy feature is created if there is none given
+        in_channels = max(in_channels, 1)
 
-#         # first block
-#         self.mlp_input = MLP([in_channels, dim_model[0]], plain_last=False)
+        # first block
+        self.mlp_input = MLP([in_channels, dim_model[0]], plain_last=False)
 
-#         self.transformer_input = TransformerBlock(in_channels=dim_model[0],
-#                                                   out_channels=dim_model[0])
-#         # backbone layers
-#         self.transformers_down = torch.nn.ModuleList()
-#         self.transition_down = torch.nn.ModuleList()
+        self.transformer_input = TransformerBlock(in_channels=dim_model[0],
+                                                  out_channels=dim_model[0])
+        # backbone layers
+        self.transformers_down = torch.nn.ModuleList()
+        self.transition_down = torch.nn.ModuleList()
 
-#         for i in range(len(dim_model) - 1):
-#             # Add Transition Down block followed by a Transformer block
-#             self.transition_down.append(
-#                 TransitionDown(in_channels=dim_model[i],
-#                                out_channels=dim_model[i + 1], k=self.k))
+        for i in range(len(dim_model) - 1):
+            # Add Transition Down block followed by a Transformer block
+            self.transition_down.append(
+                TransitionDown(in_channels=dim_model[i],
+                               out_channels=dim_model[i + 1], k=self.k))
 
-#             self.transformers_down.append(
-#                 TransformerBlock(in_channels=dim_model[i + 1],
-#                                  out_channels=dim_model[i + 1]))
+            self.transformers_down.append(
+                TransformerBlock(in_channels=dim_model[i + 1],
+                                 out_channels=dim_model[i + 1]))
 
-#         # class score computation
-#         self.mlp_output = MLP([dim_model[-1], 64, out_channels], norm=None)
+        # class score computation
+        self.mlp_output = MLP([dim_model[-1], 64, out_channels], norm=None)
 
-#     def forward(self, x, pos, batch=None):
 
-#         # add dummy features in case there is none
-#         if x is None:
-#             x = torch.ones((pos.shape[0], 1), device=pos.get_device())
+    def forward(self, x, pos, batch=None):
+        # add dummy features in case there is none
+        if x is None:
+            x = torch.ones((pos.shape[0], 1), device=pos.get_device())
 
-#         # first block
-#         x = self.mlp_input(x)
-#         edge_index = knn_graph(pos, k=self.k, batch=batch)
-#         x = self.transformer_input(x, pos, edge_index)
+        # first block
+        x = self.mlp_input(x)
+        edge_index = knn_graph(pos, k=self.k, batch=batch)
+        x = self.transformer_input(x, pos, edge_index)
 
-#         # backbone
-#         for i in range(len(self.transformers_down)):
-#             x, pos, batch = self.transition_down[i](x, pos, batch=batch)
+        # backbone
+        for i in range(len(self.transformers_down)):
+            x, pos, batch = self.transition_down[i](x, pos, batch=batch)
 
-#             edge_index = knn_graph(pos, k=self.k, batch=batch)
-#             x = self.transformers_down[i](x, pos, edge_index)
+            edge_index = knn_graph(pos, k=self.k, batch=batch)
+            x = self.transformers_down[i](x, pos, edge_index)
 
-#         # GlobalAveragePooling
-#         x = global_mean_pool(x, batch)
+        # GlobalAveragePooling
+        x = global_mean_pool(x, batch)
 
-#         # Class score
-#         out = self.mlp_output(x)
-
-#         return F.log_softmax(out, dim=-1)
+        # Class score
+        out = self.mlp_output(x)
+        #return F.log_softmax(out, dim=-1)
+        return out
 
 
 
@@ -150,7 +150,7 @@ class TransitionUp(torch.nn.Module):
         return x
 
 
-class Net(torch.nn.Module):
+class SegmentationNet(torch.nn.Module):
     def __init__(self, in_channels, out_channels, dim_model, k=16):
         super().__init__()
         self.k = k
