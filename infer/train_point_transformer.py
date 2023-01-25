@@ -60,9 +60,7 @@ def main(filename):
     train_datasize = len(train_dataset)
     test_datasize = len(test_dataset)
     print(f"train_datasize={train_datasize} test_datasize={test_datasize}")
-    # train_dataset = ModelNet(path, '10', True, transform, pre_transform)
-    # test_dataset = ModelNet(path, '10', False, transform, pre_transform)
-    # print(train_dataset.data)
+
     batch_size = 32
     train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, drop_last=True)
     test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False, drop_last=True)
@@ -71,45 +69,19 @@ def main(filename):
         in_channels=3,
         out_channels=3,
         dim_model=[32, 64, 128, 256, 512],
-        )
+        ).to(device)
     model.eval()
 
-    # pos = torch.randn(778, 3)
-    # edge_index = torch.randint(10, (2, 4630))
-    # data = Data(x=pos, pos=pos, edge_index=edge_index, y=torch.zeros(3))
-    # loader = DataLoader([data], batch_size=1, shuffle=False)
-
-
-    for d in train_loader:
-        print(d.x.shape)
-        output = model(d.x, d.pos, d.batch)
-        print(output.shape)
-        break
-    # main(args.resume_dir, args.input_filename)
-
-
-
-
-def main(filename):
-    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-
-    train_dataset, test_dataset = load_data_for_geometric(filename, device)
-    train_datasize = len(train_dataset)
-    test_datasize = len(test_dataset)
-    print(f"train_datasize={train_datasize} test_datasize={test_datasize}")
-    batch_size = 32
-    train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True,
-                              num_workers=6, drop_last=True)
-    test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False,
-                             num_workers=6, drop_last=True)
-
-    model = Net().to(device)
-    # optimizer = optim.Adam(model.parameters(), lr=0.001)
-    # scheduler = optim.lr_scheduler.ExponentialLR(optimizer, gamma=0.9)
-
-    model = Net(3, train_dataset.num_classes, dim_model=[32, 64, 128, 256, 512], k=16).to(device)
     optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
     scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=20, gamma=0.5)
+
+    ####### test:
+    # for d in train_loader:
+    #     print(d.x.shape)
+    #     output = model(d.x, d.pos, d.batch)
+    #     print(output.shape)
+    #     break
+
 
     for epoch in range(1, 1000 + 1):
         train(model, epoch, train_loader, train_datasize, optimizer, scheduler, device)
@@ -117,11 +89,10 @@ def main(filename):
         if epoch % 5 == 0:
             save_checkpoint(model, epoch)
         scheduler.step()
-
-        train(model, device, train_loader, optimizer)
-        iou = test(model, device, test_loader)
-        print(f'Epoch: {epoch:03d}, Test IoU: {iou:.4f}')
-        scheduler.step()
+        # train(model, device, train_loader, optimizer)
+        # iou = test(model, device, test_loader)
+        # print(f'Epoch: {epoch:03d}, Test IoU: {iou:.4f}')
+        # scheduler.step()
 
 
 if __name__ == '__main__':
