@@ -49,6 +49,53 @@ pre_transform = T.NormalizeScale()
 # test_loader = DataLoader(test_dataset, batch_size=10, shuffle=False)
 
 
+
+def train(model, epoch, train_loader, train_datasize, optimizer, scheduler, device):
+    model.train()
+    losses = []
+    current_loss = 0.0
+    for data in train_loader:
+        # print(type(data))
+        data = data.to(device)
+        optimizer.zero_grad()
+        output = model(data)
+        # print(f"output: {output.shape}")
+        batch_size = output.shape[0]
+        # output = torch.flatten(output)
+        # print(f"output: {output.shape}")
+        # print(f"data.y: {data.y.shape}")
+        # loss = F.nll_loss(output, data.y)
+        # print(output.dtype, data.y.dtype)
+        gt_y = data.y.view(batch_size, -1).float().contiguous()
+        # print(f"gt_y: {gt_y.shape}")
+        loss = F.mse_loss(output, gt_y)
+        loss.backward()
+        optimizer.step()
+        losses.append(loss.item()) # 損失値の蓄積
+        current_loss += loss.item() * output.size(0)
+    epoch_loss = current_loss / train_datasize
+    print(f'Train Loss: {epoch_loss:.6f}')
+    scheduler.step()
+
+
+def test(model, loader, test_datasize, device):
+    model.eval()
+
+    current_loss = 0.0
+    # correct = 0
+    for data in loader:
+        data = data.to(device)
+        with torch.no_grad():
+            output = model(data)
+            # print(f"output: {output.shape}")
+        batch_size = output.shape[0]
+        # b = data.y.view(batch_size, -1).float()
+        # correct += pred.eq(b).sum().item()
+        loss = F.mse_loss(output, data.y.view(batch_size, -1).float().contiguous())
+        current_loss += loss.item() * output.size(0)
+    epoch_loss = current_loss / test_datasize
+    print(f'Validation Loss: {epoch_loss:.6f}')
+
 def main(filename):
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
@@ -81,7 +128,6 @@ def main(filename):
     #     output = model(d.x, d.pos, d.batch)
     #     print(output.shape)
     #     break
-
 
     for epoch in range(1, 1000 + 1):
         train(model, epoch, train_loader, train_datasize, optimizer, scheduler, device)
