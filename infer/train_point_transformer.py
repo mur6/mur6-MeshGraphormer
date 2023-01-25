@@ -84,7 +84,7 @@ def test(model, device, test_loader, test_datasize):
     for data in test_loader:
         data = data.to(device)
         with torch.no_grad():
-            output = model(data)
+            output = model(data.x, data.pos, data.batch)
             # print(f"output: {output.shape}")
         batch_size = output.shape[0]
         # b = data.y.view(batch_size, -1).float()
