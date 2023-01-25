@@ -5,11 +5,13 @@ import torch
 import torch.nn.functional as F
 from torch import nn, optim
 from timm.scheduler import CosineLRScheduler
+from torchmetrics.functional import jaccard_index
 
 import torch_geometric.transforms as T
 from torch_geometric.datasets import ModelNet
 from torch_geometric.loader import DataLoader
 from torch_geometric.nn import MLP, PointConv, fps, global_max_pool, radius
+from torch_geometric.utils import scatter
 
 from src.model.geometric import GlobalSAModule, SAModule, Net
 from src.handinfo.data import load_data_for_geometric
@@ -75,7 +77,7 @@ def test(model, loader, test_datasize, device):
     epoch_loss = current_loss / test_datasize
     print(f'Validation Loss: {epoch_loss:.6f}')
 
-
+############################
 
 
 def train(model, device, train_loader, optimizer):

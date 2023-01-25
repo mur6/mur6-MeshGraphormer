@@ -5,8 +5,6 @@ import torch.nn.functional as F
 from torch.nn import Linear as Lin
 from torch_cluster import fps, knn_graph
 
-from torchmetrics.functional import jaccard_index
-
 import torch_geometric.transforms as T
 from torch_geometric.datasets import ModelNet
 from torch_geometric.loader import DataLoader
