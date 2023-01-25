@@ -1,9 +1,10 @@
 from pathlib import Path
-# import os.path as osp
 
 import torch
 import torch.nn.functional as F
-from torch import nn, optim
+from torch.nn import Linear as Lin
+from torch_cluster import fps, knn_graph
+
 from timm.scheduler import CosineLRScheduler
 from torchmetrics.functional import jaccard_index
 
@@ -13,8 +14,9 @@ from torch_geometric.loader import DataLoader
 from torch_geometric.nn import MLP, PointConv, fps, global_max_pool, radius
 from torch_geometric.utils import scatter
 
-from src.model.geometric import GlobalSAModule, SAModule, Net
 from src.handinfo.data import load_data_for_geometric
+from src.model.transformer import ClassificationNet
+
 
 
 def save_checkpoint(model, epoch, iteration=None):
@@ -30,105 +32,62 @@ def save_checkpoint(model, epoch, iteration=None):
     return checkpoint_dir
 
 
-def train(model, epoch, train_loader, train_datasize, optimizer, scheduler, device):
-    model.train()
-    losses = []
-    current_loss = 0.0
-    for data in train_loader:
-        # print(type(data))
-        data = data.to(device)
-        optimizer.zero_grad()
-        output = model(data)
-        # print(f"output: {output.shape}")
-        batch_size = output.shape[0]
-        # output = torch.flatten(output)
-        # print(f"output: {output.shape}")
-        # print(f"data.y: {data.y.shape}")
-        # loss = F.nll_loss(output, data.y)
-        # print(output.dtype, data.y.dtype)
-        gt_y = data.y.view(batch_size, -1).float().contiguous()
-        # print(f"gt_y: {gt_y.shape}")
-        loss = F.mse_loss(output, gt_y)
-        loss.backward()
-        optimizer.step()
-        losses.append(loss.item()) # 損失値の蓄積
-        current_loss += loss.item() * output.size(0)
-    epoch_loss = current_loss / train_datasize
-    print(f'Train Loss: {epoch_loss:.6f}')
-    scheduler.step()
+
+transform = T.Compose([
+    T.RandomJitter(0.01),
+    T.RandomRotate(15, axis=0),
+    T.RandomRotate(15, axis=1),
+    T.RandomRotate(15, axis=2),
+])
+pre_transform = T.NormalizeScale()
+
+# train_dataset = ShapeNet(path, category, split='trainval', transform=transform,
+#                          pre_transform=pre_transform)
+# test_dataset = ShapeNet(path, category, split='test',
+#                         pre_transform=pre_transform)
+# train_loader = DataLoader(train_dataset, batch_size=10, shuffle=True)
+# test_loader = DataLoader(test_dataset, batch_size=10, shuffle=False)
 
 
-def test(model, loader, test_datasize, device):
+def main(filename):
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+
+    train_dataset, test_dataset = load_data_for_geometric(
+        filename,
+        transform=transform,
+        pre_transform=pre_transform,
+        device=device)
+    train_datasize = len(train_dataset)
+    test_datasize = len(test_dataset)
+    print(f"train_datasize={train_datasize} test_datasize={test_datasize}")
+    # train_dataset = ModelNet(path, '10', True, transform, pre_transform)
+    # test_dataset = ModelNet(path, '10', False, transform, pre_transform)
+    # print(train_dataset.data)
+    batch_size = 32
+    train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, drop_last=True)
+    test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False, drop_last=True)
+
+    model = ClassificationNet(
+        in_channels=3,
+        out_channels=3,
+        dim_model=[32, 64, 128, 256, 512],
+        )
     model.eval()
 
-    current_loss = 0.0
-    # correct = 0
-    for data in loader:
-        data = data.to(device)
-        with torch.no_grad():
-            output = model(data)
-            # print(f"output: {output.shape}")
-        batch_size = output.shape[0]
-        # b = data.y.view(batch_size, -1).float()
-        # correct += pred.eq(b).sum().item()
-        loss = F.mse_loss(output, data.y.view(batch_size, -1).float().contiguous())
-        current_loss += loss.item() * output.size(0)
-    epoch_loss = current_loss / test_datasize
-    print(f'Validation Loss: {epoch_loss:.6f}')
-
-############################
+    # pos = torch.randn(778, 3)
+    # edge_index = torch.randint(10, (2, 4630))
+    # data = Data(x=pos, pos=pos, edge_index=edge_index, y=torch.zeros(3))
+    # loader = DataLoader([data], batch_size=1, shuffle=False)
 
 
-def train(model, device, train_loader, optimizer):
-    model.train()
-
-    total_loss = correct_nodes = total_nodes = 0
-    for i, data in enumerate(train_loader):
-        data = data.to(device)
-        optimizer.zero_grad()
-        out = model(data.x, data.pos, data.batch)
-        loss = F.nll_loss(out, data.y)
-        loss.backward()
-        optimizer.step()
-        total_loss += loss.item()
-        correct_nodes += out.argmax(dim=1).eq(data.y).sum().item()
-        total_nodes += data.num_nodes
-
-        if (i + 1) % 10 == 0:
-            print(f'[{i+1}/{len(train_loader)}] Loss: {total_loss / 10:.4f} '
-                  f'Train Acc: {correct_nodes / total_nodes:.4f}')
-            total_loss = correct_nodes = total_nodes = 0
+    for d in train_loader:
+        print(d.x.shape)
+        output = model(d.x, d.pos, d.batch)
+        print(output.shape)
+        break
+    # main(args.resume_dir, args.input_filename)
 
 
-def test(model, device, test_loader):
-    model.eval()
-
-    ious, categories = [], []
-    y_map = torch.empty(test_loader.dataset.num_classes, device=device).long()
-    for data in test_loader:
-        data = data.to(device)
-        outs = model(data.x, data.pos, data.batch)
-
-        sizes = (data.ptr[1:] - data.ptr[:-1]).tolist()
-        for out, y, category in zip(outs.split(sizes), data.y.split(sizes),
-                                    data.category.tolist()):
-            category = list(ShapeNet.seg_classes.keys())[category]
-            part = ShapeNet.seg_classes[category]
-            part = torch.tensor(part, device=device)
-
-            y_map[part] = torch.arange(part.size(0), device=device)
-
-            iou = jaccard_index(out[:, part].argmax(dim=-1), y_map[y],
-                                num_classes=part.size(0), absent_score=1.0)
-            ious.append(iou)
-
-        categories.append(data.category)
-
-    iou = torch.tensor(ious, device=device)
-    category = torch.cat(categories, dim=0)
-
-    mean_iou = scatter(iou, category, reduce='mean')  # Per-category IoU.
-    return float(mean_iou.mean())  # Global IoU.
 
 
 def main(filename):
