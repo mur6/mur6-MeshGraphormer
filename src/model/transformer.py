@@ -7,10 +7,12 @@ from torch_cluster import fps, knn_graph
 
 import torch_geometric.transforms as T
 from torch_geometric.datasets import ModelNet
-from torch_geometric.loader import DataLoader
 from torch_geometric.nn import MLP, PointTransformerConv, global_mean_pool, knn, knn_interpolate
 from torch_geometric.utils import scatter
 
+
+from torch_geometric.loader import DataLoader
+from torch_geometric.data import Data, Batch, InMemoryDataset
 
 
 class TransformerBlock(torch.nn.Module):
@@ -265,4 +267,20 @@ if __name__ == '__main__':
         out_channels=3,
         dim_model=[32, 64, 128, 256, 512],
         )
-    print(model)
+    model.eval()
+
+    pos = torch.randn(3, 778)
+    edge_index = torch.randint(10, (2, 4630))
+    data = Data(x=pos, pos=pos, edge_index=edge_index, y=torch.zeros(3))
+
+    loader = DataLoader([data], batch_size=1, shuffle=False)
+
+    # batch = Batch.from_data_list([data])
+    # d = batch.get_example(0)
+    # print(d.batch)
+    for d in loader:
+        print(d.x.shape)
+        output = model(d.x, d.pos, d.batch)
+        print(output.shape)
+        break
+    # main(args.resume_dir, args.input_filename)
