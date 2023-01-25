@@ -78,33 +78,33 @@ def test(model, loader, test_datasize, device):
 
 
 
-# def train():
-#     model.train()
+def train(model, device, train_loader, optimizer):
+    model.train()
 
-#     total_loss = correct_nodes = total_nodes = 0
-#     for i, data in enumerate(train_loader):
-#         data = data.to(device)
-#         optimizer.zero_grad()
-#         out = model(data.x, data.pos, data.batch)
-#         loss = F.nll_loss(out, data.y)
-#         loss.backward()
-#         optimizer.step()
-#         total_loss += loss.item()
-#         correct_nodes += out.argmax(dim=1).eq(data.y).sum().item()
-#         total_nodes += data.num_nodes
+    total_loss = correct_nodes = total_nodes = 0
+    for i, data in enumerate(train_loader):
+        data = data.to(device)
+        optimizer.zero_grad()
+        out = model(data.x, data.pos, data.batch)
+        loss = F.nll_loss(out, data.y)
+        loss.backward()
+        optimizer.step()
+        total_loss += loss.item()
+        correct_nodes += out.argmax(dim=1).eq(data.y).sum().item()
+        total_nodes += data.num_nodes
 
-#         if (i + 1) % 10 == 0:
-#             print(f'[{i+1}/{len(train_loader)}] Loss: {total_loss / 10:.4f} '
-#                   f'Train Acc: {correct_nodes / total_nodes:.4f}')
-#             total_loss = correct_nodes = total_nodes = 0
+        if (i + 1) % 10 == 0:
+            print(f'[{i+1}/{len(train_loader)}] Loss: {total_loss / 10:.4f} '
+                  f'Train Acc: {correct_nodes / total_nodes:.4f}')
+            total_loss = correct_nodes = total_nodes = 0
 
 
-def test(loader):
+def test(model, device, test_loader):
     model.eval()
 
     ious, categories = [], []
-    y_map = torch.empty(loader.dataset.num_classes, device=device).long()
-    for data in loader:
+    y_map = torch.empty(test_loader.dataset.num_classes, device=device).long()
+    for data in test_loader:
         data = data.to(device)
         outs = model(data.x, data.pos, data.batch)
 
@@ -156,6 +156,12 @@ def main(filename):
         test(model, test_loader, test_datasize, device)
         if epoch % 5 == 0:
             save_checkpoint(model, epoch)
+        scheduler.step()
+
+        train(model, device, train_loader, optimizer)
+        iou = test(model, device, test_loader)
+        print(f'Epoch: {epoch:03d}, Test IoU: {iou:.4f}')
+        scheduler.step()
 
 
 if __name__ == '__main__':
