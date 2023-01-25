@@ -15,7 +15,6 @@ from torch_geometric.utils import scatter
 
 from src.model.geometric import GlobalSAModule, SAModule, Net
 from src.handinfo.data import load_data_for_geometric
-# from src. pointnet2_classification import GlobalSAModule, SAModule
 
 
 def save_checkpoint(model, epoch, iteration=None):

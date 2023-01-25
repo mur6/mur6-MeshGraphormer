@@ -263,13 +263,13 @@ class SegmentationNet(torch.nn.Module):
 
 if __name__ == '__main__':
     model = ClassificationNet(
-        in_channels=778,
+        in_channels=3,
         out_channels=3,
         dim_model=[32, 64, 128, 256, 512],
         )
     model.eval()
 
-    pos = torch.randn(3, 778)
+    pos = torch.randn(778, 3)
     edge_index = torch.randint(10, (2, 4630))
     data = Data(x=pos, pos=pos, edge_index=edge_index, y=torch.zeros(3))
 

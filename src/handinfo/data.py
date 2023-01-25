@@ -107,7 +107,7 @@ class MyGraphDataset(InMemoryDataset):
         self.data, self.slices = self.collate(data_list)
 
 
-def load_data_for_geometric(filename, device="cuda"):
+def load_data_for_geometric(filename, *, transform, pre_transform, device="cuda"):
     val = _load_data(filename)
     perimeter = val['perimeter']
     gt_vertices = val['gt_vertices']
@@ -128,15 +128,14 @@ def load_data_for_geometric(filename, device="cuda"):
     # print(vertex.shape, edge_index.shape)
     # print(pca_mean.shape)
     data_train, data_test = train_test_split(data_list)
-    pre_transform = T.NormalizeScale()
-    # transform = T.SamplePoints(1024)
+
     train_dataset = MyGraphDataset(
         data_train,
-        # transform=transform,
+        transform=transform,
         pre_transform=pre_transform)
     test_dataset = MyGraphDataset(
         data_test,
-        # transform=transform,
+        transform=transform,
         pre_transform=pre_transform)
     #return data_train, data_test
     return train_dataset, test_dataset
