@@ -76,6 +76,60 @@ def test(model, loader, test_datasize, device):
     print(f'Validation Loss: {epoch_loss:.6f}')
 
 
+
+
+# def train():
+#     model.train()
+
+#     total_loss = correct_nodes = total_nodes = 0
+#     for i, data in enumerate(train_loader):
+#         data = data.to(device)
+#         optimizer.zero_grad()
+#         out = model(data.x, data.pos, data.batch)
+#         loss = F.nll_loss(out, data.y)
+#         loss.backward()
+#         optimizer.step()
+#         total_loss += loss.item()
+#         correct_nodes += out.argmax(dim=1).eq(data.y).sum().item()
+#         total_nodes += data.num_nodes
+
+#         if (i + 1) % 10 == 0:
+#             print(f'[{i+1}/{len(train_loader)}] Loss: {total_loss / 10:.4f} '
+#                   f'Train Acc: {correct_nodes / total_nodes:.4f}')
+#             total_loss = correct_nodes = total_nodes = 0
+
+
+def test(loader):
+    model.eval()
+
+    ious, categories = [], []
+    y_map = torch.empty(loader.dataset.num_classes, device=device).long()
+    for data in loader:
+        data = data.to(device)
+        outs = model(data.x, data.pos, data.batch)
+
+        sizes = (data.ptr[1:] - data.ptr[:-1]).tolist()
+        for out, y, category in zip(outs.split(sizes), data.y.split(sizes),
+                                    data.category.tolist()):
+            category = list(ShapeNet.seg_classes.keys())[category]
+            part = ShapeNet.seg_classes[category]
+            part = torch.tensor(part, device=device)
+
+            y_map[part] = torch.arange(part.size(0), device=device)
+
+            iou = jaccard_index(out[:, part].argmax(dim=-1), y_map[y],
+                                num_classes=part.size(0), absent_score=1.0)
+            ious.append(iou)
+
+        categories.append(data.category)
+
+    iou = torch.tensor(ious, device=device)
+    category = torch.cat(categories, dim=0)
+
+    mean_iou = scatter(iou, category, reduce='mean')  # Per-category IoU.
+    return float(mean_iou.mean())  # Global IoU.
+
+
 def main(filename):
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
@@ -83,9 +137,6 @@ def main(filename):
     train_datasize = len(train_dataset)
     test_datasize = len(test_dataset)
     print(f"train_datasize={train_datasize} test_datasize={test_datasize}")
-    # train_dataset = ModelNet(path, '10', True, transform, pre_transform)
-    # test_dataset = ModelNet(path, '10', False, transform, pre_transform)
-    # print(train_dataset.data)
     batch_size = 32
     train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True,
                               num_workers=6, drop_last=True)
@@ -93,24 +144,16 @@ def main(filename):
                              num_workers=6, drop_last=True)
 
     model = Net().to(device)
-    optimizer = optim.Adam(model.parameters(), lr=0.001)
-    # optimizer = torch.optim.AdamW(model.parameters(), lr=0.005)
-    scheduler = optim.lr_scheduler.ExponentialLR(optimizer, gamma=0.9)
-    # scheduler = CosineLRScheduler(
-    #     optimizer,
-    #     t_initial=40,
-    #     cycle_limit=11,
-    #     cycle_decay=0.8,
-    #     lr_min=0.0001,
-    #     warmup_t=20,
-    #     warmup_lr_init=5e-5,
-    #     warmup_prefix=True)
+    # optimizer = optim.Adam(model.parameters(), lr=0.001)
+    # scheduler = optim.lr_scheduler.ExponentialLR(optimizer, gamma=0.9)
+
+    model = Net(3, train_dataset.num_classes, dim_model=[32, 64, 128, 256, 512], k=16).to(device)
+    optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
+    scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=20, gamma=0.5)
 
     for epoch in range(1, 1000 + 1):
         train(model, epoch, train_loader, train_datasize, optimizer, scheduler, device)
         test(model, test_loader, test_datasize, device)
-        # test_acc = test(test_loader)
-        # print(f'Epoch: {epoch:03d}, Test: {test_acc:.4f}')
         if epoch % 5 == 0:
             save_checkpoint(model, epoch)
 

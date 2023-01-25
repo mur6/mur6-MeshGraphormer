@@ -260,64 +260,6 @@ class Net(torch.nn.Module):
         return F.log_softmax(out, dim=-1)
 
 
-# device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-# model = Net(3, train_dataset.num_classes, dim_model=[32, 64, 128, 256, 512],
-#             k=16).to(device)
-# optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
-# scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=20, gamma=0.5)
-
-
-# def train():
-#     model.train()
-
-#     total_loss = correct_nodes = total_nodes = 0
-#     for i, data in enumerate(train_loader):
-#         data = data.to(device)
-#         optimizer.zero_grad()
-#         out = model(data.x, data.pos, data.batch)
-#         loss = F.nll_loss(out, data.y)
-#         loss.backward()
-#         optimizer.step()
-#         total_loss += loss.item()
-#         correct_nodes += out.argmax(dim=1).eq(data.y).sum().item()
-#         total_nodes += data.num_nodes
-
-#         if (i + 1) % 10 == 0:
-#             print(f'[{i+1}/{len(train_loader)}] Loss: {total_loss / 10:.4f} '
-#                   f'Train Acc: {correct_nodes / total_nodes:.4f}')
-#             total_loss = correct_nodes = total_nodes = 0
-
-
-# def test(loader):
-#     model.eval()
-
-#     ious, categories = [], []
-#     y_map = torch.empty(loader.dataset.num_classes, device=device).long()
-#     for data in loader:
-#         data = data.to(device)
-#         outs = model(data.x, data.pos, data.batch)
-
-#         sizes = (data.ptr[1:] - data.ptr[:-1]).tolist()
-#         for out, y, category in zip(outs.split(sizes), data.y.split(sizes),
-#                                     data.category.tolist()):
-#             category = list(ShapeNet.seg_classes.keys())[category]
-#             part = ShapeNet.seg_classes[category]
-#             part = torch.tensor(part, device=device)
-
-#             y_map[part] = torch.arange(part.size(0), device=device)
-
-#             iou = jaccard_index(out[:, part].argmax(dim=-1), y_map[y],
-#                                 num_classes=part.size(0), absent_score=1.0)
-#             ious.append(iou)
-
-#         categories.append(data.category)
-
-#     iou = torch.tensor(ious, device=device)
-#     category = torch.cat(categories, dim=0)
-
-#     mean_iou = scatter(iou, category, reduce='mean')  # Per-category IoU.
-#     return float(mean_iou.mean())  # Global IoU.
-
 
 
 
