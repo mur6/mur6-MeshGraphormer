@@ -111,6 +111,7 @@ def on_circle_loss(pred_output, data):
     loss_2 = (verts_3d * pred_normal_v).sum(dim=(1, 2)) - d
 
     pred_pca_mean = pred_pca_mean.unsqueeze(-2)
+    radius = data.radius
     loss_1 =  (verts_3d - pred_pca_mean).pow(2).sum(dim=(1, 2)) - radius.pow(2)
     loss_1 = loss_1 * 0.1
 
