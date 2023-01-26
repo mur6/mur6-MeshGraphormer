@@ -114,7 +114,7 @@ def main(filename):
     test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False, drop_last=True)
 
     model = ClassificationNet(
-        in_channels=0,
+        in_channels=3,
         out_channels=3,
         dim_model=[32, 64, 128, 256, 512],
         ).to(device)
