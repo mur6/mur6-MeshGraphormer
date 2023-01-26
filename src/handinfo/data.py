@@ -117,13 +117,18 @@ def load_data_for_geometric(filename, *, transform, pre_transform, device="cuda"
     # gt_3d_joints = val['gt_3d_joints']
     pca_mean = val['pca_mean_']
     # pca_components = val['pca_components_']
+    # normal_v = torch.cross(pca_components[:, 0], pca_components[:, 1], dim=1)
+    # print("normal_v: ", normal_v.shape, normal_v.dtype)
+    vert_3d = val['vert_3d']
+    # print(f"vert_3d: {vert_3d.shape}")
     vertices = gt_vertices#torch.transpose(gt_vertices, 1, 2)
     data_list = []
     for i, vertex in enumerate(vertices):
         # print(f"vertex: {vertex.shape}")
         # print(f"face: {face.shape}")
         # print(f"edge_index: {edge_index.shape} {edge_index.dtype}")
-        d = Data(x=vertex, pos=vertex, edge_index=edge_index, y=pca_mean[i])
+        # print(f"vert_3d[i]: {vert_3d[i].shape}")
+        d = Data(x=vertex, pos=vertex, edge_index=edge_index, y=vert_3d[i])
         data_list.append(d)
     # print(vertex.shape, edge_index.shape)
     # print(pca_mean.shape)
