@@ -82,7 +82,8 @@ def train(model, device, train_loader, train_datasize, bs_faces, optimizer):
         #.view(batch_size, 1538, 3)
         # print(f"bs_faces: {bs_faces.shape}")
         gt_y = data.y.view(batch_size, -1).float().contiguous()
-        loss = all_loss(output, gt_y, data, bs_faces)
+        # loss = all_loss(output, gt_y, data, bs_faces)
+        loss = F.mse_loss(output, gt_y)
         loss.backward()
         optimizer.step()
         losses.append(loss.item()) # 損失値の蓄積
@@ -105,8 +106,8 @@ def test(model, device, test_loader, test_datasize, bs_faces):
         # b = data.y.view(batch_size, -1).float()
         # correct += pred.eq(b).sum().item()
         gt_y = data.y.view(batch_size, -1).float().contiguous()
-        # loss = F.mse_loss(output, gt_y)
-        loss = all_loss(output, gt_y, data, bs_faces)
+        # loss = all_loss(output, gt_y, data, bs_faces)
+        loss = F.mse_loss(output, gt_y)
         current_loss += loss.item() * output.size(0)
     epoch_loss = current_loss / test_datasize
     print(f'Validation Loss: {epoch_loss:.6f}')
