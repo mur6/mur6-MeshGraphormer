@@ -262,17 +262,17 @@ class SegmentationNet(torch.nn.Module):
 
 
 if __name__ == '__main__':
-    # model = ClassificationNet(
+    model = ClassificationNet(
+        in_channels=0,
+        out_channels=3,
+        dim_model=[32, 64, 128, 256, 512],
+        )
+    # model = SegmentationNet(
     #     in_channels=3,
     #     out_channels=3,
     #     dim_model=[32, 64, 128, 256, 512],
-    #     )
-    model = SegmentationNet(
-        in_channels=3,
-        out_channels=3,
-        dim_model=[32, 64, 128, 256, 512],
-        k=16
-    )
+    #     k=16
+    # )
     model.eval()
 
     pos = torch.randn(778, 3)

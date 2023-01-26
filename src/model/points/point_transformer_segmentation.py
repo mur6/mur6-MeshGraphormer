@@ -175,6 +175,7 @@ def train():
         data = data.to(device)
         print(f"data.x: {data.x.shape}")
         print(f"data.pos: {data.pos.shape}")
+        print(data.batch)
         print(f"data.x: {data.x[0]}")
         print(f"data.pos: {data.pos[0]}")
 
@@ -202,10 +203,9 @@ def test(loader):
     y_map = torch.empty(loader.dataset.num_classes, device=device).long()
     for data in loader:
         data = data.to(device)
-        print(f"data.x: {data.x.shape}")
-        print(f"data.pos: {data.pos.shape}")
-        
-        break
+        # print(f"data.x: {data.x.shape}")
+        # print(f"data.pos: {data.pos.shape}")
+        # break
         outs = model(data.x, data.pos, data.batch)
 
         sizes = (data.ptr[1:] - data.ptr[:-1]).tolist()

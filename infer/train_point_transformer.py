@@ -111,12 +111,12 @@ def main(filename):
     train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, drop_last=True)
     test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False, drop_last=True)
 
-    # model = ClassificationNet(
-    #     in_channels=3,
-    #     out_channels=3,
-    #     dim_model=[32, 64, 128, 256, 512],
-    #     ).to(device)
-    model = SegmentationNet()
+    model = ClassificationNet(
+        in_channels=3,
+        out_channels=3,
+        dim_model=[32, 64, 128, 256, 512],
+        ).to(device)
+    # model = SegmentationNet()
     model.eval()
 
     optimizer = torch.optim.Adam(model.parameters(), lr=0.001)

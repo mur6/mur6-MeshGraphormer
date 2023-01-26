@@ -139,8 +139,16 @@ def train():
     total_loss = 0
     for data in train_loader:
         data = data.to(device)
+        print(f"data.x: {data.x}")
+        print(f"data.pos: {data.pos.shape}")
+        print(data.batch)
+        print(f"data.x: {data.x}")
+        print(f"data.pos: {data.pos[0]}")
         optimizer.zero_grad()
         out = model(data.x, data.pos, data.batch)
+        print(f"data.y: {data.y.shape}")
+        print(f"out: {out.shape}")
+        print()
         loss = F.nll_loss(out, data.y)
         loss.backward()
         total_loss += loss.item() * data.num_graphs
@@ -161,9 +169,10 @@ def test(loader):
 
 
 if __name__ == '__main__':
-
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-    model = Net(0, train_dataset.num_classes,
+    num_classes = train_dataset.num_classes
+    print(f"num_classes: {num_classes}")
+    model = Net(0, num_classes,
                 dim_model=[32, 64, 128, 256, 512], k=16).to(device)
     optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
     scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=20,
