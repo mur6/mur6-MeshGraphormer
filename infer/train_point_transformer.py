@@ -112,7 +112,7 @@ def test(model, device, test_loader, test_datasize, bs_faces):
     print(f'Validation Loss: {epoch_loss:.6f}')
 
 
-def main(resume_dir, input_filename, batch_size):
+def main(resume_dir, input_filename, batch_size, args):
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
     train_dataset, test_dataset = load_data_for_geometric(
@@ -157,7 +157,8 @@ def main(resume_dir, input_filename, batch_size):
             warmup_lr_init=5e-5,
             warmup_prefix=True)
     optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
-    scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=7, gamma=0.85)
+    print(f"gamma: {args.gamma.float()}")
+    scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=7, gamma=args.gamma.float())
     ####### test:
     # for d in train_loader:
     #     print(d.x.shape)
@@ -182,8 +183,10 @@ def main(resume_dir, input_filename, batch_size):
 
 
 def parse_args():
+    from decimal import Decimal
     parser = argparse.ArgumentParser()
     parser.add_argument("--batch_size", type=int, default=32)
+    parser.add_argument("--gamma", type=Decimal, default=Decimal("0.85"))
     parser.add_argument(
         "--resume_dir",
         type=Path,
@@ -200,4 +203,4 @@ def parse_args():
 
 if __name__ == '__main__':
     args = parse_args()
-    main(args.resume_dir, args.input_filename, args.batch_size)
+    main(args.resume_dir, args.input_filename, args.batch_size, args)
