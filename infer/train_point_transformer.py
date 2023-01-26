@@ -59,7 +59,7 @@ def all_loss(pred_output, gt_y, data, faces):
     # loss_1, _ = chamfer_distance(pred_output, y)
     meshes = Meshes(verts=verts, faces=faces)
     loss = point_mesh_face_distance(meshes, pcls)
-    return F.mse_loss(pred_output, gt_y) + 10.0 * loss
+    return F.mse_loss(pred_output, gt_y) + loss
 
 
 def train(model, device, train_loader, train_datasize, bs_faces, optimizer):
