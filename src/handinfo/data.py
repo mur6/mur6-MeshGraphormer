@@ -193,6 +193,14 @@ if __name__ == "__main__":
         transform=transform,
         pre_transform=pre_transform,
         device=device)
-    for data in train_dataset:
-        print(data)
-        break
+    def _iter():
+        for data in train_dataset:
+            # print(data.normal_v)
+            yield data.perimeter[0].item()
+    perimeter_list = list(_iter())
+    perimeter_list = torch.tensor(perimeter_list)
+    perimeter_list = perimeter_list / (2.0 * math.pi)
+    print(perimeter_list.mean())
+    max = torch.max(perimeter_list)
+    min = torch.min(perimeter_list)
+    print(f"min={min}, max={max}")
