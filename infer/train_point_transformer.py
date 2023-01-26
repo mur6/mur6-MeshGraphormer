@@ -81,11 +81,11 @@ def on_circle_loss(pred_output, data):
     # (x - x_0)^2 + (y - y_0)^2 + (z - z_0)^2 = r^2
     pca_mean = data.pca_mean.view(batch_size, -1)
     normal_v = data.normal_v.view(batch_size, -1)
-    print(f"pca_mean: {pca_mean.shape}")
-    print(f"normal_v: {normal_v.shape}")
+    # print(f"pca_mean: {pca_mean.shape}")
+    # print(f"normal_v: {normal_v.shape}")
     pred_pca_mean = x[:, :3]
     pred_normal_v = x[:, 3:]
-    print(f"pred_normal_v: {pred_normal_v.shape}")
+    # print(f"pred_normal_v: {pred_normal_v.shape}")
 
     radius = data.radius
     loss_1 =  (pred_pca_mean - pca_mean).pow(2).sum(dim=-1) - radius.pow(2)
