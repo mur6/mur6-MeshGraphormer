@@ -75,10 +75,29 @@ def all_loss(pred_output, gt_y, data, faces):
 #     return F.mse_loss(final_y_pred, gt_y)
 
 
+def on_circle_loss(pred_output, data):
+    batch_size = pred_output.shape[0]
+    # (x - x_0)^2 + (y - y_0)^2 + (z - z_0)^2 = r^2
+    pca_mean = data.pca_mean.view(batch_size, -1)
+    normal_v = data.normal_v.view(batch_size, -1)
+    # print(f"pca_mean: {pca_mean.shape}")
+    # print(f"normal_v: {normal_v.shape}")
+    x = pred_output
+    radius = data.radius
+    loss_1 =  (x[:, :3] - pca_mean).pow(2).sum(dim=-1) - radius.pow(2)
+    d =  (normal_v * pca_mean).sum(dim=-1) #  a*x_0 + b*y_0 + c*z_0
+    loss_2 = (normal_v * x[:, 3:]).sum(dim=-1) - d
+    print(loss_1)
+    print(loss_2)
+    loss = torch.cat((loss_1.pow(2), loss_2.pow(2)))
+    return loss.sum()
+
+
 def train(model, device, train_loader, train_datasize, bs_faces, optimizer):
     model.train()
     losses = []
     current_loss = 0.0
+
     for data in train_loader:
         data = data.to(device)
         # print(f"data.x: {data.x.shape}")
@@ -96,8 +115,9 @@ def train(model, device, train_loader, train_datasize, bs_faces, optimizer):
         # print(f"bs_faces: {bs_faces.shape}")
         gt_y = data.y.view(batch_size, -1).float().contiguous()
         # loss = all_loss(output, gt_y, data, bs_faces)
-        loss = F.mse_loss(output, gt_y)
+        # loss = F.mse_loss(output, gt_y)
         # loss = cyclic_shift_loss(output, gt_y)
+        loss = on_circle_loss(output, data)
         loss.backward()
         optimizer.step()
         losses.append(loss.item()) # 損失値の蓄積
@@ -146,7 +166,7 @@ def main(resume_dir, input_filename, batch_size, args):
 
     model = ClassificationNet(
         in_channels=3,
-        out_channels=20*3,
+        out_channels=2*3,
         dim_model=[32, 64, 128, 256, 512],
         ).to(device)
     # model = SegmentationNet(

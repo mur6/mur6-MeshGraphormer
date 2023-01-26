@@ -127,6 +127,9 @@ def load_data_for_geometric(filename, *, transform, pre_transform, device="cuda"
     # print(f"vert_3d: {vert_3d.shape}")
     vertices = gt_vertices#torch.transpose(gt_vertices, 1, 2)
     data_list = []
+
+    radius = torch.FloatTensor([0.0095])
+
     for i, vertex in enumerate(vertices):
         # print(f"perimeter: {perimeter[i]}")
         # print(f"vertex average: {vertex.abs().mean()}")
@@ -138,8 +141,10 @@ def load_data_for_geometric(filename, *, transform, pre_transform, device="cuda"
         # print(f"vert_3d[i]: {vert_3d[i].shape}")
         d = Data(x=vertex, pos=vertex, edge_index=edge_index,
                 y=vert_3d[i],
+                pca_mean=pca_mean[i],
                 normal_v=normal_v[i],
-                perimeter=perimeter[i])
+                perimeter=perimeter[i],
+                radius=radius)
         data_list.append(d)
     # print(vertex.shape, edge_index.shape)
     # print(pca_mean.shape)
