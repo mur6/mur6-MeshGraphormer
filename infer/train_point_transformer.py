@@ -60,7 +60,7 @@ def train(model, device, train_loader, train_datasize, optimizer, scheduler):
         output = model(data.x, data.pos, data.batch)
         # print(f"data.y: {data.y.shape}")
         # print(f"output: {output.shape}")
-        # print(f"output: {output.shape}")
+        # print()
         batch_size = output.shape[0]
         # output = torch.flatten(output)
         # print(f"output: {output.shape}")
@@ -109,7 +109,7 @@ def main(filename):
     test_datasize = len(test_dataset)
     print(f"train_datasize={train_datasize} test_datasize={test_datasize}")
 
-    batch_size = 32
+    batch_size = 1
     train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, drop_last=True)
     test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False, drop_last=True)
 
