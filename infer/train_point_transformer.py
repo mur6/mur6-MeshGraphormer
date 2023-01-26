@@ -61,7 +61,7 @@ def all_loss(pred_output, gt_y, data, faces):
     return F.mse_loss(pred_output, gt_y) + 10.0 * loss
 
 
-def train(model, device, train_loader, train_datasize, faces, optimizer):
+def train(model, device, train_loader, train_datasize, bs_faces, optimizer):
     model.train()
     losses = []
     current_loss = 0.0
@@ -90,7 +90,7 @@ def train(model, device, train_loader, train_datasize, faces, optimizer):
     print(f'Train Loss: {epoch_loss:.6f}')
 
 
-def test(model, device, test_loader, test_datasize, faces):
+def test(model, device, test_loader, test_datasize, bs_faces):
     model.eval()
 
     current_loss = 0.0
