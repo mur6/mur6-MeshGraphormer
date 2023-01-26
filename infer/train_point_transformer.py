@@ -51,7 +51,6 @@ pre_transform = T.NormalizeScale()
 # test_loader = DataLoader(test_dataset, batch_size=10, shuffle=False)
 
 
-
 def all_loss(pred_output, gt_y, data, faces):
     # print(out_points.shape)
     pcls = Pointclouds(pred_output.view(-1, 20, 3).contiguous())
@@ -60,6 +59,7 @@ def all_loss(pred_output, gt_y, data, faces):
     meshes = Meshes(verts=verts, faces=faces)
     loss = point_mesh_face_distance(meshes, pcls)
     return F.mse_loss(pred_output, gt_y) + loss
+
 
 def cyclic_shift_loss(pred_output, gt_y):
     pred_output = pred_output.view(-1, 20, 3)
