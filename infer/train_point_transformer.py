@@ -54,10 +54,12 @@ def train(model, device, train_loader, train_datasize, optimizer, scheduler):
     losses = []
     current_loss = 0.0
     for data in train_loader:
-        # print(type(data))
         data = data.to(device)
+        # print(f"data.pos: {data.pos.shape}")
         optimizer.zero_grad()
         output = model(data.x, data.pos, data.batch)
+        # print(f"data.y: {data.y.shape}")
+        # print(f"output: {output.shape}")
         # print(f"output: {output.shape}")
         batch_size = output.shape[0]
         # output = torch.flatten(output)
@@ -112,7 +114,7 @@ def main(filename):
     test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False, drop_last=True)
 
     model = ClassificationNet(
-        in_channels=3,
+        in_channels=0,
         out_channels=3,
         dim_model=[32, 64, 128, 256, 512],
         ).to(device)
