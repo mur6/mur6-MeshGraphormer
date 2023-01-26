@@ -128,11 +128,13 @@ def load_data_for_geometric(filename, *, transform, pre_transform, device="cuda"
     vertices = gt_vertices#torch.transpose(gt_vertices, 1, 2)
     data_list = []
     for i, vertex in enumerate(vertices):
+        scale = (1 / vertex.max()) * 0.999999
+        print(f"scale: {scale}")
         # print(f"vertex: {vertex.shape}")
         # print(f"face: {face.shape}")
         # print(f"edge_index: {edge_index.shape} {edge_index.dtype}")
         # print(f"vert_3d[i]: {vert_3d[i].shape}")
-        d = Data(x=vertex, pos=vertex, edge_index=edge_index, y=vert_3d[i])
+        d = Data(x=vertex, pos=vertex, edge_index=edge_index, y=vert_3d[i], perimeter=perimeter)
         data_list.append(d)
     # print(vertex.shape, edge_index.shape)
     # print(pca_mean.shape)
@@ -175,4 +177,14 @@ if __name__ == "__main__":
     import sys
     filename = sys.argv[1]
     print(filename)
-    load_data_for_geometric(filename, device="cpu")
+
+    transform=None
+    pre_transform=None
+
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+
+    train_dataset, test_dataset = load_data_for_geometric(
+        filename,
+        transform=transform,
+        pre_transform=pre_transform,
+        device=device)
