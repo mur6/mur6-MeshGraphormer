@@ -81,9 +81,10 @@ import trimesh
 from src.modeling._mano import MANO
 
 
-def get_mano_faces():
+def get_mano_faces(device=None):
     mano_model = MANO()
-    device = 'cuda' if torch.cuda.is_available() else 'cpu'
+    if device is None:
+        device = 'cuda' if torch.cuda.is_available() else 'cpu'
     if device == "cuda":
         mano_model = MANO().to(device)
         mano_model.layer = mano_model.layer.cuda()
@@ -114,7 +115,7 @@ def load_data_for_geometric(filename, *, transform, pre_transform, device="cuda"
     val = _load_data(filename)
     perimeter = val['perimeter']
     gt_vertices = val['gt_vertices']
-    faces = get_mano_faces()
+    faces = get_mano_faces(device="cpu")
     print(f"faces: {faces.shape}")
     edge_index = faces_to_edge_index(gt_vertices[0], faces)
     # gt_3d_joints = val['gt_3d_joints']
