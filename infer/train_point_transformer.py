@@ -91,7 +91,8 @@ def test(model, device, test_loader, test_datasize):
         batch_size = output.shape[0]
         # b = data.y.view(batch_size, -1).float()
         # correct += pred.eq(b).sum().item()
-        loss = F.mse_loss(output, data.y.view(batch_size, -1).float().contiguous())
+        # gt_y = data.y.view(batch_size, -1).float().contiguous()
+        loss = F.mse_loss(output, data.x)
         current_loss += loss.item() * output.size(0)
     epoch_loss = current_loss / test_datasize
     print(f'Validation Loss: {epoch_loss:.6f}')
