@@ -62,11 +62,16 @@ def all_loss(pred_output, gt_y, data, faces):
     return F.mse_loss(pred_output, gt_y) + loss
 
 def cyclic_shift_loss(pred_output, gt_y):
-    lis = [torch.roll(pred_output, i, dims=2) for i in range(0, pred_output.shape[2])]
+    pred_output = pred_output.view(-1, 20, 3)
+    gt_y = gt_y.view(-1, 20, 3)
+    # print(f"gt_y: {gt_y.shape}")
+    # print(f"pred_output: {pred_output.shape}")
+    lis = [torch.roll(pred_output, i, dims=1) for i in range(0, pred_output.shape[1])]
     x = torch.stack(lis, dim=0)
+    # print(f"x: {x.shape}")
     tmp_x = (x - gt_y).pow(2).sum(dim=(1, 2, 3))
     final_y_pred = x[torch.argmin(tmp_x)]
-    # print(answer.shape)
+    # print(f"final_y_pred: {final_y_pred.shape}")
     return F.mse_loss(final_y_pred, gt_y)
 
 
