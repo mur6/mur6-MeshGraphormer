@@ -109,7 +109,8 @@ class Net(torch.nn.Module):
 
         # add dummy features in case there is none
         if x is None:
-            x = torch.ones((pos.shape[0], 1), device=pos.get_device())
+            # print(f"device: {pos.get_device()}")
+            x = torch.ones((pos.shape[0], 1), device="cpu")
 
         # first block
         x = self.mlp_input(x)

@@ -44,3 +44,4 @@ misc-scripts/
 misc-data/
 .venv/
 temp_hand_images/
+src/model/data/
