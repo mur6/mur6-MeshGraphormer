@@ -157,8 +157,9 @@ def main(resume_dir, input_filename, batch_size, args):
             warmup_lr_init=5e-5,
             warmup_prefix=True)
     optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
-    print(f"gamma: {args.gamma.float()}")
-    scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=7, gamma=args.gamma.float())
+    gamma = float(args.gamma)
+    print(f"gamma: {gamma}")
+    scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=7, gamma=gamma)
     ####### test:
     # for d in train_loader:
     #     print(d.x.shape)
