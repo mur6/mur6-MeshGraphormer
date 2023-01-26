@@ -134,7 +134,7 @@ def main(resume_dir, input_filename, batch_size, args):
     train_dataset, test_dataset = load_data_for_geometric(
         input_filename,
         transform=transform,
-        pre_transform=pre_transform,
+        pre_transform=None,
         device=device)
     train_datasize = len(train_dataset)
     test_datasize = len(test_dataset)
