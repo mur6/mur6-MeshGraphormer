@@ -61,6 +61,14 @@ def all_loss(pred_output, gt_y, data, faces):
     loss = point_mesh_face_distance(meshes, pcls)
     return F.mse_loss(pred_output, gt_y) + loss
 
+def cyclic_shift_loss(pred_output, gt_y):
+    lis = [torch.roll(pred_output, i, dims=2) for i in range(0, pred_output.shape[2])]
+    x = torch.stack(lis, dim=0)
+    tmp_x = (x - gt_y).pow(2).sum(dim=(1, 2, 3))
+    final_y_pred = x[torch.argmin(tmp_x)]
+    # print(answer.shape)
+    return F.mse_loss(final_y_pred, gt_y)
+
 
 def train(model, device, train_loader, train_datasize, bs_faces, optimizer):
     model.train()
@@ -83,7 +91,8 @@ def train(model, device, train_loader, train_datasize, bs_faces, optimizer):
         # print(f"bs_faces: {bs_faces.shape}")
         gt_y = data.y.view(batch_size, -1).float().contiguous()
         # loss = all_loss(output, gt_y, data, bs_faces)
-        loss = F.mse_loss(output, gt_y)
+        # loss = F.mse_loss(output, gt_y)
+        loss = cyclic_shift_loss(output, gt_y)
         loss.backward()
         optimizer.step()
         losses.append(loss.item()) # 損失値の蓄積
@@ -107,7 +116,8 @@ def test(model, device, test_loader, test_datasize, bs_faces):
         # correct += pred.eq(b).sum().item()
         gt_y = data.y.view(batch_size, -1).float().contiguous()
         # loss = all_loss(output, gt_y, data, bs_faces)
-        loss = F.mse_loss(output, gt_y)
+        # loss = F.mse_loss(output, gt_y)
+        loss = cyclic_shift_loss(output, gt_y)
         current_loss += loss.item() * output.size(0)
     epoch_loss = current_loss / test_datasize
     print(f'Validation Loss: {epoch_loss:.6f}')
