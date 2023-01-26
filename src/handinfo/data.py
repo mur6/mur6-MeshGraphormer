@@ -120,21 +120,26 @@ def load_data_for_geometric(filename, *, transform, pre_transform, device="cuda"
     edge_index = faces_to_edge_index(gt_vertices[0], faces)
     # gt_3d_joints = val['gt_3d_joints']
     pca_mean = val['pca_mean_']
-    # pca_components = val['pca_components_']
-    # normal_v = torch.cross(pca_components[:, 0], pca_components[:, 1], dim=1)
+    pca_components = val['pca_components_']
+    normal_v = torch.cross(pca_components[:, 0], pca_components[:, 1], dim=1)
     # print("normal_v: ", normal_v.shape, normal_v.dtype)
     vert_3d = val['vert_3d']
     # print(f"vert_3d: {vert_3d.shape}")
     vertices = gt_vertices#torch.transpose(gt_vertices, 1, 2)
     data_list = []
     for i, vertex in enumerate(vertices):
-        scale = (1 / vertex.max()) * 0.999999
-        print(f"scale: {scale}")
+        # print(f"perimeter: {perimeter[i]}")
+        # print(f"vertex average: {vertex.abs().mean()}")
+        # scale = (1 / vertex.abs().max()) * 0.999999
+        # print(f"scale: {scale}")
         # print(f"vertex: {vertex.shape}")
         # print(f"face: {face.shape}")
         # print(f"edge_index: {edge_index.shape} {edge_index.dtype}")
         # print(f"vert_3d[i]: {vert_3d[i].shape}")
-        d = Data(x=vertex, pos=vertex, edge_index=edge_index, y=vert_3d[i], perimeter=perimeter)
+        d = Data(x=vertex, pos=vertex, edge_index=edge_index,
+                y=vert_3d[i],
+                normal_v=normal_v[i],
+                perimeter=perimeter[i])
         data_list.append(d)
     # print(vertex.shape, edge_index.shape)
     # print(pca_mean.shape)
