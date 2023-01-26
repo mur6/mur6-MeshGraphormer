@@ -62,6 +62,10 @@ def all_loss(pred_output, gt_y, data, faces):
 
 
 def train(model, device, train_loader, train_datasize, optimizer, scheduler):
+    faces = get_mano_faces()
+    batch_size = train_loader.batch_size
+    bs_faces = faces.repeat(batch_size, 1).view(batch_size, 1538, 3)
+
     model.train()
     losses = []
     current_loss = 0.0
@@ -78,8 +82,10 @@ def train(model, device, train_loader, train_datasize, optimizer, scheduler):
         #print(f"verts: {verts.shape}")
         #print(f"faces: {faces.shape}")
 
+        #.view(batch_size, 1538, 3)
+        # print(f"bs_faces: {bs_faces.shape}")
         gt_y = data.y.view(batch_size, -1).float().contiguous()
-        loss = all_loss(output, gt_y, data)
+        loss = all_loss(output, gt_y, data, bs_faces)
         loss.backward()
         optimizer.step()
         losses.append(loss.item()) # 損失値の蓄積

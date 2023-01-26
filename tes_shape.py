@@ -37,8 +37,13 @@ def main_2():
     print(output.shape)
 
 
-x = torch.arange(8*3)
-#x = torch.reshape(x, (8, 3))
-#print(x)
-x = x.view(8, -1)
+# x = torch.arange(8*3)
+# #x = torch.reshape(x, (8, 3))
+# #print(x)
+# x = x.view(8, -1)
+# print(x)
+
+
+x = torch.tensor([1, 2, 3])
+x = x.repeat(4).view(4, 3)
 print(x)
