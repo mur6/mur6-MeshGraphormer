@@ -1,4 +1,5 @@
 from pathlib import Path
+import argparse
 
 import torch
 import torch.nn.functional as F
@@ -111,11 +112,11 @@ def test(model, device, test_loader, test_datasize, bs_faces):
     print(f'Validation Loss: {epoch_loss:.6f}')
 
 
-def main(filename):
+def main(resume_dir, input_filename, batch_size):
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
     train_dataset, test_dataset = load_data_for_geometric(
-        filename,
+        input_filename,
         transform=transform,
         pre_transform=pre_transform,
         device=device)
@@ -123,7 +124,7 @@ def main(filename):
     test_datasize = len(test_dataset)
     print(f"train_datasize={train_datasize} test_datasize={test_datasize}")
 
-    batch_size = 32
+    # batch_size = 32
     train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, drop_last=True)
     test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False, drop_last=True)
 
@@ -180,7 +181,23 @@ def main(filename):
         # scheduler.step()
 
 
+def parse_args():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--batch_size", type=int, default=32)
+    parser.add_argument(
+        "--resume_dir",
+        type=Path,
+        required=True,
+    )
+    parser.add_argument(
+        "--input_filename",
+        type=Path,
+        required=True,
+    )
+    args = parser.parse_args()
+    return args
+
+
 if __name__ == '__main__':
-    import sys
-    filename = sys.argv[1]
-    main(filename)
+    args = parse_args()
+    main(args.resume_dir, args.input_filename, args.batch_size)
