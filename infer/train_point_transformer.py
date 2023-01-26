@@ -87,8 +87,8 @@ def on_circle_loss(pred_output, data):
     loss_1 =  (x[:, :3] - pca_mean).pow(2).sum(dim=-1) - radius.pow(2)
     d =  (normal_v * pca_mean).sum(dim=-1) #  a*x_0 + b*y_0 + c*z_0
     loss_2 = (normal_v * x[:, 3:]).sum(dim=-1) - d
-    print(loss_1)
-    print(loss_2)
+    # print(loss_1)
+    # print(loss_2)
     loss = torch.cat((loss_1.pow(2), loss_2.pow(2)))
     return loss.sum()
 
