@@ -61,11 +61,7 @@ def all_loss(pred_output, gt_y, data, faces):
     return F.mse_loss(pred_output, gt_y) + 10.0 * loss
 
 
-def train(model, device, train_loader, train_datasize, optimizer, scheduler):
-    faces = get_mano_faces()
-    batch_size = train_loader.batch_size
-    bs_faces = faces.repeat(batch_size, 1).view(batch_size, 1538, 3)
-
+def train(model, device, train_loader, train_datasize, faces, optimizer):
     model.train()
     losses = []
     current_loss = 0.0
@@ -94,7 +90,7 @@ def train(model, device, train_loader, train_datasize, optimizer, scheduler):
     print(f'Train Loss: {epoch_loss:.6f}')
 
 
-def test(model, device, test_loader, test_datasize):
+def test(model, device, test_loader, test_datasize, faces):
     model.eval()
 
     current_loss = 0.0
@@ -109,7 +105,7 @@ def test(model, device, test_loader, test_datasize):
         # correct += pred.eq(b).sum().item()
         gt_y = data.y.view(batch_size, -1).float().contiguous()
         # loss = F.mse_loss(output, gt_y)
-        loss = all_loss(output, gt_y, data)
+        loss = all_loss(output, gt_y, data, bs_faces)
         current_loss += loss.item() * output.size(0)
     epoch_loss = current_loss / test_datasize
     print(f'Validation Loss: {epoch_loss:.6f}')
@@ -168,9 +164,13 @@ def main(filename):
     #     print(output.shape)
     #     break
 
+    faces = get_mano_faces()
+    # batch_size = train_loader.batch_size
+    bs_faces = faces.repeat(batch_size, 1).view(batch_size, 1538, 3)
+
     for epoch in range(1, 1000 + 1):
-        train(model, device, train_loader, train_datasize, optimizer, scheduler)
-        test(model, device, test_loader, test_datasize)
+        train(model, device, train_loader, train_datasize, faces, optimizer)
+        test(model, device, test_loader, test_datasize, faces)
         if epoch % 5 == 0:
             save_checkpoint(model, epoch)
         scheduler.step(epoch)
