@@ -102,7 +102,7 @@ class MyGraphDataset(InMemoryDataset):
         transform: Optional[Callable] = None,
         pre_transform: Optional[Callable] = None
         ):
-        super().__init__('.', pre_transform=pre_transform)
+        super().__init__('.', transform=transform, pre_transform=pre_transform)
         # transform=transform,
         self.data, self.slices = self.collate(data_list)
 
