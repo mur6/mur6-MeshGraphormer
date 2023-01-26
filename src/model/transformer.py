@@ -81,6 +81,7 @@ class ClassificationNet(torch.nn.Module):
         in_channels = max(in_channels, 1)
 
         # first block
+        # print(f"MLP: {in_channels, dim_model[0]}")
         self.mlp_input = MLP([in_channels, dim_model[0]], plain_last=False)
 
         self.transformer_input = TransformerBlock(in_channels=dim_model[0],
@@ -109,7 +110,9 @@ class ClassificationNet(torch.nn.Module):
             x = torch.ones((pos.shape[0], 1), device=self.device)
 
         # first block
+        # print(f"before mlp_input: {x.shape}")
         x = self.mlp_input(x)
+        # print(f"after mlp_input: {x.shape}")
         edge_index = knn_graph(pos, k=self.k, batch=batch)
         x = self.transformer_input(x, pos, edge_index)
 
@@ -163,6 +166,7 @@ class SegmentationNet(torch.nn.Module):
         in_channels = max(in_channels, 1)
 
         # first block
+        # print(f"MLP: {in_channels, dim_model[0]}")
         self.mlp_input = MLP([in_channels, dim_model[0]], plain_last=False)
 
         self.transformer_input = TransformerBlock(
@@ -219,7 +223,9 @@ class SegmentationNet(torch.nn.Module):
         out_batch = []
 
         # first block
+        # print(f"before mlp_input: {x.shape}")
         x = self.mlp_input(x)
+        # print(f"after mlp_input: {x.shape}")
         edge_index = knn_graph(pos, k=self.k, batch=batch)
         x = self.transformer_input(x, pos, edge_index)
 
@@ -258,23 +264,22 @@ class SegmentationNet(torch.nn.Module):
 
         # Class score
         out = self.mlp_output(x)
-
-        return F.log_softmax(out, dim=-1)
-
+        # return F.log_softmax(out, dim=-1)
+        return out
 
 
 if __name__ == '__main__':
-    model = ClassificationNet(
-        in_channels=0,
-        out_channels=3,
-        dim_model=[32, 64, 128, 256, 512],
-        )
-    # model = SegmentationNet(
+    # model = ClassificationNet(
     #     in_channels=3,
     #     out_channels=3,
     #     dim_model=[32, 64, 128, 256, 512],
-    #     k=16
-    # )
+    #     )
+    model = SegmentationNet(
+        in_channels=3,
+        out_channels=3,
+        dim_model=[32, 64, 128, 256, 512],
+        k=3,
+    )
     model.eval()
 
     pos = torch.randn(778, 3)
