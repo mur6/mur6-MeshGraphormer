@@ -75,6 +75,7 @@ class ClassificationNet(torch.nn.Module):
     def __init__(self, in_channels, out_channels, dim_model):
         super().__init__()
         self.k = 3
+        self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
         # dummy feature is created if there is none given
         in_channels = max(in_channels, 1)
@@ -105,7 +106,7 @@ class ClassificationNet(torch.nn.Module):
     def forward(self, x, pos, batch=None):
         # add dummy features in case there is none
         if x is None:
-            x = torch.ones((pos.shape[0], 1), device=pos.get_device())
+            x = torch.ones((pos.shape[0], 1), device=self.device)
 
         # first block
         x = self.mlp_input(x)
@@ -156,6 +157,7 @@ class SegmentationNet(torch.nn.Module):
     def __init__(self, in_channels, out_channels, dim_model, k=16):
         super().__init__()
         self.k = k
+        self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
         # dummy feature is created if there is none given
         in_channels = max(in_channels, 1)
@@ -210,7 +212,7 @@ class SegmentationNet(torch.nn.Module):
 
         # add dummy features in case there is none
         if x is None:
-            x = torch.ones((pos.shape[0], 1)).to(pos.get_device())
+            x = torch.ones((pos.shape[0], 1)).to(self.device)
 
         out_x = []
         out_pos = []
@@ -281,9 +283,8 @@ if __name__ == '__main__':
 
     loader = DataLoader([data], batch_size=1, shuffle=False)
 
-
     for d in loader:
-        print(d.x.shape)
+        print(d.pos.shape)
         output = model(d.x, d.pos, d.batch)
         print(output.shape)
         break
