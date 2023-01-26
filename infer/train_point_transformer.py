@@ -13,8 +13,10 @@ from torch_geometric.loader import DataLoader
 from torch_geometric.nn import MLP, PointConv, fps, global_max_pool, radius
 from torch_geometric.utils import scatter
 
-from src.handinfo.data import load_data_for_geometric
+from src.handinfo.data import load_data_for_geometric, get_mano_faces
 from src.model.transformer import ClassificationNet, SegmentationNet
+from pytorch3d.structures import Meshes, Pointclouds
+from pytorch3d.loss import point_mesh_face_distance
 
 
 
@@ -49,21 +51,35 @@ pre_transform = T.NormalizeScale()
 
 
 
+def all_loss(pred_output, gt_y, data, faces):
+    # print(out_points.shape)
+    pcls = Pointclouds(pred_output.view(-1, 20, 3).contiguous())
+    verts = data.x.view(-1, 778, 3).contiguous()
+    # loss_1, _ = chamfer_distance(pred_output, y)
+    meshes = Meshes(verts=verts, faces=faces)
+    loss = point_mesh_face_distance(meshes, pcls)
+    return F.mse_loss(pred_output, gt_y) + 10.0 * loss
+
+
 def train(model, device, train_loader, train_datasize, optimizer, scheduler):
     model.train()
     losses = []
     current_loss = 0.0
     for data in train_loader:
         data = data.to(device)
+        # print(f"data.x: {data.x.shape}")
         # print(f"data.pos: {data.pos.shape}")
         optimizer.zero_grad()
         output = model(data.x, data.pos, data.batch)
         # print(f"data.y: {data.y.shape}")
         # print(f"output: {output.shape}")
-        # print()
+
         batch_size = output.shape[0]
+        #print(f"verts: {verts.shape}")
+        #print(f"faces: {faces.shape}")
+
         gt_y = data.y.view(batch_size, -1).float().contiguous()
-        loss = F.mse_loss(output, gt_y)
+        loss = all_loss(output, gt_y, data)
         loss.backward()
         optimizer.step()
         losses.append(loss.item()) # 損失値の蓄積
@@ -86,7 +102,8 @@ def test(model, device, test_loader, test_datasize):
         # b = data.y.view(batch_size, -1).float()
         # correct += pred.eq(b).sum().item()
         gt_y = data.y.view(batch_size, -1).float().contiguous()
-        loss = F.mse_loss(output, gt_y)
+        # loss = F.mse_loss(output, gt_y)
+        loss = all_loss(output, gt_y, data)
         current_loss += loss.item() * output.size(0)
     epoch_loss = current_loss / test_datasize
     print(f'Validation Loss: {epoch_loss:.6f}')
