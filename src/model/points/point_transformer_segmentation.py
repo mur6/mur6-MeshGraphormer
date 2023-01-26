@@ -173,9 +173,16 @@ def train():
     total_loss = correct_nodes = total_nodes = 0
     for i, data in enumerate(train_loader):
         data = data.to(device)
+        print(f"data.x: {data.x.shape}")
+        print(f"data.pos: {data.pos.shape}")
+        print(f"data.x: {data.x[0]}")
+        print(f"data.pos: {data.pos[0]}")
+
         optimizer.zero_grad()
         out = model(data.x, data.pos, data.batch)
         loss = F.nll_loss(out, data.y)
+        print(f"data.y: {data.y.shape}")
+        print(f"out: {out.shape}")
         loss.backward()
         optimizer.step()
         total_loss += loss.item()
@@ -195,6 +202,10 @@ def test(loader):
     y_map = torch.empty(loader.dataset.num_classes, device=device).long()
     for data in loader:
         data = data.to(device)
+        print(f"data.x: {data.x.shape}")
+        print(f"data.pos: {data.pos.shape}")
+        
+        break
         outs = model(data.x, data.pos, data.batch)
 
         sizes = (data.ptr[1:] - data.ptr[:-1]).tolist()
