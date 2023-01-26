@@ -165,12 +165,11 @@ def main(filename):
     #     break
 
     faces = get_mano_faces()
-    # batch_size = train_loader.batch_size
     bs_faces = faces.repeat(batch_size, 1).view(batch_size, 1538, 3)
 
     for epoch in range(1, 1000 + 1):
-        train(model, device, train_loader, train_datasize, faces, optimizer)
-        test(model, device, test_loader, test_datasize, faces)
+        train(model, device, train_loader, train_datasize, bs_faces, optimizer)
+        test(model, device, test_loader, test_datasize, bs_faces)
         if epoch % 5 == 0:
             save_checkpoint(model, epoch)
         scheduler.step(epoch)
