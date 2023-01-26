@@ -193,3 +193,6 @@ if __name__ == "__main__":
         transform=transform,
         pre_transform=pre_transform,
         device=device)
+    for data in train_dataset:
+        print(data)
+        break
