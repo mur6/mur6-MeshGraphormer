@@ -187,7 +187,7 @@ def parse_args():
     parser.add_argument(
         "--resume_dir",
         type=Path,
-        required=True,
+        required=False,
     )
     parser.add_argument(
         "--input_filename",
