@@ -149,7 +149,7 @@ def main(filename):
         test(model, device, test_loader, test_datasize)
         if epoch % 5 == 0:
             save_checkpoint(model, epoch)
-        scheduler.step()
+        scheduler.step(epoch)
         # train(model, device, train_loader, optimizer)
         # iou = test(model, device, test_loader)
         # print(f'Epoch: {epoch:03d}, Test IoU: {iou:.4f}')
