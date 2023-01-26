@@ -137,7 +137,7 @@ def main(filename):
             warmup_lr_init=5e-5,
             warmup_prefix=True)
     optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
-    scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=10, gamma=0.75)
+    scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=7, gamma=0.85)
     ####### test:
     # for d in train_loader:
     #     print(d.x.shape)

@@ -67,8 +67,8 @@ def infer(model, test_loader):
             mesh = make_hand_mesh(data.pos)
             print("-------")
             output = model(data.x, data.pos, data.batch)
-            # print(output.shape)
-            visualize_points(mesh=mesh, points=output.numpy())
+            print(f"output.shape: {output.shape}")
+            # visualize_points(mesh=mesh, points=output.numpy())
             if idx == 0:
                 break
 
@@ -101,6 +101,7 @@ def main(resume_dir, input_filename):
         model = torch.load(resume_dir / "model.bin", map_location=torch.device('cpu'))
         state_dict = torch.load(resume_dir / "state_dict.bin", map_location=torch.device('cpu'))
         model.load_state_dict(state_dict)
+        print(f"Model class: {model.__class__.__name__}")
         infer(model, test_loader)
     else:
         raise Exception(f"{resume_dir} is not valid directory.")
