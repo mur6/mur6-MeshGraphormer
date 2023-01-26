@@ -62,14 +62,8 @@ def train(model, device, train_loader, train_datasize, optimizer, scheduler):
         # print(f"output: {output.shape}")
         # print()
         batch_size = output.shape[0]
-        # output = torch.flatten(output)
-        # print(f"output: {output.shape}")
-        # print(f"data.y: {data.y.shape}")
-        # loss = F.nll_loss(output, data.y)
-
-        # gt_y = data.y.view(batch_size, -1).float().contiguous()
-
-        loss = F.mse_loss(output, data.x)
+        gt_y = data.y.view(batch_size, -1).float().contiguous()
+        loss = F.mse_loss(output, gt_y)
         loss.backward()
         optimizer.step()
         losses.append(loss.item()) # 損失値の蓄積
@@ -91,8 +85,8 @@ def test(model, device, test_loader, test_datasize):
         batch_size = output.shape[0]
         # b = data.y.view(batch_size, -1).float()
         # correct += pred.eq(b).sum().item()
-        # gt_y = data.y.view(batch_size, -1).float().contiguous()
-        loss = F.mse_loss(output, data.x)
+        gt_y = data.y.view(batch_size, -1).float().contiguous()
+        loss = F.mse_loss(output, gt_y)
         current_loss += loss.item() * output.size(0)
     epoch_loss = current_loss / test_datasize
     print(f'Validation Loss: {epoch_loss:.6f}')
@@ -116,7 +110,7 @@ def main(filename):
 
     model = ClassificationNet(
         in_channels=3,
-        out_channels=20,
+        out_channels=20*3,
         dim_model=[32, 64, 128, 256, 512],
         ).to(device)
     # model = SegmentationNet(
