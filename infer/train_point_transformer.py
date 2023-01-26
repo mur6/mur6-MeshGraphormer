@@ -75,27 +75,45 @@ def all_loss(pred_output, gt_y, data, faces):
 #     return F.mse_loss(final_y_pred, gt_y)
 
 
+# def on_circle_loss(pred_output, data):
+#     batch_size = pred_output.shape[0]
+#     verts_3d = data.y.view(batch_size, 20, 3)
+#     print(f"verts_3d: {verts_3d.shape}")
+#     x = pred_output
+
+#     # # (x - x_0)^2 + (y - y_0)^2 + (z - z_0)^2 = r^2
+#     # pca_mean = data.pca_mean.view(batch_size, -1)
+#     # normal_v = data.normal_v.view(batch_size, -1)
+#     # print(f"pca_mean: {pca_mean.shape}")
+#     # print(f"normal_v: {normal_v.shape}")
+#     pred_pca_mean = x[:, :3]
+#     pred_normal_v = x[:, 3:]
+#     # print(f"pred_normal_v: {pred_normal_v.shape}")
+
+#     radius = data.radius
+#     loss_1 =  (pred_pca_mean - pca_mean).pow(2).sum(dim=-1) - radius.pow(2)
+#     d =  (normal_v * pca_mean).sum(dim=-1) #  a*x_0 + b*y_0 + c*z_0
+#     loss_2 = (pred_normal_v * pred_pca_mean).sum(dim=-1) - d
+#     # print(loss_1)
+#     # print(loss_2)
+#     loss = torch.cat((loss_1.pow(2), loss_2.pow(2)))
+#     return loss.sum()
+
 def on_circle_loss(pred_output, data):
     batch_size = pred_output.shape[0]
     verts_3d = data.y.view(batch_size, 20, 3)
-    print(f"verts_3d: {verts_3d.shape}")
-    x = pred_output
 
-    # (x - x_0)^2 + (y - y_0)^2 + (z - z_0)^2 = r^2
-    pca_mean = data.pca_mean.view(batch_size, -1)
-    normal_v = data.normal_v.view(batch_size, -1)
-    print(f"pca_mean: {pca_mean.shape}")
-    print(f"normal_v: {normal_v.shape}")
-    pred_pca_mean = x[:, :3]
-    pred_normal_v = x[:, 3:]
-    # print(f"pred_normal_v: {pred_normal_v.shape}")
+    pred_pca_mean = pred_output[:, :3]
+    pred_normal_v = pred_output[:, 3:]
 
-    radius = data.radius
-    loss_1 =  (pred_pca_mean - pca_mean).pow(2).sum(dim=-1) - radius.pow(2)
-    d =  (normal_v * pca_mean).sum(dim=-1) #  a*x_0 + b*y_0 + c*z_0
-    loss_2 = (pred_normal_v * pred_pca_mean).sum(dim=-1) - d
-    # print(loss_1)
-    # print(loss_2)
+    d =  (pred_normal_v * pred_pca_mean).sum(dim=-1) #  a*x_0 + b*y_0 + c*z_0
+    pred_normal_v  = pred_normal_v.unsqueeze(-2)
+    loss_2 = (verts_3d * pred_normal_v).sum(dim=(1, 2)) - d
+
+    pred_pca_mean = pred_pca_mean.unsqueeze(-2)
+    loss_1 =  (verts_3d - pred_pca_mean).pow(2).sum(dim=(1, 2)) - radius.pow(2)
+    loss_1 = loss_1 * 0.1
+
     loss = torch.cat((loss_1.pow(2), loss_2.pow(2)))
     return loss.sum()
 
