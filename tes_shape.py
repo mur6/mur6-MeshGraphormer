@@ -48,7 +48,7 @@ def main_2():
 # x = x.repeat(4).view(4, 3)
 # print(x)
 
-def on_circle_loss(x, pca_mean, normal_v):
+def _backup_on_circle_loss(x, pca_mean, normal_v):
     radius = torch.FloatTensor([0.0095])
     # radius torch.full((2, 3), 3.141592)
     # batch_size = pred_output.shape[0]
@@ -72,12 +72,45 @@ def on_circle_loss(x, pca_mean, normal_v):
     loss = torch.cat((loss_1.pow(2), loss_2.pow(2)))
     return loss.sum()
 
+def on_circle_loss(verts_3d, pred_pca_mean, pred_normal_v):
+    radius = torch.FloatTensor([0.0095])
+    # radius torch.full((2, 3), 3.141592)
+    # batch_size = pred_output.shape[0]
+    # # pred_output
+    # print(f"pred_output: {pred_output.shape}")
+    # # (x - x_0)^2 + (y - y_0)^2 + (z - z_0)^2 = r^2
+    # pca_mean = data.pca_mean.view(batch_size, -1)
+    # normal_v = data.normal_v.view(batch_size, -1)
+    print(f"verts_3d: {verts_3d.shape}")
+
+    d =  (pred_normal_v * pred_pca_mean).sum(dim=-1) #  a*x_0 + b*y_0 + c*z_0
+    pred_normal_v  = pred_normal_v.unsqueeze(-2)
+    loss_2 = (verts_3d * pred_normal_v).sum(dim=(1, 2)) - d
+
+    print(f"loss_2: {loss_2.shape}")
+    # print(loss_1)
+    pred_pca_mean = pred_pca_mean.unsqueeze(-2)
+    print(f"pred_pca_mean: {pred_pca_mean.shape}")
+    # print(f"normal_v: {normal_v.shape}")
+    #print(x[:, :3].shape)
+    loss_1 =  (verts_3d - pred_pca_mean).pow(2).sum(dim=(1, 2)) - radius.pow(2)
+    loss_1 = loss_1 * 0.1
+    # print(f"loss_1: {loss_1.shape}")
+    print(loss_1)
+    print(loss_2)
+    loss = torch.cat((loss_1.pow(2), loss_2.pow(2)))
+    return loss.sum()
+#+ F.mse_loss()
+
 
 # pred_output: torch.Size([32, 6])
 # pca_mean: torch.Size([32, 3])
 # normal_v: torch.Size([32, 3])
-pred_output = torch.randn(4, 6)
-pca_mean = torch.randn(4, 3)
-normal_v = torch.randn(4, 3)
-loss = on_circle_loss(pred_output, pca_mean, normal_v)
-print(loss)
+def main():
+    verts_3d = torch.randn(4, 20, 3)#: torch.Size([32, 20, 3])
+    pred_output = torch.randn(4, 6)
+    pca_mean = torch.randn(4, 3)
+    normal_v = torch.randn(4, 3)
+    loss = on_circle_loss(verts_3d, pca_mean, normal_v)
+    print(loss)
+main()
