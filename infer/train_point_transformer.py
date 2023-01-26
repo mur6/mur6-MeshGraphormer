@@ -36,7 +36,7 @@ def save_checkpoint(model, epoch, iteration=None):
 
 
 transform = T.Compose([
-    T.RandomJitter(0.01),
+    # T.RandomJitter(0.01),
     T.RandomRotate(15, axis=0),
     T.RandomRotate(15, axis=1),
     T.RandomRotate(15, axis=2),
