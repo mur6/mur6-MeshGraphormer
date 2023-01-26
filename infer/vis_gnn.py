@@ -68,7 +68,7 @@ def infer(model, test_loader):
             print("-------")
             output = model(data.x, data.pos, data.batch)
             print(f"output.shape: {output.shape}")
-            # visualize_points(mesh=mesh, points=output.numpy())
+            visualize_points(mesh=mesh, points=output.numpy().reshape(20, 3))
             if idx == 0:
                 break
 
