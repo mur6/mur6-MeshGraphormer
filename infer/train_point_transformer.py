@@ -61,18 +61,18 @@ def all_loss(pred_output, gt_y, data, faces):
     return F.mse_loss(pred_output, gt_y) + loss
 
 
-def cyclic_shift_loss(pred_output, gt_y):
-    pred_output = pred_output.view(-1, 20, 3)
-    gt_y = gt_y.view(-1, 20, 3)
-    # print(f"gt_y: {gt_y.shape}")
-    # print(f"pred_output: {pred_output.shape}")
-    lis = [torch.roll(pred_output, i, dims=1) for i in range(0, pred_output.shape[1])]
-    x = torch.stack(lis, dim=0)
-    # print(f"x: {x.shape}")
-    tmp_x = (x - gt_y).pow(2).sum(dim=(1, 2, 3))
-    final_y_pred = x[torch.argmin(tmp_x)]
-    # print(f"final_y_pred: {final_y_pred.shape}")
-    return F.mse_loss(final_y_pred, gt_y)
+# def cyclic_shift_loss(pred_output, gt_y):
+#     pred_output = pred_output.view(-1, 20, 3)
+#     gt_y = gt_y.view(-1, 20, 3)
+#     # print(f"gt_y: {gt_y.shape}")
+#     # print(f"pred_output: {pred_output.shape}")
+#     lis = [torch.roll(pred_output, i, dims=1) for i in range(0, pred_output.shape[1])]
+#     x = torch.stack(lis, dim=0)
+#     # print(f"x: {x.shape}")
+#     tmp_x = (x - gt_y).pow(2).sum(dim=(1, 2, 3))
+#     final_y_pred = x[torch.argmin(tmp_x)]
+#     # print(f"final_y_pred: {final_y_pred.shape}")
+#     return F.mse_loss(final_y_pred, gt_y)
 
 
 def train(model, device, train_loader, train_datasize, bs_faces, optimizer):
@@ -96,8 +96,8 @@ def train(model, device, train_loader, train_datasize, bs_faces, optimizer):
         # print(f"bs_faces: {bs_faces.shape}")
         gt_y = data.y.view(batch_size, -1).float().contiguous()
         # loss = all_loss(output, gt_y, data, bs_faces)
-        # loss = F.mse_loss(output, gt_y)
-        loss = cyclic_shift_loss(output, gt_y)
+        loss = F.mse_loss(output, gt_y)
+        # loss = cyclic_shift_loss(output, gt_y)
         loss.backward()
         optimizer.step()
         losses.append(loss.item()) # 損失値の蓄積
@@ -121,8 +121,8 @@ def test(model, device, test_loader, test_datasize, bs_faces):
         # correct += pred.eq(b).sum().item()
         gt_y = data.y.view(batch_size, -1).float().contiguous()
         # loss = all_loss(output, gt_y, data, bs_faces)
-        # loss = F.mse_loss(output, gt_y)
-        loss = cyclic_shift_loss(output, gt_y)
+        loss = F.mse_loss(output, gt_y)
+        # loss = cyclic_shift_loss(output, gt_y)
         current_loss += loss.item() * output.size(0)
     epoch_loss = current_loss / test_datasize
     print(f'Validation Loss: {epoch_loss:.6f}')
