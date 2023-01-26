@@ -121,10 +121,22 @@ def main(filename):
     # model = SegmentationNet()
     model.eval()
 
-    optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
-    # scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=20, gamma=0.5)
-    scheduler = torch.optim.lr_scheduler.ExponentialLR(optimizer, gamma=0.9)
-
+    if False:
+        optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
+        # scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=20, gamma=0.5)
+        scheduler = torch.optim.lr_scheduler.ExponentialLR(optimizer, gamma=0.9)
+    else:
+        optimizer = torch.optim.AdamW(model.parameters(), lr=0.002)
+        # scheduler = optim.lr_scheduler.ExponentialLR(optimizer, gamma=0.9)
+        scheduler = CosineLRScheduler(
+            optimizer,
+            t_initial=40,
+            cycle_limit=11,
+            cycle_decay=0.8,
+            lr_min=0.0001,
+            warmup_t=20,
+            warmup_lr_init=5e-5,
+            warmup_prefix=True)
     ####### test:
     # for d in train_loader:
     #     print(d.x.shape)
