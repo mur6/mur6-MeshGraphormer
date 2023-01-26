@@ -41,6 +41,16 @@ def visualize_one_point(*, mesh, a_point):
     scene.add_geometry(create_point_geom(a_point, "red"))
     scene.show()
 
+def visualize_points(*, mesh, points):
+    color = [102, 102, 102, 64]
+    for facet in mesh.facets:
+        #mesh.visual.face_colors[facet] = [color, color]
+        mesh.visual.face_colors[facet] = color
+    scene = trimesh.Scene()
+    scene.add_geometry(mesh)
+    for p in points:
+        scene.add_geometry(create_point_geom(p, "red"))
+    scene.show()
 
 def make_hand_mesh(gt_vertices):
     print(f"gt_vertices: {gt_vertices.shape}")
@@ -56,16 +66,20 @@ def infer(model, test_loader):
         for idx, data in enumerate(test_loader):
             mesh = make_hand_mesh(data.pos)
             print("-------")
-            output = model(data)
+            output = model(data.x, data.pos, data.batch)
             # print(output.shape)
-            visualize_one_point(mesh=mesh, a_point=output[0].numpy())
+            visualize_points(mesh=mesh, points=output.numpy())
             if idx == 0:
                 break
 
 
 def main(resume_dir, input_filename):
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-    train_dataset, test_dataset = load_data_for_geometric(input_filename, device)
+    train_dataset, test_dataset = load_data_for_geometric(
+        input_filename,
+        transform=None,
+        pre_transform=None,
+        device=device)
     train_datasize = len(train_dataset)
     test_datasize = len(test_dataset)
     print(f"train_datasize={train_datasize} test_datasize={test_datasize}")

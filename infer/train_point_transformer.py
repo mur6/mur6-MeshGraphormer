@@ -114,16 +114,16 @@ def main(filename):
     train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, drop_last=True)
     test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False, drop_last=True)
 
-    # model = ClassificationNet(
+    model = ClassificationNet(
+        in_channels=3,
+        out_channels=20,
+        dim_model=[32, 64, 128, 256, 512],
+        ).to(device)
+    # model = SegmentationNet(
     #     in_channels=3,
     #     out_channels=3,
     #     dim_model=[32, 64, 128, 256, 512],
-    #     ).to(device)
-    model = SegmentationNet(
-        in_channels=3,
-        out_channels=3,
-        dim_model=[32, 64, 128, 256, 512],
-    ).to(device)
+    # ).to(device)
     model.eval()
 
     if False:
