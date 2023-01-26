@@ -66,10 +66,10 @@ def train(model, device, train_loader, train_datasize, optimizer, scheduler):
         # print(f"output: {output.shape}")
         # print(f"data.y: {data.y.shape}")
         # loss = F.nll_loss(output, data.y)
-        # print(output.dtype, data.y.dtype)
-        gt_y = data.y.view(batch_size, -1).float().contiguous()
-        # print(f"gt_y: {gt_y.shape}")
-        loss = F.mse_loss(output, gt_y)
+
+        # gt_y = data.y.view(batch_size, -1).float().contiguous()
+
+        loss = F.mse_loss(output, data.x)
         loss.backward()
         optimizer.step()
         losses.append(loss.item()) # 損失値の蓄積
@@ -156,6 +156,7 @@ def main(filename):
         if epoch % 5 == 0:
             save_checkpoint(model, epoch)
         scheduler.step(epoch)
+        print(f"lr: {scheduler.get_last_lr()}")
         # train(model, device, train_loader, optimizer)
         # iou = test(model, device, test_loader)
         # print(f'Epoch: {epoch:03d}, Test IoU: {iou:.4f}')
