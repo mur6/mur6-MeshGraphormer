@@ -103,21 +103,35 @@ def on_circle_loss(pred_output, data):
     batch_size = pred_output.shape[0]
     verts_3d = data.y.view(batch_size, 20, 3)
 
-    pred_pca_mean = pred_output[:, :3]
-    pred_normal_v = pred_output[:, 3:]
+    pred_pca_mean = pred_output[:, :3].float()
+    pred_normal_v = pred_output[:, 3:].float()
+    # print(f"pred_pca_mean: {pred_pca_mean.shape}")
+    # print(f"pred_normal_v: {pred_normal_v.shape}")
+    gt_pca_mean = data.pca_mean.view(batch_size, -1).float()
+    gt_normal_v = data.normal_v.view(batch_size, -1).float()
+    # print(f"gt: pca_mean: {gt_pca_mean.shape}")
+    # print(f"gt: normal_v: {gt_normal_v.shape}")
+    loss_pca_mean = F.mse_loss(pred_pca_mean, gt_pca_mean)
+    loss_normal_v = F.mse_loss(pred_normal_v, gt_normal_v)
+    # print(f"loss: pca_mean: {loss_pca_mean} {loss_pca_mean.dtype}") # 0.0012
+    # print(f"loss: normal_v: {loss_normal_v} {loss_normal_v.dtype}") # 0.33
 
     d =  (pred_normal_v * pred_pca_mean).sum(dim=-1) #  a*x_0 + b*y_0 + c*z_0
     pred_normal_v  = pred_normal_v.unsqueeze(-2)
     loss_2 = (verts_3d * pred_normal_v).sum(dim=(1, 2)) - d
+    loss_2 = loss_2.pow(2).mean()
 
     pred_pca_mean = pred_pca_mean.unsqueeze(-2)
     radius = data.radius
-    loss_1 =  (verts_3d - pred_pca_mean).pow(2).sum(dim=(1, 2)) - radius.pow(2)
-    loss_1 = loss_1 * 0.1
-
-    loss = torch.cat((loss_1.pow(2), loss_2.pow(2)))
-    return loss.sum()
-
+    loss_1 = (verts_3d - pred_pca_mean).pow(2).sum(dim=(1, 2)) - radius.pow(2)
+    loss_1 = loss_1.pow(2).mean()
+    # print(f"loss_1: {loss_1} {loss_1.dtype}") # 0.73
+    # print(f"loss_2: {loss_2} {loss_2.dtype}") # 0.0017
+    # loss = torch.cat((loss_1.pow(2), loss_2.pow(2)))
+    loss = loss_pca_mean * 40.0 + loss_normal_v + loss_1 * 0.33 + loss_2 * 33.0
+    # print(f"loss: {loss} {loss.dtype}")
+    # print()
+    return loss.float()
 
 def train(model, device, train_loader, train_datasize, bs_faces, optimizer):
     model.train()
