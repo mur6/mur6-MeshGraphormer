@@ -240,7 +240,7 @@ def main(resume_dir, input_filename, batch_size, args):
     if True:
         optimizer = torch.optim.AdamW(model.parameters(), lr=0.001)
         # scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=7, gamma=gamma)
-        scheduler = torch.optim.lr_scheduler.ExponentialLR(optimizer, gamma=0.9)
+        scheduler = torch.optim.lr_scheduler.ExponentialLR(optimizer, gamma=gamma)
     ####### test:
     # for d in train_loader:
     #     print(d.x.shape)
