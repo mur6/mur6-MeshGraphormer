@@ -214,10 +214,12 @@ def main(resume_dir, input_filename, batch_size, args):
     if resume_dir:
         if (resume_dir / "model.bin").exists() and \
             (resume_dir / "state_dict.bin").exists():
-            # model = torch.load(resume_dir / "model.bin")
-            # state_dict = torch.load(resume_dir / "state_dict.bin")
-            model = torch.load(resume_dir / "model.bin", map_location=torch.device('cpu'))
-            state_dict = torch.load(resume_dir / "state_dict.bin", map_location=torch.device('cpu'))
+            if True:
+                model = torch.load(resume_dir / "model.bin")
+                state_dict = torch.load(resume_dir / "state_dict.bin")
+            else:
+                model = torch.load(resume_dir / "model.bin", map_location=torch.device('cpu'))
+                state_dict = torch.load(resume_dir / "state_dict.bin", map_location=torch.device('cpu'))
             model.load_state_dict(state_dict)
         else:
             raise Exception(f"{resume_dir} is not valid directory.")
