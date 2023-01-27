@@ -202,15 +202,25 @@ def main(resume_dir, input_filename, batch_size, args):
     test_datasize = len(test_dataset)
     print(f"train_datasize={train_datasize} test_datasize={test_datasize}")
 
-    # batch_size = 32
     train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, drop_last=True)
     test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False, drop_last=True)
 
-    model = ClassificationNet(
-        in_channels=3,
-        out_channels=2*3,
-        dim_model=[32, 64, 128, 256, 512],
-        ).to(device)
+    if resume_dir:
+        if (resume_dir / "model.bin").exists() and \
+            (resume_dir / "state_dict.bin").exists():
+            model = torch.load(resume_dir / "model.bin")
+            state_dict = torch.load(resume_dir / "state_dict.bin")
+            model.load_state_dict(state_dict)
+        else:
+            raise Exception(f"{resume_dir} is not valid directory.")
+    else:
+        model = ClassificationNet(
+            in_channels=3,
+            out_channels=2*3,
+            dim_model=[32, 64, 128, 256, 512],
+            ).to(device)
+    print(f"model: {model.__class__.__name__}")
+
     # model = SegmentationNet(
     #     in_channels=3,
     #     out_channels=3,
@@ -272,7 +282,6 @@ def parse_args():
     parser.add_argument(
         "--resume_dir",
         type=Path,
-        required=False,
     )
     parser.add_argument(
         "--input_filename",
