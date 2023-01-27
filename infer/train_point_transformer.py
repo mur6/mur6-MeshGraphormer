@@ -118,8 +118,8 @@ def on_circle_loss(pred_output, data):
     loss_normal_v = similarity(pred_normal_v, gt_normal_v)
     # print(f"loss_normal_v: {loss_normal_v.shape}")
     loss_normal_v = loss_normal_v.pow(2).mean()
-    # print(f"loss: pca_mean: {loss_pca_mean} {loss_pca_mean.dtype}") # 0.0012
-    # print(f"loss: normal_v: {loss_normal_v} {loss_normal_v.dtype}") # 0.33
+    # print(f"loss: pca_mean: {loss_pca_mean:.07}") # 0.0012
+    # print(f"loss: normal_v: {loss_normal_v:.07}") # 0.33
     d =  (pred_normal_v * pred_pca_mean).sum(dim=-1) #  a*x_0 + b*y_0 + c*z_0
     pred_normal_v  = pred_normal_v.unsqueeze(-2)
     loss_of_plane = (verts_3d * pred_normal_v).sum(dim=(1, 2)) - d
@@ -132,8 +132,8 @@ def on_circle_loss(pred_output, data):
     # print(f"loss_of_sphere: {loss_of_sphere} {loss_of_sphere.dtype}") # 0.73
     # print(f"loss_of_plane: {loss_of_plane}") # 0.0017
     # loss = torch.cat((loss_1.pow(2), loss_2.pow(2)))
-    loss_1 = loss_pca_mean * 25.0 + loss_normal_v * 1.75
-    loss_2 = loss_of_sphere * 7.5 + loss_of_plane * 30.0
+    loss_1 = loss_pca_mean + loss_normal_v
+    loss_2 = loss_of_sphere + loss_of_plane
     # print(f"loss_1:{loss_1}")
     # print(f"loss_2:{loss_2}")
     # print()
@@ -214,8 +214,10 @@ def main(resume_dir, input_filename, batch_size, args):
     if resume_dir:
         if (resume_dir / "model.bin").exists() and \
             (resume_dir / "state_dict.bin").exists():
-            model = torch.load(resume_dir / "model.bin")
-            state_dict = torch.load(resume_dir / "state_dict.bin")
+            # model = torch.load(resume_dir / "model.bin")
+            # state_dict = torch.load(resume_dir / "state_dict.bin")
+            model = torch.load(resume_dir / "model.bin", map_location=torch.device('cpu'))
+            state_dict = torch.load(resume_dir / "state_dict.bin", map_location=torch.device('cpu'))
             model.load_state_dict(state_dict)
         else:
             raise Exception(f"{resume_dir} is not valid directory.")

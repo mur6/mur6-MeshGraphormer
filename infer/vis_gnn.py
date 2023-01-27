@@ -41,6 +41,17 @@ def visualize_one_point(*, mesh, a_point):
     scene.add_geometry(create_point_geom(a_point, "red"))
     scene.show()
 
+def visualize_colored_points(*, mesh, points=[]):
+    color = [102, 102, 102, 64]
+    for facet in mesh.facets:
+        #mesh.visual.face_colors[facet] = [color, color]
+        mesh.visual.face_colors[facet] = color
+    scene = trimesh.Scene()
+    scene.add_geometry(mesh)
+    for (p, color) in points:
+        scene.add_geometry(create_point_geom(p, color))
+    scene.show()
+
 def visualize_points(*, mesh, points):
     color = [102, 102, 102, 64]
     for facet in mesh.facets:
@@ -59,6 +70,9 @@ def make_hand_mesh(gt_vertices):
     # mesh objects can be created from existing faces and vertex data
     return trimesh.Trimesh(vertices=gt_vertices, faces=mano_faces)
 
+def similarity(x1, x2, **kwargs):
+    return 1 - F.relu(F.cosine_similarity(x1, x2, **kwargs))
+
 
 def infer(model, test_loader):
     model.eval()
@@ -68,9 +82,21 @@ def infer(model, test_loader):
             print("-------")
             output = model(data.x, data.pos, data.batch)
             print(f"output.shape: {output.shape}")
-            visualize_points(mesh=mesh, points=output.numpy().reshape(20, 3))
-            if idx == 0:
-                break
+            print(f"output: {output.view(-1)}")
+            mean = output.view(-1)[:3]
+            normal_v = output.view(-1)[3:]
+            gt_normal_v = data.normal_v
+            print("pred:" , normal_v)
+            print(f"gt_normal_v: {gt_normal_v}")
+            cs = F.cosine_similarity(normal_v, normal_v, dim=0).abs()
+            print(cs)
+            # visualize_colored_points(mesh=mesh, points=[
+            #     (mean.numpy(), "red"),
+            #     (mean+normal_v, "blue"),
+            # ])
+            # if idx > 7:
+            #     break
+            break
 
 
 def main(resume_dir, input_filename):
