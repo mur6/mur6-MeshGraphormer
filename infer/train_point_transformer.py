@@ -112,10 +112,11 @@ def on_circle_loss(pred_output, data):
     # print(f"gt: pca_mean: {gt_pca_mean.shape}")
     # print(f"gt: normal_v: {gt_normal_v.shape}")
     loss_pca_mean = F.mse_loss(pred_pca_mean, gt_pca_mean)
-    loss_normal_v = F.mse_loss(pred_normal_v, gt_normal_v)
+    # loss_normal_v = F.cosine_similarity(pred_normal_v, gt_normal_v)
+    print(f"loss_normal_v: {loss_normal_v.shape}")
+    loss_normal_v = loss_normal_v.pow(2).mean()
     # print(f"loss: pca_mean: {loss_pca_mean} {loss_pca_mean.dtype}") # 0.0012
     # print(f"loss: normal_v: {loss_normal_v} {loss_normal_v.dtype}") # 0.33
-
     # d =  (pred_normal_v * pred_pca_mean).sum(dim=-1) #  a*x_0 + b*y_0 + c*z_0
     # pred_normal_v  = pred_normal_v.unsqueeze(-2)
     # loss_of_plane = (verts_3d * pred_normal_v).sum(dim=(1, 2)) - d
@@ -128,7 +129,7 @@ def on_circle_loss(pred_output, data):
     # print(f"loss_of_sphere: {loss_of_sphere} {loss_of_sphere.dtype}") # 0.73
     # print(f"loss_2: {loss_2} {loss_2.dtype}") # 0.0017
     # loss = torch.cat((loss_1.pow(2), loss_2.pow(2)))
-    loss = loss_pca_mean * 100.0 + loss_normal_v * 0.5 + loss_of_sphere * 1.0 # + loss_of_plane * 33.0
+    loss = loss_pca_mean * 100.0 + loss_normal_v * 0.5# + loss_of_sphere * 1.0 # + loss_of_plane * 33.0
     # print(f"loss: {loss} {loss.dtype}")
     # print()
     return loss.float()
