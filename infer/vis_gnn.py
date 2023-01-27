@@ -88,15 +88,14 @@ def infer(model, test_loader):
             gt_normal_v = data.normal_v
             print("pred:" , normal_v)
             print(f"gt_normal_v: {gt_normal_v}")
-            cs = F.cosine_similarity(normal_v, normal_v, dim=0).abs()
-            print(cs)
-            # visualize_colored_points(mesh=mesh, points=[
-            #     (mean.numpy(), "red"),
-            #     (mean+normal_v, "blue"),
-            # ])
-            # if idx > 7:
-            #     break
-            break
+            # cs = F.cosine_similarity(normal_v, normal_v, dim=0).abs()
+            # print(cs)
+            visualize_colored_points(mesh=mesh, points=[
+                (mean.numpy(), "red"),
+                (mean+normal_v, "blue"),
+            ])
+            if idx > 5:
+                break
 
 
 def main(resume_dir, input_filename):
