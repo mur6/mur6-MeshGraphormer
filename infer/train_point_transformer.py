@@ -100,7 +100,7 @@ def all_loss(pred_output, gt_y, data, faces):
 #     return loss.sum()
 
 def similarity(x1, x2, **kwargs):
-    return 1 - F.relu(F.cosine_similarity(x1, x2, **kwargs))
+    return 1 - F.leaky_relu(F.cosine_similarity(x1, x2, **kwargs))
 
 def on_circle_loss(pred_output, data):
     batch_size = pred_output.shape[0]
