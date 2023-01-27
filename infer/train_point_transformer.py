@@ -99,6 +99,9 @@ def all_loss(pred_output, gt_y, data, faces):
 #     loss = torch.cat((loss_1.pow(2), loss_2.pow(2)))
 #     return loss.sum()
 
+def similarity(x1, x2, **kwargs):
+    return 1 - F.relu(F.cosine_similarity(x1, x2, **kwargs))
+
 def on_circle_loss(pred_output, data):
     batch_size = pred_output.shape[0]
     verts_3d = data.y.view(batch_size, 20, 3)
@@ -112,7 +115,7 @@ def on_circle_loss(pred_output, data):
     # print(f"gt: pca_mean: {gt_pca_mean.shape}")
     # print(f"gt: normal_v: {gt_normal_v.shape}")
     loss_pca_mean = F.mse_loss(pred_pca_mean, gt_pca_mean)
-    loss_normal_v = F.cosine_similarity(pred_normal_v, gt_normal_v)
+    loss_normal_v = similarity(pred_normal_v, gt_normal_v)
     # print(f"loss_normal_v: {loss_normal_v.shape}")
     loss_normal_v = loss_normal_v.pow(2).mean()
     # print(f"loss: pca_mean: {loss_pca_mean} {loss_pca_mean.dtype}") # 0.0012
