@@ -205,6 +205,7 @@ def main(resume_dir, input_filename, batch_size, args):
     train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, drop_last=True)
     test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False, drop_last=True)
 
+    print(f"resume_dir: {resume_dir}")
     if resume_dir:
         if (resume_dir / "model.bin").exists() and \
             (resume_dir / "state_dict.bin").exists():
