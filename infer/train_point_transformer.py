@@ -108,7 +108,7 @@ def get_loss_3d_plane(verts_3d, pred_normal_v, pred_pca_mean):
     pred_normal_v  = pred_normal_v.unsqueeze(-2)
     loss_of_plane = (verts_3d * pred_normal_v).sum(dim=(1, 2)) - d
     loss_of_plane = loss_of_plane.pow(2).mean()
-    print(f"loss_of_plane: {loss_of_plane}")
+    #print(f"loss_of_plane: {loss_of_plane}") # 0.095
     return loss_of_plane
 
 
@@ -116,14 +116,12 @@ def get_loss_3d_sphere(verts_3d, pred_pca_mean, pred_radius):
     pred_pca_mean = pred_pca_mean.unsqueeze(-2)
     x = (verts_3d - pred_pca_mean).pow(2).sum(dim=-1) # [32, 20]
     pred_radius  = pred_radius.pow(2).unsqueeze(-1)
-    print(f"x: {x.shape}")
-    print(f"pred_radius: {pred_radius.shape}")
-
+    # print(f"x: {x.shape}")
+    # print(f"pred_radius: {pred_radius.shape}")
     loss_of_sphere = x - pred_radius
-
-    print(f"loss_of_sphere: {loss_of_sphere.shape}")
+    # print(f"loss_of_sphere: {loss_of_sphere.shape}")
     loss_of_sphere = loss_of_sphere.pow(2).mean()
-    print(f"loss_of_sphere: value={loss_of_sphere}") # 0.73
+    # print(f"loss_of_sphere: value={loss_of_sphere}") # 0.0004326337
     return loss_of_sphere
 
 
@@ -156,14 +154,14 @@ def on_circle_loss(pred_output, data):
 
     loss_of_plane = get_loss_3d_plane(verts_3d, pred_normal_v, pred_pca_mean)
     loss_of_sphere = get_loss_3d_sphere(verts_3d, pred_pca_mean, pred_radius)
-    print(f"loss: plane: {loss_of_plane:.07}")
-    print(f"loss: sphere: {loss_of_sphere:.07}")
+    # print(f"loss: plane: {loss_of_plane:.07}")
+    # print(f"loss: sphere: {loss_of_sphere:.07}")
 
     loss_2 = loss_of_sphere + loss_of_plane
-    # print(f"loss_1:{loss_1}")
-    # print(f"loss_2:{loss_2}")
+    print(f"loss_1:{loss_1}")
+    print(f"loss_2:{loss_2}")
     # print()
-    return loss_1
+    return loss_1 * loss_2
 
 def train(model, device, train_loader, train_datasize, bs_faces, optimizer):
     model.train()
