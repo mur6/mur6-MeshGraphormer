@@ -146,16 +146,16 @@ def on_circle_loss(pred_output, data):
     loss_normal_v = similarity(pred_normal_v, gt_normal_v)
     loss_normal_v = loss_normal_v.pow(2).mean()
     loss_radius = F.mse_loss(pred_radius, gt_radius)
-    # print(f"loss: pca_mean: {loss_pca_mean:.07}") # 0.004
-    # print(f"loss: normal_v: {loss_normal_v:.07}") # 0.33
-    # print(f"loss: radius: {loss_radius:.07}") # 0.0009
+    print(f"loss: pca_mean: {loss_pca_mean:.07}") # 0.004
+    print(f"loss: normal_v: {loss_normal_v:.07}") # 0.33
+    print(f"loss: radius: {loss_radius:.07}") # 0.0009
 
     loss_1 = loss_pca_mean * 10.0 + loss_normal_v * 0.33 + loss_radius * 20.0
 
     loss_of_plane = get_loss_3d_plane(verts_3d, pred_normal_v, pred_pca_mean)
     loss_of_sphere = get_loss_3d_sphere(verts_3d, pred_pca_mean, pred_radius)
-    # print(f"loss: plane: {loss_of_plane:.07}")
-    # print(f"loss: sphere: {loss_of_sphere:.07}")
+    print(f"loss: plane: {loss_of_plane:.07}")
+    print(f"loss: sphere: {loss_of_sphere:.07}")
 
     loss_2 = loss_of_plane * 10.0 + loss_of_sphere * 1000.0
     # print(f"loss_1:{loss_1}")
