@@ -287,10 +287,10 @@ def main(resume_dir, input_filename, batch_size, args):
         scheduler = torch.optim.lr_scheduler.ExponentialLR(optimizer, gamma=gamma)
         # scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=15, eta_min=0.0001)
     if True:
-        optimizer = torch.optim.RAdam(model.parameters(), lr=9e-5)
+        optimizer = torch.optim.RAdam(model.parameters(), lr=5e-5)
         # scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=5, gamma=gamma)
         # scheduler = torch.optim.lr_scheduler.ExponentialLR(optimizer, gamma=gamma)
-        scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=30, eta_min=2e-05)
+        scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=20, eta_min=1e-05)
     ####### test:
     # for d in train_loader:
     #     print(d.x.shape)
