@@ -161,7 +161,7 @@ def on_circle_loss(pred_output, data):
     # print(f"loss_1:{loss_1}")
     # print(f"loss_2:{loss_2}")
     # print()
-    return loss_1 * loss_2
+    return loss_1 + loss_2
 
 def train(model, device, train_loader, train_datasize, bs_faces, optimizer):
     model.train()
