@@ -281,11 +281,16 @@ def main(resume_dir, input_filename, batch_size, args):
             warmup_t=20,
             warmup_lr_init=5e-5,
             warmup_prefix=True)
-    if True:
+    if False:
         optimizer = torch.optim.AdamW(model.parameters(), lr=0.00025)
         # scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=5, gamma=gamma)
         scheduler = torch.optim.lr_scheduler.ExponentialLR(optimizer, gamma=gamma)
         # scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=15, eta_min=0.0001)
+    if True:
+        optimizer = torch.optim.RAdam(model.parameters(), lr=0.00025)
+        # scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=5, gamma=gamma)
+        # scheduler = torch.optim.lr_scheduler.ExponentialLR(optimizer, gamma=gamma)
+        scheduler = torch.optim.CosineAnnealingLR(optimizer, T_max=30, eta_min=0.00001)
     ####### test:
     # for d in train_loader:
     #     print(d.x.shape)
