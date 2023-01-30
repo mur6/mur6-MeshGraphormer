@@ -1,5 +1,6 @@
 from pathlib import Path
 import argparse
+import math
 
 import trimesh
 import torch
@@ -74,6 +75,22 @@ def similarity(x1, x2, **kwargs):
     return 1 - F.relu(F.cosine_similarity(x1, x2, **kwargs))
 
 
+def conv_circle(normal_v, radius):
+
+    def _circle(a, b, radius):
+        theta = torch.linspace(-math.pi, math.pi, steps=100)
+        theta = theta.expand(3, -1).t()
+        z = a.unsqueeze(0) * torch.cos(theta) + b.unsqueeze(0) * torch.sin(theta)
+        return z * radius
+
+    # print(normal_v, normal_v.tolist())
+    input = torch.tensor([normal_v.tolist(), [0, 1, 0], [0, 0, 1]]).t()
+    q, r = torch.linalg.qr(input)
+    a = q[:, 1]
+    b = q[:, 2]
+    return _circle(a, b, radius)
+
+
 def infer(model, test_loader):
     model.eval()
     with torch.no_grad():
@@ -96,12 +113,15 @@ def infer(model, test_loader):
             print(f"gt:normal_v: {gt_normal_v}")
             print(f"類似度: {F.cosine_similarity(normal_v, gt_normal_v, 0)}")
             # cs = F.cosine_similarity(normal_v, normal_v, dim=0).abs()
-            # print(cs)
-            visualize_colored_points(mesh=mesh, points=[
-                (mean.numpy(), "red"),
-                (mean+normal_v, "blue"),
-            ])
-            if idx == 3:
+            circle_points = conv_circle(normal_v, radius)
+            print(circle_points.shape)
+            circle_points = circle_points + mean.unsqueeze(0)
+            # visualize_colored_points(mesh=mesh, points=[
+            #     (mean.numpy(), "red"),
+            #     (mean+normal_v, "blue"),
+            # ])
+            visualize_points(mesh=mesh, points=circle_points)
+            if idx == 4:
                 break
 
 
