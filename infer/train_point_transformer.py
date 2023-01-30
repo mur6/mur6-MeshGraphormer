@@ -139,31 +139,29 @@ def on_circle_loss(pred_output, data):
     gt_normal_v = data.normal_v.view(batch_size, -1).float()
     gt_radius = data.radius.float()
 
-    # print(f"gt: pca_mean: {gt_pca_mean.shape}")
-    # print(f"gt: normal_v: {gt_normal_v.shape}")
-    # print(f"gt: radius: {gt_radius.shape}")
     loss_pca_mean = F.mse_loss(pred_pca_mean, gt_pca_mean)
     loss_pca_mean = loss_pca_mean * 100.0
     loss_normal_v = similarity(pred_normal_v, gt_normal_v)
     loss_normal_v = loss_normal_v.pow(2).mean()
-    loss_normal_v = loss_normal_v * 0.1
-    loss_radius = F.mse_loss(pred_radius, gt_radius) * 5000.0
-    # print(f"loss: pca_mean: {loss_pca_mean:.07}") # 0.004
-    # print(f"loss: normal_v: {loss_normal_v:.07}") # 0.33
-    # print(f"loss: radius: {loss_radius:.07}") # 0.0009
+    # loss_normal_v = loss_normal_v * 1.0
+    loss_radius = F.mse_loss(pred_radius, gt_radius)
+    loss_radius *= 1e4
+    debug = False
+    if debug:
+        print(f"gt: pca_mean: {gt_pca_mean.shape}")
+        print(f"gt: normal_v: {gt_normal_v.shape}")
+        print(f"gt: radius: {gt_radius.shape}")
+        print(f"loss: pca_mean: {loss_pca_mean:.07}") # 0.004
+        print(f"loss: normal_v: {loss_normal_v:.07}") # 0.33
+        print(f"loss: radius: {loss_radius:.07}") # 0.0009
 
-    loss_1 = loss_pca_mean + loss_normal_v + loss_radius
-
-    loss_of_plane = get_loss_3d_plane(verts_3d, pred_normal_v, pred_pca_mean) * 5.0
-    loss_of_sphere = get_loss_3d_sphere(verts_3d, pred_pca_mean, pred_radius) * 10000.0
-    # print(f"loss: plane: {loss_of_plane:.07}")
-    # print(f"loss: sphere: {loss_of_sphere:.07}")
-    # print()
-    loss_2 = loss_of_plane + loss_of_sphere
-    # print(f"loss_1:{loss_1}")
-    # print(f"loss_2:{loss_2}")
-
-    return loss_1 + loss_2
+    loss_of_plane = get_loss_3d_plane(verts_3d, pred_normal_v, pred_pca_mean) * 10.0
+    loss_of_sphere = get_loss_3d_sphere(verts_3d, pred_pca_mean, pred_radius) * 1e4
+    if debug:
+        print(f"loss: plane: {loss_of_plane:.07}")
+        print(f"loss: sphere: {loss_of_sphere:.07}")
+        print()
+    return loss_pca_mean + loss_normal_v + loss_radius + loss_of_plane + loss_of_sphere
 
 def train(model, device, train_loader, train_datasize, bs_faces, optimizer):
     model.train()

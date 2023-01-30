@@ -85,16 +85,23 @@ def infer(model, test_loader):
             print(f"output: {output.view(-1)}")
             mean = output.view(-1)[:3]
             normal_v = output.view(-1)[3:6]
+            radius = output.view(-1)[6:]
             gt_normal_v = data.normal_v
-            print("pred:" , normal_v)
-            print(f"gt_normal_v: {gt_normal_v}")
+            gt_radius = data.radius
+            print(f"pred: mean: {mean}")
+            print(f"gt: mean: {data.pca_mean}")
+            print(f"pred: radius: {radius}")
+            print(f"gt: radius: {gt_radius}")
+            print(f"pred: normal_v: {normal_v}")
+            print(f"gt:normal_v: {gt_normal_v}")
+            print(f"類似度: {F.cosine_similarity(normal_v, gt_normal_v, 0)}")
             # cs = F.cosine_similarity(normal_v, normal_v, dim=0).abs()
             # print(cs)
-            visualize_colored_points(mesh=mesh, points=[
-                (mean.numpy(), "red"),
-                (mean+normal_v, "blue"),
-            ])
-            if idx == 2:
+            # visualize_colored_points(mesh=mesh, points=[
+            #     (mean.numpy(), "red"),
+            #     (mean+normal_v, "blue"),
+            # ])
+            if idx == 3:
                 break
 
 
