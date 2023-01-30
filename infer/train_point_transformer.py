@@ -156,7 +156,7 @@ def on_circle_loss(pred_output, data):
         print(f"loss: radius: {loss_radius:.07}") # 0.0009
 
     loss_of_plane = get_loss_3d_plane(verts_3d, pred_normal_v, pred_pca_mean) * 100.0
-    loss_of_sphere = get_loss_3d_sphere(verts_3d, pred_pca_mean, pred_radius) * 1e3
+    loss_of_sphere = get_loss_3d_sphere(verts_3d, pred_pca_mean, pred_radius) * 1e5
     if debug:
         print(f"loss: plane: {loss_of_plane:.07}")
         print(f"loss: sphere: {loss_of_sphere:.07}")
