@@ -146,7 +146,7 @@ def on_circle_loss(pred_output, data):
     # loss_normal_v = loss_normal_v * 1.0
     loss_radius = F.mse_loss(pred_radius, gt_radius)
     loss_radius *= 1e4
-    debug = True
+    debug = False
     if debug:
         print(f"gt: pca_mean: {gt_pca_mean.shape}")
         print(f"gt: normal_v: {gt_normal_v.shape}")
