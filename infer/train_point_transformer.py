@@ -146,7 +146,7 @@ def on_circle_loss(pred_output, data):
     # print(f"loss: radius: {loss_radius:.07}") # 0.0009
 
     # loss = torch.cat((loss_1.pow(2), loss_2.pow(2)))
-    loss_1 = loss_pca_mean * 100.0 + loss_normal_v + loss_radius * 200.0
+    loss_1 = loss_pca_mean * 10.0 + loss_normal_v * 0.33 + loss_radius * 20.0
     # loss_2 = loss_of_sphere + loss_of_plane
     # print(f"loss_1:{loss_1}")
     # print(f"loss_2:{loss_2}")
