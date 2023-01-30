@@ -84,7 +84,7 @@ def infer(model, test_loader):
             print(f"output.shape: {output.shape}")
             print(f"output: {output.view(-1)}")
             mean = output.view(-1)[:3]
-            normal_v = output.view(-1)[3:]
+            normal_v = output.view(-1)[3:6]
             gt_normal_v = data.normal_v
             print("pred:" , normal_v)
             print(f"gt_normal_v: {gt_normal_v}")
@@ -94,7 +94,7 @@ def infer(model, test_loader):
                 (mean.numpy(), "red"),
                 (mean+normal_v, "blue"),
             ])
-            if idx > 5:
+            if idx == 2:
                 break
 
 
