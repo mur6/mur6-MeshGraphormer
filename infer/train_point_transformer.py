@@ -103,20 +103,27 @@ def similarity(x1, x2, **kwargs):
     return 1 - F.leaky_relu(F.cosine_similarity(x1, x2, **kwargs))
 
 
-def loss_3d_plane(verts_3d, pred_pca_mean):
+def get_loss_3d_plane(verts_3d, pred_pca_mean):
     d =  (pred_normal_v * pred_pca_mean).sum(dim=-1) #  a*x_0 + b*y_0 + c*z_0
     pred_normal_v  = pred_normal_v.unsqueeze(-2)
     loss_of_plane = (verts_3d * pred_normal_v).sum(dim=(1, 2)) - d
     loss_of_plane = loss_of_plane.pow(2).mean()
+    print(f"loss_of_plane: {loss_of_plane}")
     return loss_of_plane
 
 
-def loss_3d_plane(verts_3d, pred_pca_mean, pred_radius):
+def get_loss_3d_sphere(verts_3d, pred_pca_mean, pred_radius):
     pred_pca_mean = pred_pca_mean.unsqueeze(-2)
-    loss_of_sphere = (verts_3d - pred_pca_mean).pow(2).sum(dim=(1, 2)) - pred_radius.pow(2)
+    x = (verts_3d - pred_pca_mean).pow(2)
+    print(f"x: {x.shape}")
+    loss_of_sphere = x.sum(dim=(1, 2))
+    print(f"pred_radius: {pred_radius.shape}")
+    pred_radius  = pred_radius.pow(2)
+    print(f"pred_radius: {pred_radius.shape}")
     loss_of_sphere = loss_of_sphere.pow(2).mean()
-    # print(f"loss_of_sphere: {loss_of_sphere} {loss_of_sphere.dtype}") # 0.73
-    # print(f"loss_of_plane: {loss_of_plane}") # 0.0017
+    # 
+    # 
+    print(f"loss_of_sphere: {loss_of_sphere}") # 0.73
     return loss_of_sphere
 
 
@@ -145,9 +152,14 @@ def on_circle_loss(pred_output, data):
     # print(f"loss: normal_v: {loss_normal_v:.07}") # 0.33
     # print(f"loss: radius: {loss_radius:.07}") # 0.0009
 
-    # loss = torch.cat((loss_1.pow(2), loss_2.pow(2)))
     loss_1 = loss_pca_mean * 10.0 + loss_normal_v * 0.33 + loss_radius * 20.0
-    # loss_2 = loss_of_sphere + loss_of_plane
+
+    loss_of_plane = get_loss_3d_plane(verts_3d, pred_pca_mean)
+    loss_of_sphere = get_loss_3d_sphere(verts_3d, pred_pca_mean, pred_radius)
+    print(f"loss: plane: {loss_of_plane:.07}")
+    print(f"loss: sphere: {loss_of_sphere:.07}")
+
+    loss_2 = loss_of_sphere + loss_of_plane
     # print(f"loss_1:{loss_1}")
     # print(f"loss_2:{loss_2}")
     # print()
