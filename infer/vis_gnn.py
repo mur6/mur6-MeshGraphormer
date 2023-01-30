@@ -97,10 +97,10 @@ def infer(model, test_loader):
             print(f"類似度: {F.cosine_similarity(normal_v, gt_normal_v, 0)}")
             # cs = F.cosine_similarity(normal_v, normal_v, dim=0).abs()
             # print(cs)
-            # visualize_colored_points(mesh=mesh, points=[
-            #     (mean.numpy(), "red"),
-            #     (mean+normal_v, "blue"),
-            # ])
+            visualize_colored_points(mesh=mesh, points=[
+                (mean.numpy(), "red"),
+                (mean+normal_v, "blue"),
+            ])
             if idx == 3:
                 break
 

@@ -146,7 +146,7 @@ def on_circle_loss(pred_output, data):
     # loss_normal_v = loss_normal_v * 1.0
     loss_radius = F.mse_loss(pred_radius, gt_radius)
     loss_radius *= 1e4
-    debug = False
+    debug = True
     if debug:
         print(f"gt: pca_mean: {gt_pca_mean.shape}")
         print(f"gt: normal_v: {gt_normal_v.shape}")
@@ -155,8 +155,8 @@ def on_circle_loss(pred_output, data):
         print(f"loss: normal_v: {loss_normal_v:.07}") # 0.33
         print(f"loss: radius: {loss_radius:.07}") # 0.0009
 
-    loss_of_plane = get_loss_3d_plane(verts_3d, pred_normal_v, pred_pca_mean) * 10.0
-    loss_of_sphere = get_loss_3d_sphere(verts_3d, pred_pca_mean, pred_radius) * 1e4
+    loss_of_plane = get_loss_3d_plane(verts_3d, pred_normal_v, pred_pca_mean) * 100.0
+    loss_of_sphere = get_loss_3d_sphere(verts_3d, pred_pca_mean, pred_radius) * 1e3
     if debug:
         print(f"loss: plane: {loss_of_plane:.07}")
         print(f"loss: sphere: {loss_of_sphere:.07}")
