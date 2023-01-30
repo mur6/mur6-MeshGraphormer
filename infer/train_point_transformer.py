@@ -143,26 +143,26 @@ def on_circle_loss(pred_output, data):
     # print(f"gt: normal_v: {gt_normal_v.shape}")
     # print(f"gt: radius: {gt_radius.shape}")
     loss_pca_mean = F.mse_loss(pred_pca_mean, gt_pca_mean)
-    loss_pca_mean = loss_pca_mean * 10.0
+    loss_pca_mean = loss_pca_mean * 100.0
     loss_normal_v = similarity(pred_normal_v, gt_normal_v)
     loss_normal_v = loss_normal_v.pow(2).mean()
-    loss_normal_v = loss_normal_v * 0.5
-    loss_radius = F.mse_loss(pred_radius, gt_radius) * 800.0
+    loss_normal_v = loss_normal_v * 0.1
+    loss_radius = F.mse_loss(pred_radius, gt_radius) * 5000.0
     # print(f"loss: pca_mean: {loss_pca_mean:.07}") # 0.004
     # print(f"loss: normal_v: {loss_normal_v:.07}") # 0.33
     # print(f"loss: radius: {loss_radius:.07}") # 0.0009
 
     loss_1 = loss_pca_mean + loss_normal_v + loss_radius
 
-    loss_of_plane = get_loss_3d_plane(verts_3d, pred_normal_v, pred_pca_mean) * 50.0
+    loss_of_plane = get_loss_3d_plane(verts_3d, pred_normal_v, pred_pca_mean) * 5.0
     loss_of_sphere = get_loss_3d_sphere(verts_3d, pred_pca_mean, pred_radius) * 10000.0
     # print(f"loss: plane: {loss_of_plane:.07}")
     # print(f"loss: sphere: {loss_of_sphere:.07}")
-
+    # print()
     loss_2 = loss_of_plane + loss_of_sphere
     # print(f"loss_1:{loss_1}")
     # print(f"loss_2:{loss_2}")
-    # print()
+
     return loss_1 + loss_2
 
 def train(model, device, train_loader, train_datasize, bs_faces, optimizer):
@@ -240,7 +240,7 @@ def main(resume_dir, input_filename, batch_size, args):
     if resume_dir:
         if (resume_dir / "model.bin").exists() and \
             (resume_dir / "state_dict.bin").exists():
-            if True:
+            if torch.cuda.is_available():
                 model = torch.load(resume_dir / "model.bin")
                 state_dict = torch.load(resume_dir / "state_dict.bin")
             else:

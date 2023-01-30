@@ -42,7 +42,7 @@ def visualize_one_point(*, mesh, a_point):
     scene.show()
 
 def visualize_colored_points(*, mesh, points=[]):
-    color = [102, 102, 102, 64]
+    color = [102, 102, 102, 10]
     for facet in mesh.facets:
         #mesh.visual.face_colors[facet] = [color, color]
         mesh.visual.face_colors[facet] = color
