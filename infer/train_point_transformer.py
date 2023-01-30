@@ -102,42 +102,56 @@ def all_loss(pred_output, gt_y, data, faces):
 def similarity(x1, x2, **kwargs):
     return 1 - F.leaky_relu(F.cosine_similarity(x1, x2, **kwargs))
 
+
+def loss_3d_plane(verts_3d, pred_pca_mean):
+    d =  (pred_normal_v * pred_pca_mean).sum(dim=-1) #  a*x_0 + b*y_0 + c*z_0
+    pred_normal_v  = pred_normal_v.unsqueeze(-2)
+    loss_of_plane = (verts_3d * pred_normal_v).sum(dim=(1, 2)) - d
+    loss_of_plane = loss_of_plane.pow(2).mean()
+    return loss_of_plane
+
+
+def loss_3d_plane(verts_3d, pred_pca_mean, pred_radius):
+    pred_pca_mean = pred_pca_mean.unsqueeze(-2)
+    loss_of_sphere = (verts_3d - pred_pca_mean).pow(2).sum(dim=(1, 2)) - pred_radius.pow(2)
+    loss_of_sphere = loss_of_sphere.pow(2).mean()
+    # print(f"loss_of_sphere: {loss_of_sphere} {loss_of_sphere.dtype}") # 0.73
+    # print(f"loss_of_plane: {loss_of_plane}") # 0.0017
+    return loss_of_sphere
+
+
 def on_circle_loss(pred_output, data):
     batch_size = pred_output.shape[0]
     verts_3d = data.y.view(batch_size, 20, 3)
 
     pred_pca_mean = pred_output[:, :3].float()
-    pred_normal_v = pred_output[:, 3:].float()
-    # print(f"pred_pca_mean: {pred_pca_mean.shape}")
-    # print(f"pred_normal_v: {pred_normal_v.shape}")
+    pred_normal_v = pred_output[:, 3:6].float()
+    pred_radius = pred_output[:, 6:].squeeze(-1).float()
+    print(f"pred_pca_mean: {pred_pca_mean.shape}")
+    print(f"pred_normal_v: {pred_normal_v.shape}")
+    print(f"pred_radius: {pred_radius.shape}")
     gt_pca_mean = data.pca_mean.view(batch_size, -1).float()
     gt_normal_v = data.normal_v.view(batch_size, -1).float()
+    gt_radius = data.radius.float()
+
     # print(f"gt: pca_mean: {gt_pca_mean.shape}")
     # print(f"gt: normal_v: {gt_normal_v.shape}")
+    # print(f"gt: radius: {gt_radius.shape}")
     loss_pca_mean = F.mse_loss(pred_pca_mean, gt_pca_mean)
     loss_normal_v = similarity(pred_normal_v, gt_normal_v)
-    # print(f"loss_normal_v: {loss_normal_v.shape}")
     loss_normal_v = loss_normal_v.pow(2).mean()
-    # print(f"loss: pca_mean: {loss_pca_mean:.07}") # 0.0012
+    loss_radius = F.mse_loss(pred_radius, gt_radius)
+    # print(f"loss: pca_mean: {loss_pca_mean:.07}") # 0.004
     # print(f"loss: normal_v: {loss_normal_v:.07}") # 0.33
-    d =  (pred_normal_v * pred_pca_mean).sum(dim=-1) #  a*x_0 + b*y_0 + c*z_0
-    pred_normal_v  = pred_normal_v.unsqueeze(-2)
-    loss_of_plane = (verts_3d * pred_normal_v).sum(dim=(1, 2)) - d
-    loss_of_plane = loss_of_plane.pow(2).mean()
+    # print(f"loss: radius: {loss_radius:.07}") # 0.0009
 
-    pred_pca_mean = pred_pca_mean.unsqueeze(-2)
-    radius = data.radius
-    loss_of_sphere = (verts_3d - pred_pca_mean).pow(2).sum(dim=(1, 2)) - radius.pow(2)
-    loss_of_sphere = loss_of_sphere.pow(2).mean()
-    # print(f"loss_of_sphere: {loss_of_sphere} {loss_of_sphere.dtype}") # 0.73
-    # print(f"loss_of_plane: {loss_of_plane}") # 0.0017
     # loss = torch.cat((loss_1.pow(2), loss_2.pow(2)))
-    loss_1 = loss_pca_mean + loss_normal_v * 0.002
-    loss_2 = loss_of_sphere + loss_of_plane
+    loss_1 = loss_pca_mean * 100.0 + loss_normal_v + loss_radius * 200.0
+    # loss_2 = loss_of_sphere + loss_of_plane
     # print(f"loss_1:{loss_1}")
     # print(f"loss_2:{loss_2}")
     # print()
-    return (loss_1 + loss_2).float()
+    return loss_1
 
 def train(model, device, train_loader, train_datasize, bs_faces, optimizer):
     model.train()
@@ -226,7 +240,7 @@ def main(resume_dir, input_filename, batch_size, args):
     else:
         model = ClassificationNet(
             in_channels=3,
-            out_channels=2*3,
+            out_channels=7,
             dim_model=[32, 64, 128, 256, 512],
             ).to(device)
     print(f"model: {model.__class__.__name__}")
