@@ -8,7 +8,6 @@ from torch_geometric.datasets import ModelNet
 from torch_geometric.loader import DataLoader
 from torch_geometric.nn import MLP, PointConv, fps, global_max_pool, radius
 from torch_geometric.nn import knn_interpolate
-
 from torch_geometric.data import Data, Batch, InMemoryDataset
 
 
@@ -105,8 +104,8 @@ class Net(torch.nn.Module):
         self.out_channel_num = 3
         self.fc = torch.nn.Linear(self.in_channel_num, self.out_channel_num)
 
-    def forward(self, data):
-        sa0_out = (data.x, data.pos, data.batch)
+    def forward(self, x, pos, batch):
+        sa0_out = (x, pos, batch)
         sa1_out = self.sa1_module(*sa0_out)
         sa2_out = self.sa2_module(*sa1_out)
         sa3_out = self.sa3_module(*sa2_out)
@@ -137,7 +136,14 @@ if __name__ == "__main__":
     # print(d.batch)
     for d in loader:
         print(d.x.shape)
-        output = m(d)
+        output = m(d.x, d.pos, d.batch)
+        torch.onnx.export(
+            m,
+            (d.x, d.pos, d.batch),
+            "super_resolution.onnx",
+            export_params=True,
+            opset_version=15,
+        )
         print(output.shape)
         break
     # main(args.resume_dir, args.input_filename)
