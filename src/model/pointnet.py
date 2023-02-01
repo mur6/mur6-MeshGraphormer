@@ -117,14 +117,16 @@ class PointNetfeat(nn.Module):
         x = F.relu(self.bn2(self.conv2(x)))
         x = self.bn3(self.conv3(x))
         x = torch.max(x, 2, keepdim=True)[0]
+        x = x.view(-1, 7)
         return x
+
 
 if __name__ == "__main__":
     # input = torch.randn(1, 3, 778)
     # m = torch.nn.Conv1d(3, 778, 1)
     m = PointNetfeat()
     m.eval()
-    input = torch.randn(1, 3, 778)
-    output = m(input)
-    print(output.shape)
-    # main(args.resume_dir, args.input_filename)
+    input = torch.randn(8, 778, 3)
+    print(f"input: {input.shape}")
+    output = m(input.transpose(2, 1))
+    print(f"output: {output.shape}")
