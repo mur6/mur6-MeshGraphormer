@@ -2,73 +2,39 @@ from pathlib import Path
 import argparse
 
 import torch
-import torch.nn as nn
-from torch import nn, optim
-import numpy as np
-from torch.utils.data import TensorDataset, DataLoader
+import torch.nn.functional as F
+from torch.nn import Linear as Lin
+from torch_cluster import fps, knn_graph
+import torch_geometric.transforms as T
+
 from timm.scheduler import CosineLRScheduler
 
+from src.handinfo.data import load_data_for_geometric, get_mano_faces
+from src.handinfo.losses import on_circle_loss
 from src.model.pointnet import PointNetfeat, Simple_STN3d
 from src.model.pointnet2 import PointNetCls
-from src.handinfo.data import load_data
-# from pytorch3d.structures import Meshes, Pointclouds
-# from pytorch3d.loss import (
-#     chamfer_distance,
-#     mesh_edge_loss,
-#     mesh_laplacian_smoothing,
-#     point_mesh_face_distance,
-# )
+
+
+transform = T.Compose([
+    # T.RandomJitter(0.01),
+    T.RandomRotate(15, axis=0),
+    T.RandomRotate(15, axis=1),
+    T.RandomRotate(15, axis=2),
+])
+pre_transform = T.NormalizeScale()
 
 
 def save_checkpoint(model, epoch, iteration=None):
     output_dir = Path("output")
     output_dir.mkdir(exist_ok=True)
-    checkpoint_dir = output_dir / f"checkpoint-{epoch}" # -{iteration}
+    checkpoint_dir = output_dir / f"checkpoint-{epoch}"
     checkpoint_dir.mkdir(exist_ok=True)
     model_to_save = model.module if hasattr(model, "module") else model
 
     torch.save(model_to_save, checkpoint_dir / "model.bin")
-    torch.save(model_to_save.state_dict(), checkpoint_dir/ "state_dict.bin")
+    torch.save(model_to_save.state_dict(), checkpoint_dir / "state_dict.bin")
     print(f"Save checkpoint to {checkpoint_dir}")
     return checkpoint_dir
-
-
-def plane_loss(vert_3d, pca_mean, pca_components):
-    # print(vert_3d.shape, pca_mean.shape, pca_components.shape)
-    normal_v = torch.cross(pca_components[:, 0], pca_components[:, 1], dim=1).unsqueeze(1)
-    # print(f"normal_v: {normal_v.shape}")
-    vert_3d = (torch.transpose(vert_3d, 2, 1))
-    pca_mean = pca_mean.unsqueeze(1)
-
-    x = (vert_3d - pca_mean) * normal_v
-    x = torch.sum(x, dim=2)
-    # print(f"sum: {x.shape}")
-    # print(f"{x[0]}")
-    # print()
-
-    x = torch.pow(x, 2)
-    # print(f"square: {x.shape}")
-    # print(f"{x[0]}")
-
-    x = torch.sum(x) * 0.05
-    # print(x)
-    return x
-
-
-def all_loss(y, y_pred, x, mano_faces):
-    #mesh = Meshes(verts=torch.transpose(x, 2, 1), faces=mano_faces)
-    loss_1, _ = chamfer_distance(y_pred, y)
-    #loss_2 = point_mesh_face_distance(mesh, Pointclouds(torch.transpose(y_pred, 2, 1)))
-    return loss_1
-
-
-def cyclic_shift_loss(E, y, y_pred):
-    lis = [torch.roll(y_pred, i, dims=2) for i in range(0, y_pred.shape[2])]
-    x = torch.stack(lis, dim=0)
-    tmp_x = (x - y).pow(2).sum(dim=(1, 2, 3))
-    final_y_pred = x[torch.argmin(tmp_x)]
-    # print(answer.shape)
-    return E(final_y_pred, y)
 
 
 def exec_train(train_loader, test_loader, *, model, train_datasize, test_datasize, device, epochs=1000):
@@ -105,24 +71,13 @@ def exec_train(train_loader, test_loader, *, model, train_datasize, test_datasiz
                 pca_components = pca_components.cuda()
                 normal_v = normal_v.cuda()
                 perimeter = perimeter.cuda()
-            # print(f"verts: {torch.transpose(x, 2, 1).shape}")
-            # print(f"mano_faces: {mano_faces.shape}")
-            # print(pca_mean.shape, normal_v.shape)
-            optimizer.zero_grad()                   # 勾配情報を0に初期化
+
+            optimizer.zero_grad()
             y_pred = model(gt_3d_joints)
-            # print(f"y_pred: {y_pred.shape}")
-            # mean_and_normal_vec = torch.cat((pca_mean, normal_v), dim=1)
-            # mean_and_normal_vec = torch.tensor(mean_and_normal_vec, dtype=torch.float32)
-            # loss = E(y_pred, y) + plane_loss(y_pred, pca_mean, pca_components)
-            # loss = all_loss(y, y_pred, x, mano_faces)
-            # loss = cyclic_shift_loss(E, y_pred, y)
-            # print(pca_mean.shape, output.shape)
-            # print(y_pred.shape, y_pred.dtype)
-            # print(mean_and_normal_vec.shape, mean_and_normal_vec.dtype)
             loss = E(pca_mean.float().detach(), y_pred)
             loss.backward()
-            optimizer.step()                        # 勾配の更新
-            losses.append(loss.item())              # 損失値の蓄積
+            optimizer.step()
+            losses.append(loss.item())
             current_loss += loss.item() * y_pred.size(0)
 
         epoch_loss = current_loss / train_datasize
@@ -141,70 +96,174 @@ def exec_train(train_loader, test_loader, *, model, train_datasize, test_datasiz
                     normal_v = normal_v.cuda()
                     perimeter = perimeter.cuda()
                 y_pred = model(gt_3d_joints)
-                # mean_and_normal_vec = torch.cat((pca_mean, normal_v), dim=1)
-                # mean_and_normal_vec = torch.tensor(mean_and_normal_vec, dtype=torch.float32)
-                # loss = E(y_pred, y) + plane_loss(y_pred, pca_mean, pca_components)
-                # loss, _ = chamfer_distance(y_pred, y)
-                # loss = cyclic_shift_loss(E, y_pred, y)
                 loss = E(pca_mean.float().detach(), y_pred)
                 current_loss += loss.item() * y_pred.size(0)
             epoch_loss = current_loss / test_datasize
             print(f'Validation Loss: {epoch_loss:.6f}')
         if (epoch + 1) % 5 == 0:
             save_checkpoint(model, epoch+1)
-    with torch.no_grad():
-        for x, gt_y in test_loader:
-            #print("-------")
-            y_pred = model(x)
-            y_pred = y_pred.reshape(gt_y.shape)
-            print(f"gt: {gt_y[0]} pred: {y_pred[0]}")
-            #print(gt_y - y_pred)
-
-    # print(X_train.shape, y_train.shape)
-    # plot(X_train, y_train, X_test.data.numpy().T[1], y_pred, losses)
 
 
-def main(resume_dir, input_filename, device, batch_size):
-    train_dataset, test_dataset = load_data(input_filename)
-    train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
-    test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False)
+
+def train(model, device, train_loader, train_datasize, bs_faces, optimizer):
+    model.train()
+    losses = []
+    current_loss = 0.0
+
+    for data in train_loader:
+        data = data.to(device)
+        # print(f"data.x: {data.x.shape}")
+        # print(f"data.pos: {data.pos.shape}")
+        optimizer.zero_grad()
+        output = model(data.x, data.pos, data.batch)
+        # print(f"data.y: {data.y.shape}")
+        # print(f"output: {output.shape}")
+
+        batch_size = output.shape[0]
+        #print(f"verts: {verts.shape}")
+        #print(f"faces: {faces.shape}")
+
+        #.view(batch_size, 1538, 3)
+        # print(f"bs_faces: {bs_faces.shape}")
+        gt_y = data.y.view(batch_size, -1).float().contiguous()
+        # loss = all_loss(output, gt_y, data, bs_faces)
+        # loss = F.mse_loss(output, gt_y)
+        # loss = cyclic_shift_loss(output, gt_y)
+        loss = on_circle_loss(output, data)
+        loss.backward()
+        optimizer.step()
+        losses.append(loss.item()) # 損失値の蓄積
+        current_loss += loss.item() * output.size(0)
+    epoch_loss = current_loss / train_datasize
+    print(f'Train Loss: {epoch_loss:.6f}')
+
+
+def test(model, device, test_loader, test_datasize, bs_faces):
+    model.eval()
+
+    current_loss = 0.0
+    # correct = 0
+    for data in test_loader:
+        data = data.to(device)
+        with torch.no_grad():
+            output = model(data.x, data.pos, data.batch)
+            # print(f"output: {output.shape}")
+        batch_size = output.shape[0]
+        # b = data.y.view(batch_size, -1).float()
+        # correct += pred.eq(b).sum().item()
+        gt_y = data.y.view(batch_size, -1).float().contiguous()
+        # loss = all_loss(output, gt_y, data, bs_faces)
+        # loss = F.mse_loss(output, gt_y)
+        # loss = cyclic_shift_loss(output, gt_y)
+        loss = on_circle_loss(output, data)
+        current_loss += loss.item() * output.size(0)
+    epoch_loss = current_loss / test_datasize
+    print(f'Validation Loss: {epoch_loss:.6f}')
+
+
+def main(resume_dir, input_filename, batch_size, args):
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+
+    train_dataset, test_dataset = load_data_for_geometric(
+        input_filename,
+        transform=transform,
+        pre_transform=None,
+        device=device)
     train_datasize = len(train_dataset)
     test_datasize = len(test_dataset)
     print(f"train_datasize={train_datasize} test_datasize={test_datasize}")
 
+    train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, drop_last=True)
+    test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False, drop_last=True)
+
+    print(f"resume_dir: {resume_dir}")
     if resume_dir:
         if (resume_dir / "model.bin").exists() and \
             (resume_dir / "state_dict.bin").exists():
-            model = torch.load(resume_dir / "model.bin")
-            state_dict = torch.load(resume_dir / "state_dict.bin")
+            if torch.cuda.is_available():
+                model = torch.load(resume_dir / "model.bin")
+                state_dict = torch.load(resume_dir / "state_dict.bin")
+            else:
+                model = torch.load(resume_dir / "model.bin", map_location=torch.device('cpu'))
+                state_dict = torch.load(resume_dir / "state_dict.bin", map_location=torch.device('cpu'))
             model.load_state_dict(state_dict)
         else:
             raise Exception(f"{resume_dir} is not valid directory.")
     else:
-        model = PointNetCls()
-        print(f"model: {model.__class__.__name__}")
+        model = ClassificationNet(
+            in_channels=3,
+            out_channels=7,
+            dim_model=[32, 64, 128, 256, 512],
+            ).to(device)
+    print(f"model: {model.__class__.__name__}")
 
-    if device == "cuda":
-        model.to(device)
+    # model = SegmentationNet(
+    #     in_channels=3,
+    #     out_channels=3,
+    #     dim_model=[32, 64, 128, 256, 512],
+    # ).to(device)
+    model.eval()
 
-    # mano_faces = mano_faces.repeat(batch_size, 1, 1)
+    gamma = float(args.gamma)
+    print(f"gamma: {gamma}")
 
-    exec_train(
-        train_loader, test_loader,
-        model=model,
-        train_datasize=train_datasize,
-        test_datasize=test_datasize,
-        device=device)
+    if False:
+        optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
+        # scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=20, gamma=0.5)
+        scheduler = torch.optim.lr_scheduler.ExponentialLR(optimizer, gamma=0.9)
+    if False:
+        optimizer = torch.optim.AdamW(model.parameters(), lr=0.002)
+        # scheduler = optim.lr_scheduler.ExponentialLR(optimizer, gamma=0.9)
+        scheduler = CosineLRScheduler(
+            optimizer,
+            t_initial=40,
+            cycle_limit=11,
+            cycle_decay=0.8,
+            lr_min=0.0001,
+            warmup_t=20,
+            warmup_lr_init=5e-5,
+            warmup_prefix=True)
+    if False:
+        optimizer = torch.optim.AdamW(model.parameters(), lr=0.00025)
+        # scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=5, gamma=gamma)
+        scheduler = torch.optim.lr_scheduler.ExponentialLR(optimizer, gamma=gamma)
+        # scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=15, eta_min=0.0001)
+    if True:
+        optimizer = torch.optim.RAdam(model.parameters(), lr=5e-5)
+        # scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=5, gamma=gamma)
+        # scheduler = torch.optim.lr_scheduler.ExponentialLR(optimizer, gamma=gamma)
+        scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=20, eta_min=1e-05)
+    ####### test:
+    # for d in train_loader:
+    #     print(d.x.shape)
+    #     output = model(d.x, d.pos, d.batch)
+    #     print(output.shape)
+    #     break
+
+    faces = get_mano_faces()
+    bs_faces = faces.repeat(batch_size, 1).view(batch_size, 1538, 3)
+
+    for epoch in range(1, 1000 + 1):
+        train(model, device, train_loader, train_datasize, bs_faces, optimizer)
+        test(model, device, test_loader, test_datasize, bs_faces)
+        if epoch % 5 == 0:
+            save_checkpoint(model, epoch)
+        scheduler.step(epoch)
+        print(f"lr: {scheduler.get_last_lr()}")
+        # train(model, device, train_loader, optimizer)
+        # iou = test(model, device, test_loader)
+        # print(f'Epoch: {epoch:03d}, Test IoU: {iou:.4f}')
+        # scheduler.step()
 
 
 def parse_args():
+    from decimal import Decimal
     parser = argparse.ArgumentParser()
-    parser.add_argument("--device", type=str, default="cpu", help="cuda or cpu")
     parser.add_argument("--batch_size", type=int, default=32)
+    parser.add_argument("--gamma", type=Decimal, default=Decimal("0.85"))
     parser.add_argument(
         "--resume_dir",
         type=Path,
-        #required=True,
     )
     parser.add_argument(
         "--input_filename",
@@ -215,6 +274,6 @@ def parse_args():
     return args
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     args = parse_args()
-    main(args.resume_dir, args.input_filename, args.device, args.batch_size)
+    main(args.resume_dir, args.input_filename, args.batch_size, args)
