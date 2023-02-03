@@ -1,5 +1,6 @@
 from pathlib import Path
 import argparse
+import math
 
 import torch
 import torch.nn.functional as F
@@ -7,10 +8,11 @@ from torch.nn import Linear as Lin
 from torch_cluster import fps, knn_graph
 import torch_geometric.transforms as T
 
+from torch.utils.data import TensorDataset, DataLoader
 from timm.scheduler import CosineLRScheduler
 
-from src.handinfo.data import load_data_for_geometric, get_mano_faces
-from src.handinfo.losses import on_circle_loss
+from src.handinfo.data import load_data_for_geometric, get_mano_faces, load_data
+from src.handinfo.losses import on_circle_loss, on_circle_loss_wrap
 from src.model.pointnet import PointNetfeat, Simple_STN3d
 from src.model.pointnet2 import PointNetCls
 
@@ -38,24 +40,8 @@ def save_checkpoint(model, epoch, iteration=None):
 
 
 def exec_train(train_loader, test_loader, *, model, train_datasize, test_datasize, device, epochs=1000):
-    #optimizer = optim.RMSprop(net.parameters(), lr=0.01)
-    if False:
-        # optimizer = optim.SGD(model.parameters(), lr=0.01)
-        optimizer = optim.AdamW(model.parameters(), lr=0.009)
-        scheduler = optim.lr_scheduler.ExponentialLR(optimizer, gamma=0.85)
-    if True:
-        optimizer = optim.AdamW(model.parameters(), lr=0.005)
-        # optimizer = optim.SGD(model.parameters(), lr=0.005)
-        # scheduler = optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=25, eta_min=0.0005)
-        scheduler = CosineLRScheduler(
-            optimizer,
-            t_initial=40,
-            cycle_limit=11,
-            cycle_decay=0.8,
-            lr_min=0.0001,
-            warmup_t=20,
-            warmup_lr_init=5e-5,
-            warmup_prefix=True)
+
+    optimizer = optim.AdamW(model.parameters(), lr=0.005)
     E = nn.MSELoss()
 
     for epoch in range(epochs):
@@ -105,57 +91,66 @@ def exec_train(train_loader, test_loader, *, model, train_datasize, test_datasiz
 
 
 
-def train(model, device, train_loader, train_datasize, bs_faces, optimizer):
+def train(model, device, train_loader, train_datasize, optimizer):
     model.train()
     losses = []
     current_loss = 0.0
 
-    for data in train_loader:
-        data = data.to(device)
+    for i, (gt_vertices, gt_3d_joints, vert_3d, pca_mean, pca_components, normal_v, perimeter) in enumerate(train_loader):
+        if device == "cuda":
+            gt_vertices = gt_vertices.cuda()
+            gt_3d_joints = gt_3d_joints.cuda()
+            gt_y = y.cuda()
+            pca_mean = pca_mean.cuda()
+            pca_components = pca_components.cuda()
+            normal_v = normal_v.cuda()
+            perimeter = perimeter.cuda()
+            radius = perimeter / (2.0 * math.pi)
         # print(f"data.x: {data.x.shape}")
         # print(f"data.pos: {data.pos.shape}")
         optimizer.zero_grad()
-        output = model(data.x, data.pos, data.batch)
+        pred_output = model(gt_vertices)
         # print(f"data.y: {data.y.shape}")
         # print(f"output: {output.shape}")
 
-        batch_size = output.shape[0]
+        # batch_size = pred_output.shape[0]
         #print(f"verts: {verts.shape}")
         #print(f"faces: {faces.shape}")
 
         #.view(batch_size, 1538, 3)
         # print(f"bs_faces: {bs_faces.shape}")
-        gt_y = data.y.view(batch_size, -1).float().contiguous()
+        # gt_y = gt_y.view(batch_size, -1).float().contiguous()
         # loss = all_loss(output, gt_y, data, bs_faces)
         # loss = F.mse_loss(output, gt_y)
         # loss = cyclic_shift_loss(output, gt_y)
-        loss = on_circle_loss(output, data)
+        # loss = on_circle_loss(output, data)
+        loss = on_circle_loss(pred_output, vert_3d, gt_vertices, pca_mean, normal_v, radius)
         loss.backward()
         optimizer.step()
         losses.append(loss.item()) # 損失値の蓄積
-        current_loss += loss.item() * output.size(0)
+        current_loss += loss.item() * pred_output.size(0)
     epoch_loss = current_loss / train_datasize
     print(f'Train Loss: {epoch_loss:.6f}')
 
 
-def test(model, device, test_loader, test_datasize, bs_faces):
+def test(model, device, test_loader, test_datasize):
     model.eval()
 
     current_loss = 0.0
     # correct = 0
-    for data in test_loader:
-        data = data.to(device)
+    for gt_vertices, gt_3d_joints, vert_3d, pca_mean, pca_components, normal_v, perimeter in test_loader:
+        if device == "cuda":
+            gt_vertices = gt_vertices.cuda()
+            gt_3d_joints = gt_3d_joints.cuda()
+            vert_3d = vert_3d.cuda()
+            pca_mean = pca_mean.cuda()
+            pca_components = pca_components.cuda()
+            normal_v = normal_v.cuda()
+            perimeter = perimeter.cuda()
+            radius = perimeter / (2.0 * math.pi)
         with torch.no_grad():
-            output = model(data.x, data.pos, data.batch)
-            # print(f"output: {output.shape}")
-        batch_size = output.shape[0]
-        # b = data.y.view(batch_size, -1).float()
-        # correct += pred.eq(b).sum().item()
-        gt_y = data.y.view(batch_size, -1).float().contiguous()
-        # loss = all_loss(output, gt_y, data, bs_faces)
-        # loss = F.mse_loss(output, gt_y)
-        # loss = cyclic_shift_loss(output, gt_y)
-        loss = on_circle_loss(output, data)
+            output = model(gt_vertices)
+        loss = on_circle_loss(output, vert_3d, gt_vertices, pca_mean, normal_v, radius)
         current_loss += loss.item() * output.size(0)
     epoch_loss = current_loss / test_datasize
     print(f'Validation Loss: {epoch_loss:.6f}')
@@ -163,18 +158,12 @@ def test(model, device, test_loader, test_datasize, bs_faces):
 
 def main(resume_dir, input_filename, batch_size, args):
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-
-    train_dataset, test_dataset = load_data_for_geometric(
-        input_filename,
-        transform=transform,
-        pre_transform=None,
-        device=device)
+    train_dataset, test_dataset = load_data(input_filename)
+    train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, drop_last=True)
+    test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False, drop_last=True)
     train_datasize = len(train_dataset)
     test_datasize = len(test_dataset)
     print(f"train_datasize={train_datasize} test_datasize={test_datasize}")
-
-    train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, drop_last=True)
-    test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False, drop_last=True)
 
     print(f"resume_dir: {resume_dir}")
     if resume_dir:
@@ -196,12 +185,6 @@ def main(resume_dir, input_filename, batch_size, args):
             dim_model=[32, 64, 128, 256, 512],
             ).to(device)
     print(f"model: {model.__class__.__name__}")
-
-    # model = SegmentationNet(
-    #     in_channels=3,
-    #     out_channels=3,
-    #     dim_model=[32, 64, 128, 256, 512],
-    # ).to(device)
     model.eval()
 
     gamma = float(args.gamma)
@@ -233,19 +216,13 @@ def main(resume_dir, input_filename, batch_size, args):
         # scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=5, gamma=gamma)
         # scheduler = torch.optim.lr_scheduler.ExponentialLR(optimizer, gamma=gamma)
         scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=20, eta_min=1e-05)
-    ####### test:
-    # for d in train_loader:
-    #     print(d.x.shape)
-    #     output = model(d.x, d.pos, d.batch)
-    #     print(output.shape)
-    #     break
 
     faces = get_mano_faces()
     bs_faces = faces.repeat(batch_size, 1).view(batch_size, 1538, 3)
 
     for epoch in range(1, 1000 + 1):
-        train(model, device, train_loader, train_datasize, bs_faces, optimizer)
-        test(model, device, test_loader, test_datasize, bs_faces)
+        train(model, device, train_loader, train_datasize, optimizer)
+        test(model, device, test_loader, test_datasize)
         if epoch % 5 == 0:
             save_checkpoint(model, epoch)
         scheduler.step(epoch)

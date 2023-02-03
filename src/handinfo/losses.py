@@ -54,19 +54,22 @@ def get_loss_3d_sphere(verts_3d, pred_pca_mean, pred_radius):
     return loss_of_sphere
 
 
-def on_circle_loss(pred_output, data):
+def on_circle_loss_wrap(pred_output, data):
     batch_size = pred_output.shape[0]
     verts_3d = data.y.view(batch_size, 20, 3)
+    gt_pca_mean = data.pca_mean.view(batch_size, -1).float()
+    gt_normal_v = data.normal_v.view(batch_size, -1).float()
+    gt_radius = data.radius.float()
+    return on_circle_loss(pred_output, verts_3d, gt_pca_mean, gt_normal_v, gt_radius)
 
+
+def on_circle_loss(pred_output, verts_3d, gt_pca_mean, gt_normal_v, gt_radius):
     pred_pca_mean = pred_output[:, :3].float()
     pred_normal_v = pred_output[:, 3:6].float()
     pred_radius = pred_output[:, 6:].squeeze(-1).float()
     # print(f"pred_pca_mean: {pred_pca_mean.shape}")
     # print(f"pred_normal_v: {pred_normal_v.shape}")
     # print(f"pred_radius: {pred_radius.shape}")
-    gt_pca_mean = data.pca_mean.view(batch_size, -1).float()
-    gt_normal_v = data.normal_v.view(batch_size, -1).float()
-    gt_radius = data.radius.float()
 
     loss_pca_mean = F.mse_loss(pred_pca_mean, gt_pca_mean)
     loss_pca_mean = loss_pca_mean * 100.0

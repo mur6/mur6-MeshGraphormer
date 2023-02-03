@@ -4,7 +4,7 @@ from typing import Callable, Optional
 
 import numpy as np
 import torch
-# from torch.utils.data import TensorDataset, DataLoader
+from torch.utils.data import TensorDataset, DataLoader
 import torch_geometric.transforms as T
 from torch_geometric.data import Data, InMemoryDataset
 from sklearn.model_selection import train_test_split
