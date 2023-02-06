@@ -45,7 +45,7 @@ def train(model, device, train_loader, train_datasize, optimizer):
     current_loss = 0.0
 
     for i, (gt_vertices, gt_3d_joints, vert_3d, pca_mean, pca_components, normal_v, perimeter) in enumerate(train_loader):
-        if device == "cuda":
+        if torch.cuda.is_available():
             gt_vertices = gt_vertices.cuda()
             gt_3d_joints = gt_3d_joints.cuda()
             vert_3d = vert_3d.cuda()
@@ -82,7 +82,7 @@ def test(model, device, test_loader, test_datasize):
     current_loss = 0.0
     # correct = 0
     for gt_vertices, gt_3d_joints, vert_3d, pca_mean, pca_components, normal_v, perimeter in test_loader:
-        if device == "cuda":
+        if torch.cuda.is_available():
             gt_vertices = gt_vertices.cuda()
             gt_3d_joints = gt_3d_joints.cuda()
             vert_3d = vert_3d.cuda()
@@ -128,7 +128,8 @@ def main(resume_dir, input_filename, batch_size, args):
             raise Exception(f"{resume_dir} is not valid directory.")
     else:
         model = PointNetCls()
-        if device == "cuda":
+        print(f"cuda is_available: {torch.cuda.is_available()}")
+        if torch.cuda.is_available():
             model.to(device)
 
     print(f"model: {model.__class__.__name__}")
