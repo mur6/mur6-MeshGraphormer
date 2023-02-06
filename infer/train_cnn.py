@@ -142,7 +142,7 @@ def main(resume_dir, input_filename, batch_size, args):
 
     optimizer = torch.optim.AdamW(model.parameters(), lr=learning_rate)
     # scheduler = torch.optim.lr_scheduler.ExponentialLR(optimizer, gamma=gamma)
-    scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=30, eta_min=3.e-06)
+    scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=30, eta_min=1.5e-06)
 
     # faces = get_mano_faces()
     # bs_faces = faces.repeat(batch_size, 1).view(batch_size, 1538, 3)
