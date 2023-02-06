@@ -94,19 +94,17 @@ def conv_circle(normal_v, radius):
 def infer(model, test_loader):
     model.eval()
     with torch.no_grad():
-        for idx, data in enumerate(test_loader):
-            mesh = make_hand_mesh(data.pos)
-            print("-------")
-            output = model(data.x, data.pos, data.batch)
+        for idx, (gt_vertices, gt_3d_joints, vert_3d, pca_mean, pca_components, normal_v, perimeter) in enumerate(test_loader):
+            output = model(gt_vertices)
             print(f"output.shape: {output.shape}")
             print(f"output: {output.view(-1)}")
             mean = output.view(-1)[:3]
             normal_v = output.view(-1)[3:6]
             radius = output.view(-1)[6:]
-            gt_normal_v = data.normal_v
-            gt_radius = data.radius
+            gt_normal_v = normal_v
+            gt_radius = perimeter / (2.0 * math.pi)
             print(f"pred: mean: {mean}")
-            print(f"gt: mean: {data.pca_mean}")
+            print(f"gt: mean: {pca_mean}")
             print(f"pred: radius: {radius}")
             print(f"gt: radius: {gt_radius}")
             print(f"pred: normal_v: {normal_v}")
@@ -128,6 +126,7 @@ def infer(model, test_loader):
 def main(resume_dir, input_filename):
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     train_dataset, test_dataset = load_data(input_filename)
+    batch_size = 1
     train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, drop_last=True)
     test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False, drop_last=True)
     train_datasize = len(train_dataset)
