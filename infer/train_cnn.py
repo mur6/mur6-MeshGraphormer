@@ -194,8 +194,8 @@ def main(resume_dir, input_filename, batch_size, args):
     optimizer = torch.optim.AdamW(model.parameters(), lr=lr)
     scheduler = torch.optim.lr_scheduler.ExponentialLR(optimizer, gamma=gamma)
 
-    faces = get_mano_faces()
-    bs_faces = faces.repeat(batch_size, 1).view(batch_size, 1538, 3)
+    # faces = get_mano_faces()
+    # bs_faces = faces.repeat(batch_size, 1).view(batch_size, 1538, 3)
 
     for epoch in range(1, 1000 + 1):
         train(model, device, train_loader, train_datasize, optimizer)
@@ -204,10 +204,6 @@ def main(resume_dir, input_filename, batch_size, args):
             save_checkpoint(model, epoch)
         scheduler.step(epoch)
         print(f"lr: {scheduler.get_last_lr()}")
-        # train(model, device, train_loader, optimizer)
-        # iou = test(model, device, test_loader)
-        # print(f'Epoch: {epoch:03d}, Test IoU: {iou:.4f}')
-        # scheduler.step()
 
 
 def parse_args():
