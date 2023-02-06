@@ -63,7 +63,10 @@ def on_circle_loss_wrap(pred_output, data):
     return on_circle_loss(pred_output, verts_3d, gt_pca_mean, gt_normal_v, gt_radius)
 
 
-def on_circle_loss(pred_output, verts_3d, gt_pca_mean, gt_normal_v, gt_radius):
+def on_circle_loss(
+        *,
+        pred_output,
+        verts_3d, gt_pca_mean, gt_normal_v, gt_radius):
     pred_pca_mean = pred_output[:, :3].float()
     pred_normal_v = pred_output[:, 3:6].float()
     pred_radius = pred_output[:, 6:].squeeze(-1).float()

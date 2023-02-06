@@ -53,7 +53,7 @@ def train(model, device, train_loader, train_datasize, optimizer):
             pca_components = pca_components.cuda()
             normal_v = normal_v.cuda()
             perimeter = perimeter.cuda()
-            radius = perimeter / (2.0 * math.pi)
+        radius = perimeter / (2.0 * math.pi)
         # print(f"data.x: {data.x.shape}")
         # print(f"data.pos: {data.pos.shape}")
         optimizer.zero_grad()
@@ -72,7 +72,12 @@ def train(model, device, train_loader, train_datasize, optimizer):
         # loss = F.mse_loss(output, gt_y)
         # loss = cyclic_shift_loss(output, gt_y)
         # loss = on_circle_loss(output, data)
-        loss = on_circle_loss(pred_output, vert_3d, gt_vertices, pca_mean, normal_v, radius)
+        loss = on_circle_loss(
+            pred_output=pred_output,
+            verts_3d=vert_3d,
+            gt_pca_mean=pca_mean,
+            gt_normal_v=normal_v,
+            gt_radius=radius)
         loss.backward()
         optimizer.step()
         losses.append(loss.item()) # 損失値の蓄積
@@ -95,11 +100,16 @@ def test(model, device, test_loader, test_datasize):
             pca_components = pca_components.cuda()
             normal_v = normal_v.cuda()
             perimeter = perimeter.cuda()
-            radius = perimeter / (2.0 * math.pi)
+        radius = perimeter / (2.0 * math.pi)
         with torch.no_grad():
-            output = model(gt_vertices)
-        loss = on_circle_loss(output, vert_3d, gt_vertices, pca_mean, normal_v, radius)
-        current_loss += loss.item() * output.size(0)
+            pred_output = model(gt_vertices)
+        loss = on_circle_loss(
+            pred_output=pred_output,
+            verts_3d=vert_3d,
+            gt_pca_mean=pca_mean,
+            gt_normal_v=normal_v,
+            gt_radius=radius)
+        current_loss += loss.item() * pred_output.size(0)
     epoch_loss = current_loss / test_datasize
     print(f'Validation Loss: {epoch_loss:.6f}')
 
