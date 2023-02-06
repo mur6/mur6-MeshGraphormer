@@ -136,6 +136,7 @@ def main(resume_dir, input_filename):
     print(f"resume_dir: {resume_dir}")
 
     if (resume_dir / "model.bin").exists() and \
+        (resume_dir / "state_dict.bin").exists():
         if torch.cuda.is_available():
             model = torch.load(resume_dir / "model.bin")
             state_dict = torch.load(resume_dir / "state_dict.bin")
