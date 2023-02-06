@@ -186,11 +186,12 @@ def main(resume_dir, input_filename, batch_size, args):
     print(f"model: {model.__class__.__name__}")
     model.eval()
 
-    lr = float(args.lr)
+    learning_rate = float(args.learning_rate)
     gamma = float(args.gamma)
+    print(f"learning rate: {learning_rate}")
     print(f"gamma: {gamma}")
 
-    optimizer = torch.optim.AdamW(model.parameters(), lr=lr)
+    optimizer = torch.optim.AdamW(model.parameters(), lr=learning_rate)
     scheduler = torch.optim.lr_scheduler.ExponentialLR(optimizer, gamma=gamma)
 
     # faces = get_mano_faces()
@@ -209,7 +210,7 @@ def parse_args():
     from decimal import Decimal
     parser = argparse.ArgumentParser()
     parser.add_argument("--batch_size", type=int, default=32)
-    parser.add_argument("--lr", type=Decimal, default=Decimal("0.01"))
+    parser.add_argument("--learning_rate", type=Decimal, default=Decimal("0.01"))
     parser.add_argument("--gamma", type=Decimal, default=Decimal("0.85"))
     parser.add_argument(
         "--resume_dir",
