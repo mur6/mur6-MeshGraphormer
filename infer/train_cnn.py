@@ -179,11 +179,10 @@ def main(resume_dir, input_filename, batch_size, args):
         else:
             raise Exception(f"{resume_dir} is not valid directory.")
     else:
-        model = ClassificationNet(
-            in_channels=3,
-            out_channels=7,
-            dim_model=[32, 64, 128, 256, 512],
-            ).to(device)
+        model = PointNetCls()
+        if device == "cuda":
+            model.to(device)
+
     print(f"model: {model.__class__.__name__}")
     model.eval()
 
