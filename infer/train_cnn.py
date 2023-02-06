@@ -187,35 +187,12 @@ def main(resume_dir, input_filename, batch_size, args):
     print(f"model: {model.__class__.__name__}")
     model.eval()
 
+    lr = float(args.lr)
     gamma = float(args.gamma)
     print(f"gamma: {gamma}")
 
-    if False:
-        optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
-        # scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=20, gamma=0.5)
-        scheduler = torch.optim.lr_scheduler.ExponentialLR(optimizer, gamma=0.9)
-    if False:
-        optimizer = torch.optim.AdamW(model.parameters(), lr=0.002)
-        # scheduler = optim.lr_scheduler.ExponentialLR(optimizer, gamma=0.9)
-        scheduler = CosineLRScheduler(
-            optimizer,
-            t_initial=40,
-            cycle_limit=11,
-            cycle_decay=0.8,
-            lr_min=0.0001,
-            warmup_t=20,
-            warmup_lr_init=5e-5,
-            warmup_prefix=True)
-    if False:
-        optimizer = torch.optim.AdamW(model.parameters(), lr=0.00025)
-        # scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=5, gamma=gamma)
-        scheduler = torch.optim.lr_scheduler.ExponentialLR(optimizer, gamma=gamma)
-        # scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=15, eta_min=0.0001)
-    if True:
-        optimizer = torch.optim.RAdam(model.parameters(), lr=5e-5)
-        # scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=5, gamma=gamma)
-        # scheduler = torch.optim.lr_scheduler.ExponentialLR(optimizer, gamma=gamma)
-        scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=20, eta_min=1e-05)
+    optimizer = torch.optim.AdamW(model.parameters(), lr=lr)
+    scheduler = torch.optim.lr_scheduler.ExponentialLR(optimizer, gamma=gamma)
 
     faces = get_mano_faces()
     bs_faces = faces.repeat(batch_size, 1).view(batch_size, 1538, 3)
@@ -237,6 +214,7 @@ def parse_args():
     from decimal import Decimal
     parser = argparse.ArgumentParser()
     parser.add_argument("--batch_size", type=int, default=32)
+    parser.add_argument("--lr", type=Decimal, default=Decimal("0.01"))
     parser.add_argument("--gamma", type=Decimal, default=Decimal("0.85"))
     parser.add_argument(
         "--resume_dir",
