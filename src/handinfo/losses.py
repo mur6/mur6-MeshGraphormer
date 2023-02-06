@@ -67,6 +67,8 @@ def on_circle_loss(
         *,
         pred_output,
         verts_3d, gt_pca_mean, gt_normal_v, gt_radius):
+    # print(f"type: pred_output: {pred_output.dtype}")
+    # print(f"type: verts_3d: {verts_3d.dtype}")
     pred_pca_mean = pred_output[:, :3].float()
     pred_normal_v = pred_output[:, 3:6].float()
     pred_radius = pred_output[:, 6:].squeeze(-1).float()
@@ -81,6 +83,9 @@ def on_circle_loss(
     # loss_normal_v = loss_normal_v * 1.0
     loss_radius = F.mse_loss(pred_radius, gt_radius)
     loss_radius *= 1e4
+    # print(f"type: loss_pca_mean: {loss_pca_mean.dtype}")
+    # print(f"type: loss_normal_v: {loss_normal_v.dtype}")
+    # print(f"type: loss_radius: {loss_radius.dtype}")
     debug = False
     if debug:
         print(f"gt: pca_mean: {gt_pca_mean.shape}")
@@ -92,8 +97,11 @@ def on_circle_loss(
 
     loss_of_plane = get_loss_3d_plane(verts_3d, pred_normal_v, pred_pca_mean) * 100.0
     loss_of_sphere = get_loss_3d_sphere(verts_3d, pred_pca_mean, pred_radius) * 1e5
+    # print(f"type: loss_of_plane: {loss_of_plane.dtype}")
+    # print(f"type: loss_of_sphere: {loss_of_sphere.dtype}")
     if debug:
         print(f"loss: plane: {loss_of_plane:.07}")
         print(f"loss: sphere: {loss_of_sphere:.07}")
         print()
-    return loss_pca_mean + loss_normal_v + loss_radius + loss_of_plane + loss_of_sphere
+    loss = (loss_pca_mean + loss_normal_v + loss_radius + loss_of_plane + loss_of_sphere)
+    return loss.float()

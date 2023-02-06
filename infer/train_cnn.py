@@ -54,30 +54,20 @@ def train(model, device, train_loader, train_datasize, optimizer):
             normal_v = normal_v.cuda()
             perimeter = perimeter.cuda()
         radius = perimeter / (2.0 * math.pi)
-        # print(f"data.x: {data.x.shape}")
-        # print(f"data.pos: {data.pos.shape}")
         optimizer.zero_grad()
         pred_output = model(gt_vertices)
-        # print(f"data.y: {data.y.shape}")
-        # print(f"output: {output.shape}")
-
-        # batch_size = pred_output.shape[0]
-        #print(f"verts: {verts.shape}")
-        #print(f"faces: {faces.shape}")
-
-        #.view(batch_size, 1538, 3)
-        # print(f"bs_faces: {bs_faces.shape}")
-        # gt_y = gt_y.view(batch_size, -1).float().contiguous()
-        # loss = all_loss(output, gt_y, data, bs_faces)
-        # loss = F.mse_loss(output, gt_y)
-        # loss = cyclic_shift_loss(output, gt_y)
-        # loss = on_circle_loss(output, data)
+        # print(f"gt_vertices: {gt_vertices.shape}")
+        # print(f"pred_output: {pred_output.shape}")
+        # print(f"vert_3d: {vert_3d.shape}")
+        # print(f"pca_mean: {pca_mean.shape}")
+        # print(f"normal_v: {normal_v.shape}")
+        # print(f"radius: {radius.shape}")
         loss = on_circle_loss(
             pred_output=pred_output,
-            verts_3d=vert_3d,
-            gt_pca_mean=pca_mean,
-            gt_normal_v=normal_v,
-            gt_radius=radius)
+            verts_3d=vert_3d.float().detach(),
+            gt_pca_mean=pca_mean.float().detach(),
+            gt_normal_v=normal_v.float().detach(),
+            gt_radius=radius.float().detach())
         loss.backward()
         optimizer.step()
         losses.append(loss.item()) # 損失値の蓄積
@@ -105,10 +95,10 @@ def test(model, device, test_loader, test_datasize):
             pred_output = model(gt_vertices)
         loss = on_circle_loss(
             pred_output=pred_output,
-            verts_3d=vert_3d,
-            gt_pca_mean=pca_mean,
-            gt_normal_v=normal_v,
-            gt_radius=radius)
+            verts_3d=vert_3d.float().detach(),
+            gt_pca_mean=pca_mean.float().detach(),
+            gt_normal_v=normal_v.float().detach(),
+            gt_radius=radius.float().detach())
         current_loss += loss.item() * pred_output.size(0)
     epoch_loss = current_loss / test_datasize
     print(f'Validation Loss: {epoch_loss:.6f}')

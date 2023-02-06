@@ -42,7 +42,7 @@ def load_data(filename):
     gt_3d_joints = val['gt_3d_joints']
     gt_3d_joints = torch.transpose(gt_3d_joints, 1, 2)
     vert_3d = val['vert_3d']
-    vert_3d = torch.transpose(vert_3d, 1, 2)
+    # vert_3d = torch.transpose(vert_3d, 1, 2)
     pca_mean = val['pca_mean_']
     pca_components = val['pca_components_']
 
