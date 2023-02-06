@@ -39,58 +39,6 @@ def save_checkpoint(model, epoch, iteration=None):
     return checkpoint_dir
 
 
-def exec_train(train_loader, test_loader, *, model, train_datasize, test_datasize, device, epochs=1000):
-
-    optimizer = optim.AdamW(model.parameters(), lr=0.005)
-    E = nn.MSELoss()
-
-    for epoch in range(epochs):
-        losses = []
-        current_loss = 0.0
-        model.train()
-        for i, (gt_vertices, gt_3d_joints, y, pca_mean, pca_components, normal_v, perimeter) in enumerate(train_loader):
-            if device == "cuda":
-                gt_vertices = gt_vertices.cuda()
-                gt_3d_joints = gt_3d_joints.cuda()
-                y = y.cuda()
-                pca_mean = pca_mean.cuda()
-                pca_components = pca_components.cuda()
-                normal_v = normal_v.cuda()
-                perimeter = perimeter.cuda()
-
-            optimizer.zero_grad()
-            y_pred = model(gt_3d_joints)
-            loss = E(pca_mean.float().detach(), y_pred)
-            loss.backward()
-            optimizer.step()
-            losses.append(loss.item())
-            current_loss += loss.item() * y_pred.size(0)
-
-        epoch_loss = current_loss / train_datasize
-        print(f'Train Loss: {epoch_loss:.6f}')
-        scheduler.step(epoch+1)
-        model.eval()
-        with torch.no_grad():
-            current_loss = 0.0
-            for gt_vertices, gt_3d_joints, y, pca_mean, pca_components, normal_v, perimeter in test_loader:
-                if device == "cuda":
-                    gt_vertices = gt_vertices.cuda()
-                    gt_3d_joints = gt_3d_joints.cuda()
-                    y = y.cuda()
-                    pca_mean = pca_mean.cuda()
-                    pca_components = pca_components.cuda()
-                    normal_v = normal_v.cuda()
-                    perimeter = perimeter.cuda()
-                y_pred = model(gt_3d_joints)
-                loss = E(pca_mean.float().detach(), y_pred)
-                current_loss += loss.item() * y_pred.size(0)
-            epoch_loss = current_loss / test_datasize
-            print(f'Validation Loss: {epoch_loss:.6f}')
-        if (epoch + 1) % 5 == 0:
-            save_checkpoint(model, epoch+1)
-
-
-
 def train(model, device, train_loader, train_datasize, optimizer):
     model.train()
     losses = []
@@ -100,7 +48,7 @@ def train(model, device, train_loader, train_datasize, optimizer):
         if device == "cuda":
             gt_vertices = gt_vertices.cuda()
             gt_3d_joints = gt_3d_joints.cuda()
-            gt_y = y.cuda()
+            vert_3d = vert_3d.cuda()
             pca_mean = pca_mean.cuda()
             pca_components = pca_components.cuda()
             normal_v = normal_v.cuda()
