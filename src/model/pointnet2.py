@@ -89,13 +89,14 @@ class PointNetfeat(nn.Module):
 
 
 class PointNetCls(nn.Module):
-    def __init__(self, k=3, feature_transform=True):
+    def __init__(self, feature_transform=True):
         super(PointNetCls, self).__init__()
+        self.output_features = 7
         self.feature_transform = feature_transform
         self.feat = PointNetfeat(global_feat=True, feature_transform=feature_transform)
         self.fc1 = nn.Linear(1024, 512)
         self.fc2 = nn.Linear(512, 256)
-        self.fc3 = nn.Linear(256, k)
+        self.fc3 = nn.Linear(256, self.output_features)
         self.dropout = nn.Dropout(p=0.3)
         self.bn1 = nn.BatchNorm1d(512)
         self.bn2 = nn.BatchNorm1d(256)
@@ -113,7 +114,7 @@ class PointNetCls(nn.Module):
 if __name__ == "__main__":
     m = PointNetCls()
     m.eval()
-    input = torch.randn(1, 3, 21)
-    output = m(input)
+    input = torch.randn(32, 778, 3)
+    output = m(torch.transpose(input, 2, 1))
     print(output.shape)
     # main(args.resume_dir, args.input_filename)
