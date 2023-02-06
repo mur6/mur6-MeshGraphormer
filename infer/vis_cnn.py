@@ -65,9 +65,11 @@ def visualize_points(*, mesh, points):
     scene.show()
 
 def make_hand_mesh(gt_vertices):
+    gt_vertices = torch.transpose(gt_vertices, 2, 1).squeeze(0)
     print(f"gt_vertices: {gt_vertices.shape}")
     mano_model = MANO().to("cpu")
     mano_faces = mano_model.layer.th_faces
+    print(f"mano_faces: {mano_faces.shape}")
     # mesh objects can be created from existing faces and vertex data
     return trimesh.Trimesh(vertices=gt_vertices, faces=mano_faces)
 
@@ -118,6 +120,7 @@ def infer(model, test_loader):
             #     (mean.numpy(), "red"),
             #     (mean+normal_v, "blue"),
             # ])
+            mesh = make_hand_mesh(gt_vertices)
             visualize_points(mesh=mesh, points=circle_points)
             if idx == 4:
                 break
