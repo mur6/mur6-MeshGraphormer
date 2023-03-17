@@ -26,8 +26,8 @@ class Graphormer_Hand_Network(torch.nn.Module):
         batch_size = images.size(0)
         # Generate T-pose template mesh
         template_pose = torch.zeros((1,48))
-        template_pose = template_pose.cuda()
-        template_betas = torch.zeros((1,10)).cuda()
+        # template_pose = template_pose.cuda()
+        template_betas = torch.zeros((1,10))# .cuda()
         template_vertices, template_3d_joints = mesh_model.layer(template_pose, template_betas)
         template_vertices = template_vertices/1000.0
         template_3d_joints = template_3d_joints/1000.0

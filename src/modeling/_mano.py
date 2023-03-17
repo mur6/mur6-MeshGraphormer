@@ -140,8 +140,13 @@ class Mesh(object):
                  num_downsampling=1, nsize=1, device=torch.device('cuda')):
         self._A, self._U, self._D = get_graph_params(filename=filename, nsize=nsize)
         # self._A = [a.to(device) for a in self._A]
-        self._U = [u.to(device) for u in self._U]
-        self._D = [d.to(device) for d in self._D]
+        use_dense = True
+        if use_dense:
+            self._U = [u.to_dense().to(device) for u in self._U]
+            self._D = [d.to_dense().to(device) for d in self._D]
+        else:
+            self._U = [u.to(device) for u in self._U]
+            self._D = [d.to(device) for d in self._D]
         self.num_downsampling = num_downsampling
 
     def downsample(self, x, n1=0, n2=None):

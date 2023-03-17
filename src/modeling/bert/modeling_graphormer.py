@@ -234,7 +234,7 @@ class EncoderBlock(BertPreTrainedModel):
 
         batch_size = len(img_feats)
         seq_length = len(img_feats[0])
-        input_ids = torch.zeros([batch_size, seq_length],dtype=torch.long).cuda()
+        input_ids = torch.zeros([batch_size, seq_length],dtype=torch.long)#.cuda()
 
         if position_ids is None:
             position_ids = torch.arange(seq_length, dtype=torch.long, device=input_ids.device)

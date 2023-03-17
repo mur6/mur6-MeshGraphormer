@@ -66,8 +66,8 @@ def run_inference(args, image_list, Graphormer_model, mano, renderer, mesh_sampl
                 img_tensor = transform(img)
                 img_visual = transform_visualize(img)
 
-                batch_imgs = torch.unsqueeze(img_tensor, 0).cuda()
-                batch_visual_imgs = torch.unsqueeze(img_visual, 0).cuda()
+                batch_imgs = torch.unsqueeze(img_tensor, 0)#.cuda()
+                batch_visual_imgs = torch.unsqueeze(img_visual, 0)#.cuda()
                 # forward-pass
                 pred_camera, pred_3d_joints, pred_vertices_sub, pred_vertices, hidden_states, att = Graphormer_model(batch_imgs, mano, mesh_sampler)
                 # obtain 3d joints from full mesh
@@ -207,8 +207,8 @@ def main(args):
 
     # Mesh and MANO utils
     mano_model = MANO().to(args.device)
-    mano_model.layer = mano_model.layer.cuda()
-    mesh_sampler = Mesh()
+    mano_model.layer = mano_model.layer
+    mesh_sampler = Mesh(device=args.device)
 
     # Renderer for visualization
     renderer = Renderer(faces=mano_model.face)
