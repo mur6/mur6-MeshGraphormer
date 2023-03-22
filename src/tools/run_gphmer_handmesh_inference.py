@@ -70,7 +70,7 @@ class WrapperModel(nn.Module):
             batch_imgs, mesh_model, self.mesh_sampler)
         vertices = pred_vertices[0]
         #, hidden_states, att
-        return pred_camera, pred_3d_joints, pred_vertices_sub, vertices, self.faces
+        return pred_camera, pred_3d_joints, pred_vertices_sub, vertices# , self.faces
 
 
 def run_inference(args, image_list, Graphormer_model, mano, renderer, mesh_sampler):
@@ -96,9 +96,9 @@ def run_inference(args, image_list, Graphormer_model, mano, renderer, mesh_sampl
                 pred_camera, pred_3d_joints, pred_vertices_sub, pred_vertices = wrapper_model(batch_imgs)
 
                 torch.onnx.export(
-                    wrapper_model, (batch_imgs,), "gm2.onnx",
+                    wrapper_model, (batch_imgs,), args.export_model,
                     input_names = ['batch_imgs'],
-                    output_names = ['pred_camera', 'pred_3d_joints', 'pred_vertices_sub', 'pred_vertices'],
+                    output_names = ['pred_camera', 'pred_3d_joints', 'pred_vertices_sub', 'vertices'], #"faces"
                     opset_version=11)
                 return 
 

@@ -11,6 +11,8 @@ from PIL import Image
 from torchvision import transforms
 
 import src.modeling.data.config as cfg
+
+
 from src.handinfo import utils
 from src.handinfo.data.tools import make_hand_data_loader
 from src.handinfo.fastmetro import get_fastmetro_model
@@ -63,29 +65,6 @@ from src.modeling._mano import MANO, Mesh
 #     # print(pred_3d_joints.squeeze(0))
 
 
-def main_back(args):
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
-    mesh_sampler = Mesh(device=device)
-    mano_model = MANO().to("cpu")
-
-    fastmetro_model = get_fastmetro_model(
-        args, mesh_sampler=mesh_sampler, force_from_checkpoint=True
-    )
-    inputs = torch.randn(16, 3, 224, 224)
-    # out = fastmetro_model(inputs)
-    # print(len(out))
-    model = WrapperForRadiusModel(fastmetro_model)
-    (
-        plane_origin,
-        plane_normal,
-        _,
-        pred_3d_joints,
-        pred_3d_vertices_fine,
-    ) = model(inputs, mano_model)
-    # model.eval()
-    print(plane_origin, plane_normal)
-
 
 def load_image_as_tensor(image_file, show_image=False):
     transform = transforms.Compose(
@@ -118,6 +97,11 @@ def parse_args():
         type=Path,
         # required=True,
     )
+    parser.add_argument(
+        "--model_path",
+        type=Path,
+        required=True,
+    )
     args = parser.parse_args()
     return args
 
@@ -132,30 +116,46 @@ def conv_camera_param(camera):
     return camera_t
 
 
+
+
+
 def main(args):
+    #model_filename = "onnx/gm2.onnx"
+    model_filename = str(args.model_path)
+    print(f"model_filename: {model_filename}")
     images = load_image_as_tensor(args.sample_dir)
     print(images.shape)
     # str(model_filename)
-    model_filename = "onnx/radius_pred_cam_model.onnx"
+
     ort_sess = ort.InferenceSession(model_filename)
     # outputs = ort_sess.run(None, {"images": images.numpy()})
-    (
-        collision_points,
-        vertices,
-        faces,
-        max_distance,
-        min_distance,
-        mean_distance,
-        ring_finger_length,
-        ring_finger_points,
-        pred_cam,
-    ) = ort_sess.run(None, {"images": images.numpy()})
-    print(f"pred_cam: {pred_cam}")
-    print(f"pred_cam:converted: {conv_camera_param(pred_cam[0])}")
-    # print(f"vertices: {vertices.shape}")
+    # (
+    #     collision_points,
+    #     vertices,
+    #     faces,
+    #     max_distance,
+    #     min_distance,
+    #     mean_distance,
+    #     ring_finger_length,
+    #     ring_finger_points,
+    #     pred_cam,
+    # )
+    (pred_camera, pred_3d_joints, pred_vertices_sub, vertices) = ort_sess.run(None, {"batch_imgs": images.numpy()})
+
+    # 'pred_camera', 'pred_3d_joints', 'pred_vertices_sub', 'pred_vertices'],
+    print(f"pred_cam: {pred_camera}")
+    # print(f"pred_cam:converted: {conv_camera_param(pred_cam[0])}")
+    print(f"vertices: {vertices.shape}")
     # print(f"faces: {faces.shape}")
+    print(f"pred_vertices_sub: {pred_vertices_sub.shape}")
+    faces = torch.load("../FastMETRO/models/weights/faces.pt")
+    print(f"faces: {faces.shape}")
     mesh = trimesh.Trimesh(vertices=vertices, faces=faces)
     visualize_mesh(mesh=mesh)
+
+"""
+PYTHONPATH=. python scripts/tests/test_infer_with_logic.py --sample_dir  demo/sample_hand_images_12/1.jpeg
+"""
 
 
 if __name__ == "__main__":
