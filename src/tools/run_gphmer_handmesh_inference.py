@@ -53,10 +53,32 @@ transform_visualize = transforms.Compose([
                     transforms.CenterCrop(224),
                     transforms.ToTensor()])
 
+
+from torch import nn
+class WrapperModel(nn.Module):
+    def __init__(self, graphormer_model, mano_model, mesh_sampler, faces):
+        super().__init__()
+        self.graphormer_model = graphormer_model
+        self.mano_model = mano_model
+        self.mesh_sampler = mesh_sampler
+        self.faces = faces
+
+    def forward(self, batch_imgs):
+        model = self.graphormer_model
+        mesh_model = self.mano_model
+        pred_camera, pred_3d_joints, pred_vertices_sub, pred_vertices, hidden_states, att = model(
+            batch_imgs, mesh_model, self.mesh_sampler)
+        vertices = pred_vertices[0]
+        #, hidden_states, att
+        return pred_camera, pred_3d_joints, pred_vertices_sub, vertices, self.faces
+
+
 def run_inference(args, image_list, Graphormer_model, mano, renderer, mesh_sampler):
 # switch to evaluate mode
     Graphormer_model.eval()
     mano.eval()
+    faces = torch.load("../FastMETRO/models/weights/faces.pt")
+    print(f"faces: {faces.shape}")
     with torch.no_grad():
         for image_file in image_list:
             if 'pred' not in image_file:
@@ -69,7 +91,19 @@ def run_inference(args, image_list, Graphormer_model, mano, renderer, mesh_sampl
                 batch_imgs = torch.unsqueeze(img_tensor, 0)#.cuda()
                 batch_visual_imgs = torch.unsqueeze(img_visual, 0)#.cuda()
                 # forward-pass
-                pred_camera, pred_3d_joints, pred_vertices_sub, pred_vertices, hidden_states, att = Graphormer_model(batch_imgs, mano, mesh_sampler)
+                wrapper_model = WrapperModel(Graphormer_model, mano, mesh_sampler, faces)
+                # pred_camera, pred_3d_joints, pred_vertices_sub, pred_vertices, hidden_states, att = Graphormer_model(batch_imgs, mano, mesh_sampler)
+                pred_camera, pred_3d_joints, pred_vertices_sub, pred_vertices = wrapper_model(batch_imgs)
+
+                torch.onnx.export(
+                    wrapper_model, (batch_imgs,), "gm2.onnx",
+                    input_names = ['batch_imgs'],
+                    output_names = ['pred_camera', 'pred_3d_joints', 'pred_vertices_sub', 'pred_vertices'],
+                    opset_version=11)
+                return 
+
+
+
                 # obtain 3d joints from full mesh
                 pred_3d_joints_from_mesh = mano.get_3d_joints(pred_vertices)
                 pred_3d_pelvis = pred_3d_joints_from_mesh[:,cfg.J_NAME.index('Wrist'),:]
@@ -77,9 +111,10 @@ def run_inference(args, image_list, Graphormer_model, mano, renderer, mesh_sampl
                 pred_vertices = pred_vertices - pred_3d_pelvis[:, None, :]
 
                 # save attantion
-                att_max_value = att[-1]
-                att_cpu = np.asarray(att_max_value.cpu().detach())
-                att_all.append(att_cpu)
+                if False:
+                    att_max_value = att[-1]
+                    att_cpu = np.asarray(att_max_value.cpu().detach())
+                    att_all.append(att_cpu)
 
                 # obtain 3d joints, which are regressed from the full mesh
                 pred_3d_joints_from_mesh = mano.get_3d_joints(pred_vertices)
@@ -143,8 +178,9 @@ def parse_args():
     #########################################################
     # Data related arguments
     #########################################################
-    parser.add_argument("--num_workers", default=4, type=int, 
-                        help="Workers in dataloader.")       
+    parser.add_argument("--export_model", type=str, required=True)
+    parser.add_argument("--num_workers", default=4, type=int,
+                        help="Workers in dataloader.")
     parser.add_argument("--img_scale_factor", default=1, type=int, 
                         help="adjust image resolution.")  
     parser.add_argument("--image_file_or_path", default='./samples/hand', type=str, 
