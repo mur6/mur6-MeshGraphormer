@@ -55,22 +55,7 @@ transform_visualize = transforms.Compose([
 
 
 from torch import nn
-class WrapperModel(nn.Module):
-    def __init__(self, graphormer_model, mano_model, mesh_sampler, faces):
-        super().__init__()
-        self.graphormer_model = graphormer_model
-        self.mano_model = mano_model
-        self.mesh_sampler = mesh_sampler
-        self.faces = faces
-
-    def forward(self, batch_imgs):
-        model = self.graphormer_model
-        mesh_model = self.mano_model
-        pred_camera, pred_3d_joints, pred_vertices_sub, pred_vertices, hidden_states, att = model(
-            batch_imgs, mesh_model, self.mesh_sampler)
-        vertices = pred_vertices[0]
-        #, hidden_states, att
-        return pred_camera, pred_3d_joints, pred_vertices_sub, vertices, self.faces
+from src.handinfo.ring.plane_collision import WrapperForRadiusAndMeshGraphormer
 
 
 def run_inference(args, image_list, Graphormer_model, mano, renderer, mesh_sampler):
@@ -91,15 +76,27 @@ def run_inference(args, image_list, Graphormer_model, mano, renderer, mesh_sampl
                 batch_imgs = torch.unsqueeze(img_tensor, 0)#.cuda()
                 batch_visual_imgs = torch.unsqueeze(img_visual, 0)#.cuda()
                 # forward-pass
-                wrapper_model = WrapperModel(Graphormer_model, mano, mesh_sampler, faces)
+                wrapper_model = WrapperForRadiusAndMeshGraphormer(Graphormer_model, mano, mesh_sampler, faces)
                 # pred_camera, pred_3d_joints, pred_vertices_sub, pred_vertices, hidden_states, att = Graphormer_model(batch_imgs, mano, mesh_sampler)
-                pred_camera, pred_3d_joints, pred_vertices_sub, pred_vertices = wrapper_model(batch_imgs)
+                # pred_camera, pred_3d_joints, pred_vertices_sub, pred_vertices = wrapper_model(batch_imgs)
+                collision_points, vertices, faces, max_distance, min_distance, mean_distance, ring_finger_length, ring_finger_points, pred_cam  = wrapper_model(batch_imgs)
 
                 torch.onnx.export(
                     wrapper_model, (batch_imgs,), args.export_model,
                     input_names = ['batch_imgs'],
-                    output_names = ['pred_camera', 'pred_3d_joints', 'pred_vertices_sub', 'vertices'], #"faces"
-                    opset_version=11)
+                    output_names=[
+                        "collision_points",
+                        "vertices",
+                        "faces",
+                        "max_distance",
+                        "min_distance",
+                        "mean_distance",
+                        "ring_finger_length",
+                        "ring_finger_points",
+                        "pred_cam",
+                    ],
+                    # output_names = ['pred_camera', 'pred_3d_joints', 'pred_vertices_sub', 'vertices'], #"faces"
+                    )
                 return 
 
 

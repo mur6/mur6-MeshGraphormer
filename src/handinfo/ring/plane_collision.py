@@ -221,9 +221,17 @@ class WrapperForRadiusAndMeshGraphormer(nn.Module):
         plane_normal = ring2_point - ring1_point  # (batch X 3)
         plane_origin = (ring1_point + ring2_point) / 2  # (batch X 3)
 
+        print(f"pred_3d_joints: {pred_3d_joints.shape}")
+        print(f"pred_vertices: {pred_vertices.shape}")
+        print(f"plane_normal: {plane_normal.shape}")
+        print(f"plane_origin: {plane_origin.shape}")
+
         # #########################################################################
         vertices = pred_vertices[0]
         pred_cam = pred_camera
+        print(f"vertices: {vertices.shape}")
+        print(f"faces: {self.faces.shape}")
+        print(f"faces: {self.faces.dtype}")
 
         # #########################################################################
         ring_mesh_vertices, ring_mesh_faces = PlaneCollision.ring_finger_submesh(
