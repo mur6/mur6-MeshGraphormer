@@ -190,3 +190,75 @@ class WrapperForRadiusModel(nn.Module):
                 pred_3d_joints,
                 pred_3d_vertices_fine,
             )
+
+
+
+
+
+
+class WrapperForRadiusAndMeshGraphormer(nn.Module):
+    def __init__(self, graphormer_model, mano_model, mesh_sampler, faces):
+        super().__init__()
+        self.graphormer_model = graphormer_model
+        self.mano_model = mano_model
+        self.mesh_sampler = mesh_sampler
+        self.faces = faces
+
+    def forward(self, batch_imgs):
+        model = self.graphormer_model
+        mesh_model = self.mano_model
+        pred_camera, pred_3d_joints, pred_vertices_sub, pred_vertices, hidden_states, att = model(
+            batch_imgs, mesh_model, self.mesh_sampler)
+
+        # def make_plane_normal_and_origin_from_3d_vertices(pred_3d_joints, pred_3d_vertices_fine):
+        #     pred_3d_joints_from_mano = _get_3d_joints(pred_3d_vertices_fine)
+        #     pred_3d_joints_from_mano_wrist = pred_3d_joints_from_mano[:, WRIST_INDEX, :]
+        #     pred_3d_vertices_fine = pred_3d_vertices_fine - pred_3d_joints_from_mano_wrist[:, None, :]
+        #     pred_3d_joints = pred_3d_joints - pred_3d_joints_from_mano_wrist[:, None, :]
+
+        ring1_point = pred_3d_joints[:, 13, :]
+        ring2_point = pred_3d_joints[:, 14, :]
+        plane_normal = ring2_point - ring1_point  # (batch X 3)
+        plane_origin = (ring1_point + ring2_point) / 2  # (batch X 3)
+
+        # #########################################################################
+        vertices = pred_vertices[0]
+        pred_cam = pred_camera
+
+        # #########################################################################
+        ring_mesh_vertices, ring_mesh_faces = PlaneCollision.ring_finger_submesh(
+            vertices,
+            self.faces
+        )
+        ring_finger_triangles = ring_mesh_vertices[ring_mesh_faces].float()
+
+        plane_colli = PlaneCollision(
+            ring_finger_triangles, pca_mean=plane_origin[0], normal_v=plane_normal[0]
+        )
+        collision_points = plane_colli.get_filtered_collision_points(sort_by_angle=True)
+        # 1: 薬指根本周囲の点群の、原点からの距離を計算
+        distance_from_origin = torch.norm(collision_points, dim=1)
+        max_distance = distance_from_origin.max()
+        min_distance = distance_from_origin.min()
+        mean_distance = distance_from_origin.mean()
+        # 2: 薬指根本周囲の点を、原点位置から元の位置に移動
+        collision_points = collision_points + plane_origin
+        # 3: 薬指の長さを計算
+        joints = pred_3d_joints[0]
+        # joints[RING_1_INDEX : RING_4_INDEX + 1]
+        ring_finger_length = torch.norm(joints[RING_1_INDEX] - joints[RING_4_INDEX])
+        ring_finger_points = joints[[RING_1_INDEX, RING_4_INDEX]]
+
+        return (
+            collision_points,
+            vertices,  # pred_3d_vertices_fine[0],
+            self.faces,
+            max_distance,
+            min_distance,
+            mean_distance,
+            ring_finger_length,
+            ring_finger_points,
+            pred_cam,
+        )
+
+        # return pred_camera, pred_3d_joints, pred_vertices_sub, vertices, self.faces
