@@ -116,7 +116,41 @@ def conv_camera_param(camera):
     return camera_t
 
 
+def conv_camera_param2(camera):
+    import numpy as np
+    focal_length = 1000
+    res = 224
+    camera_t = [camera[1], camera[2], 2*focal_length/(res * camera[0] +1e-9)]
+    return camera_t
 
+
+from trimesh.scene.cameras import Camera
+
+def set_color(mesh, *, color):
+    for facet in mesh.facets:
+        # mesh.visual.face_colors[facet] = [color, color]
+        mesh.visual.face_colors[facet] = color
+    return mesh
+def set_blue(mesh):
+    blue = [32, 32, 210, 128]
+    return set_color(mesh, color=blue)
+def visualize_mesh2(*, mesh, tx, ty, sc):
+    import numpy as np
+    cam = Camera(resolution=(640, 480), focal=(800, 800))
+    # set camera parameters
+    # cam.transform = trimesh.transformations.translation_matrix([tx, ty, -sc])
+    # cam.projection = 'perspective'
+    scene = trimesh.Scene()
+    cam = np.eye(4)
+    cam[3, 0:3] = [tx, ty, sc]
+    scene.camera_transform = cam
+    # angles=(0.5, 0, 0), distance=5,
+    print(f"distance: {sc}")
+    # scene.set_camera(distance=sc, center=(0,0,0))
+    print(scene.camera_transform)
+
+    scene.add_geometry(set_blue(mesh))
+    scene.show()
 
 
 def main(args):
@@ -150,8 +184,18 @@ def main(args):
     print(f"pred_vertices_sub: {pred_vertices_sub.shape}")
     faces = torch.load("../FastMETRO/models/weights/faces.pt")
     print(f"faces: {faces.shape}")
+    ####
+    camera = pred_camera
+    tx = camera[1]
+    ty = camera[2]
+    sc = camera[0]
+    debug_text = {"sc": camera[0], "tx": camera[1], "ty": camera[2]}
+    print(f"camera debug: {debug_text}")
+    camera_t = conv_camera_param2(pred_camera)
+    print(f"camera_t: {camera_t}")
     mesh = trimesh.Trimesh(vertices=vertices, faces=faces)
-    visualize_mesh(mesh=mesh)
+    visualize_mesh2(mesh=mesh, tx=tx, ty=ty, sc=sc)
+
 
 """
 PYTHONPATH=. python scripts/tests/test_infer_with_logic.py --sample_dir  demo/sample_hand_images_12/1.jpeg
