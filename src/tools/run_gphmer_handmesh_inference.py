@@ -70,7 +70,7 @@ class WrapperModel(nn.Module):
             batch_imgs, mesh_model, self.mesh_sampler)
         vertices = pred_vertices[0]
         #, hidden_states, att
-        return pred_camera, pred_3d_joints, pred_vertices_sub, vertices# , self.faces
+        return pred_camera, pred_3d_joints, pred_vertices_sub, vertices, self.faces
 
 
 def run_inference(args, image_list, Graphormer_model, mano, renderer, mesh_sampler):
