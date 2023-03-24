@@ -4,8 +4,12 @@ opencv-python
 tqdm
 nltk
 numpy
-scipy==1.4.1
+scipy
+#==1.4.1
 chumpy
 boto3
 requests
 onnxruntime
+matplotlib
+trimesh[all]
+scikit-learn

@@ -23,7 +23,10 @@ fi
 
 if [ "$RUN_MODE" = "all" ] || [ "$RUN_MODE" = "infer" ]; then
     echo "2. onnx形式での推論のテストを実行...."
-    TEST_IMAGE_PATH="../FastMETRO/demo/sample_hand_images_12/1.jpeg"
+    TEST_IMAGE_PATH_backup="../FastMETRO/demo/sample_hand_images_12/1.jpeg"
+
+    TEST_IMAGE_PATH="samples/hand2/01.jpeg"
+
     # export PYTHONPATH=".:/Users/taichi.muraki/workspace/Python/mur6/FastMETRO"
     echo python scripts/infer_by_onnx_model.py --sample_dir $TEST_IMAGE_PATH --model_path $MODEL_PATH
     python scripts/infer_by_onnx_model.py --sample_dir $TEST_IMAGE_PATH --model_path $MODEL_PATH
