@@ -22,13 +22,13 @@ class Graphormer_Hand_Network(torch.nn.Module):
         self.cam_param_fc3 = torch.nn.Linear(150, 3)
         self.grid_feat_dim = torch.nn.Linear(1024, 2051)
 
-    def forward(self, images, mesh_model, mesh_sampler, meta_masks=None, is_train=False):
+    def forward(self, images, mesh_model_layer, mesh_sampler, meta_masks=None, is_train=False):
         batch_size = images.size(0)
         # Generate T-pose template mesh
         template_pose = torch.zeros((1,48))
         # template_pose = template_pose.cuda()
         template_betas = torch.zeros((1,10))# .cuda()
-        template_vertices, template_3d_joints = mesh_model.layer(template_pose, template_betas)
+        template_vertices, template_3d_joints = mesh_model_layer(template_pose, template_betas)
         template_vertices = template_vertices/1000.0
         template_3d_joints = template_3d_joints/1000.0
 

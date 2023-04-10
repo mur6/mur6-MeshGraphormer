@@ -200,15 +200,20 @@ class WrapperForRadiusAndMeshGraphormer(nn.Module):
     def __init__(self, graphormer_model, mano_model, mesh_sampler, faces):
         super().__init__()
         self.graphormer_model = graphormer_model
-        self.mano_model = mano_model
+        # self.mano_model = mano_model
+        self.mesh_model_right_layer = mesh_model_right_layer
+        self.mesh_model_left_layer = mesh_model_left_layer
         self.mesh_sampler = mesh_sampler
         self.faces = faces
 
-    def forward(self, batch_imgs):
+    def forward(self, batch_imgs, right_hand):
         model = self.graphormer_model
-        mesh_model = self.mano_model
+        if right_hand:
+            mesh_model_layer = self.mesh_model_right_layer
+        else:
+            mesh_model_layer = self.mesh_model_left_layer
         pred_camera, pred_3d_joints, pred_vertices_sub, pred_vertices, hidden_states, att = model(
-            batch_imgs, mesh_model, self.mesh_sampler)
+            batch_imgs, mesh_model_layer, self.mesh_sampler)
 
         # def make_plane_normal_and_origin_from_3d_vertices(pred_3d_joints, pred_3d_vertices_fine):
         #     pred_3d_joints_from_mano = _get_3d_joints(pred_3d_vertices_fine)
