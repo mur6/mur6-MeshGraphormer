@@ -49,3 +49,7 @@ misc-data/
 temp_hand_images/
 src/model/
 onnx/
+02/
+jsapp/
+samples/
+3d_models/
