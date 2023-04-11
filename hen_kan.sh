@@ -37,6 +37,6 @@ if [ "$RUN_MODE" = "all" ] || [ "$RUN_MODE" = "infer" ]; then
     TEST_IMAGE_PATH="samples/03/06.png"
 
     # export PYTHONPATH=".:/Users/taichi.muraki/workspace/Python/mur6/FastMETRO"
-    echo python scripts/infer_by_onnx_model.py --sample_dir $TEST_IMAGE_PATH --model_path $MODEL_PATH
-    python scripts/infer_by_onnx_model.py --sample_dir $TEST_IMAGE_PATH --model_path $MODEL_PATH
+    echo python scripts/infer_by_onnx_model.py --mode visualize --sample_dir $TEST_IMAGE_PATH --model_path $MODEL_PATH
+    python scripts/infer_by_onnx_model.py --mode visualize --sample_dir $TEST_IMAGE_PATH --model_path $MODEL_PATH
 fi

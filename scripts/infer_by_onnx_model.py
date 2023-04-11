@@ -194,7 +194,7 @@ def predict_onnx_model(model_filename, images, *, side, debug=True):
         idx = 0
     else:
         idx = 1
-    return vertices[idx], faces[idx], pred_cam[idx]
+    return vertices[idx], faces, pred_cam[idx]
 
 
 def make_camera_params(pred_cam):
