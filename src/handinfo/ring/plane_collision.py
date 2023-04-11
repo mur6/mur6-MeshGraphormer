@@ -192,35 +192,81 @@ class WrapperForRadiusModel(nn.Module):
             )
 
 
-
-
+from manopth.manolayer import ManoLayer
 
 
 class WrapperForRadiusAndMeshGraphormer(nn.Module):
-    def __init__(self, graphormer_model, mano_model, mesh_sampler, faces):
+    def __init__(self, graphormer_model, *, mesh_sampler, faces, mano_dir):
         super().__init__()
         self.graphormer_model = graphormer_model
         # self.mano_model = mano_model
+
+        mesh_model_right_layer = ManoLayer(side='right', mano_root=mano_dir, flat_hand_mean=False, use_pca=False)
+        mesh_model_left_layer = ManoLayer(side='left', mano_root=mano_dir, flat_hand_mean=False, use_pca=False)
         self.mesh_model_right_layer = mesh_model_right_layer
         self.mesh_model_left_layer = mesh_model_left_layer
         self.mesh_sampler = mesh_sampler
         self.faces = faces
 
-    def forward(self, batch_imgs, right_hand):
+
+    def forward(self, batch_imgs):
         model = self.graphormer_model
-        if right_hand:
-            mesh_model_layer = self.mesh_model_right_layer
-        else:
-            mesh_model_layer = self.mesh_model_left_layer
-        pred_camera, pred_3d_joints, pred_vertices_sub, pred_vertices, hidden_states, att = model(
+        mesh_model_layer = self.mesh_model_right_layer
+        pred_camera, pred_3d_joints, _, pred_vertices, _, _ = model(
             batch_imgs, mesh_model_layer, self.mesh_sampler)
+        (collision_points1,
+            vertices1,
+            max_distance1,
+            min_distance1,
+            mean_distance1,
+            ring_finger_length1,
+            ring_finger_points1,
+            pred_cam1
+        ) = self.calc_ring_infos(pred_3d_joints, pred_vertices, pred_camera, self.faces)
 
-        # def make_plane_normal_and_origin_from_3d_vertices(pred_3d_joints, pred_3d_vertices_fine):
-        #     pred_3d_joints_from_mano = _get_3d_joints(pred_3d_vertices_fine)
-        #     pred_3d_joints_from_mano_wrist = pred_3d_joints_from_mano[:, WRIST_INDEX, :]
-        #     pred_3d_vertices_fine = pred_3d_vertices_fine - pred_3d_joints_from_mano_wrist[:, None, :]
-        #     pred_3d_joints = pred_3d_joints - pred_3d_joints_from_mano_wrist[:, None, :]
+        mesh_model_layer = self.mesh_model_left_layer
+        pred_camera, pred_3d_joints, _, pred_vertices, _, _ = model(
+            batch_imgs, mesh_model_layer, self.mesh_sampler)
+        (collision_points2,
+            vertices2,
+            max_distance2,
+            min_distance2,
+            mean_distance2,
+            ring_finger_length2,
+            ring_finger_points2,
+            pred_cam2
+        ) = self.calc_ring_infos(pred_3d_joints, pred_vertices, pred_camera, self.faces)
 
+
+        collision_points = torch.stack([collision_points1, collision_points2], dim=0)
+        vertices = torch.stack([vertices1, vertices2], dim=0)
+        max_distance = torch.stack([max_distance1, max_distance2], dim=0)
+        min_distance = torch.stack([min_distance1, min_distance2], dim=0)
+        mean_distance = torch.stack([mean_distance1, mean_distance2], dim=0)
+        ring_finger_length = torch.stack([ring_finger_length1, ring_finger_length2], dim=0)
+        ring_finger_points = torch.stack([ring_finger_points1, ring_finger_points2], dim=0)
+        pred_cam = torch.stack([pred_cam1, pred_cam2], dim=0)
+        return (
+            collision_points,
+            vertices,  # pred_3d_vertices_fine[0],
+            self.faces,
+            max_distance,
+            min_distance,
+            mean_distance,
+            ring_finger_length,
+            ring_finger_points,
+            pred_cam,
+        )
+
+    # def _helper(self, batch_imgs):
+    #     model = self.graphormer_model
+    #     pred_camera, pred_3d_joints, pred_vertices_sub, pred_vertices, hidden_states, att = model(
+    #         batch_imgs, mesh_model_layer, self.mesh_sampler)
+
+
+
+    @classmethod
+    def calc_ring_infos(cls, pred_3d_joints, pred_vertices, pred_camera, faces):
         ring1_point = pred_3d_joints[:, 13, :]
         ring2_point = pred_3d_joints[:, 14, :]
         plane_normal = ring2_point - ring1_point  # (batch X 3)
@@ -235,13 +281,13 @@ class WrapperForRadiusAndMeshGraphormer(nn.Module):
         vertices = pred_vertices[0]
         pred_cam = pred_camera
         print(f"vertices: {vertices.shape}")
-        print(f"faces: {self.faces.shape}")
-        print(f"faces: {self.faces.dtype}")
+        print(f"faces: {faces.shape}")
+        print(f"faces: {faces.dtype}")
 
         # #########################################################################
         ring_mesh_vertices, ring_mesh_faces = PlaneCollision.ring_finger_submesh(
             vertices,
-            self.faces
+            faces
         )
         ring_finger_triangles = ring_mesh_vertices[ring_mesh_faces].float()
 
@@ -261,11 +307,9 @@ class WrapperForRadiusAndMeshGraphormer(nn.Module):
         # joints[RING_1_INDEX : RING_4_INDEX + 1]
         ring_finger_length = torch.norm(joints[RING_1_INDEX] - joints[RING_4_INDEX])
         ring_finger_points = joints[[RING_1_INDEX, RING_4_INDEX]]
-
         return (
             collision_points,
             vertices,  # pred_3d_vertices_fine[0],
-            self.faces,
             max_distance,
             min_distance,
             mean_distance,
@@ -273,5 +317,3 @@ class WrapperForRadiusAndMeshGraphormer(nn.Module):
             ring_finger_points,
             pred_cam,
         )
-
-        # return pred_camera, pred_3d_joints, pred_vertices_sub, vertices, self.faces

@@ -76,6 +76,7 @@ def load_image_as_tensor(image_file, show_image=False):
         ]
     )
     image = Image.open(image_file)
+    image = image.convert('RGB')
 
     img_tensor = transform(image)
     if show_image:
@@ -163,38 +164,59 @@ def main(args):
 
     ort_sess = ort.InferenceSession(model_filename)
     # outputs = ort_sess.run(None, {"images": images.numpy()})
-    # (
-    #     collision_points,
-    #     vertices,
-    #     faces,
-    #     max_distance,
-    #     min_distance,
-    #     mean_distance,
-    #     ring_finger_length,
-    #     ring_finger_points,
-    #     pred_cam,
-    # )
-    (pred_camera, pred_3d_joints, pred_vertices_sub, vertices) = ort_sess.run(None, {"batch_imgs": images.numpy()})
+
+    # (pred_camera, pred_3d_joints, pred_vertices_sub, vertices)
+
+    (
+        collision_points,
+        vertices,
+        faces,
+        max_distance,
+        min_distance,
+        mean_distance,
+        ring_finger_length,
+        ring_finger_points,
+        pred_cam,
+    ) = ort_sess.run(None, {"batch_imgs": images.numpy()})
 
     # 'pred_camera', 'pred_3d_joints', 'pred_vertices_sub', 'pred_vertices'],
-    print(f"pred_cam: {pred_camera}")
+    print(f"pred_cam: {pred_cam}")
     # print(f"pred_cam:converted: {conv_camera_param(pred_cam[0])}")
     print(f"vertices: {vertices.shape}")
     # print(f"faces: {faces.shape}")
-    print(f"pred_vertices_sub: {pred_vertices_sub.shape}")
+
     faces = torch.load("../FastMETRO/models/weights/faces.pt")
     print(f"faces: {faces.shape}")
     ####
-    camera = pred_camera
+    camera = pred_cam
     tx = camera[1]
     ty = camera[2]
     sc = camera[0]
     debug_text = {"sc": camera[0], "tx": camera[1], "ty": camera[2]}
     print(f"camera debug: {debug_text}")
-    camera_t = conv_camera_param2(pred_camera)
+    camera_t = conv_camera_param2(pred_cam)
     print(f"camera_t: {camera_t}")
     mesh = trimesh.Trimesh(vertices=vertices, faces=faces)
-    visualize_mesh2(mesh=mesh, tx=tx, ty=ty, sc=sc)
+    import pathlib
+    export_type = "obj"
+    if export_type == "obj":
+        # with pathlib.Path("test.obj").open(mode="wb") as fh:
+        #     # trimesh.exchange.obj.export_obj(mesh)
+        #     content = trimesh.exchange.stl.export_stl(mesh)
+        #     fh.write(content)
+        mesh.export('jsapp/png_08.obj')
+    elif export_type == "stl":
+        with pathlib.Path("test.stl").open(mode="wb") as fh:
+            # trimesh.exchange.obj.export_obj(mesh)
+            content = trimesh.exchange.gltf.export_gltf(mesh)
+            fh.write(content)
+    elif export_type == "gltf":
+        with pathlib.Path("test.gltf").open(mode="wb") as fh:
+            # trimesh.exchange.obj.export_obj(mesh)
+            content = trimesh.exchange.gltf.export_gltf(mesh)
+            fh.write(content)
+
+    # visualize_mesh2(mesh=mesh, tx=tx, ty=ty, sc=sc)
 
 
 """

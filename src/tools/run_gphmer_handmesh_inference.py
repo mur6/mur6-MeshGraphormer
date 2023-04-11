@@ -8,6 +8,7 @@ End-to-end inference codes for
 
 from __future__ import absolute_import, division, print_function
 import argparse
+import pathlib
 import os
 import os.path as op
 import code
@@ -33,7 +34,7 @@ from src.utils.logger import setup_logger
 from src.utils.comm import synchronize, is_main_process, get_rank, get_world_size, all_gather
 from src.utils.miscellaneous import mkdir, set_seed
 from src.utils.metric_logger import AverageMeter
-from src.utils.renderer import Renderer, visualize_reconstruction_and_att_local, visualize_reconstruction_no_text
+# from src.utils.renderer import Renderer, visualize_reconstruction_and_att_local, visualize_reconstruction_no_text
 from src.utils.metric_pampjpe import reconstruction_error
 from src.utils.geometric_layers import orthographic_projection
 
@@ -58,12 +59,13 @@ from torch import nn
 from src.handinfo.ring.plane_collision import WrapperForRadiusAndMeshGraphormer
 
 
-def run_inference(args, image_list, Graphormer_model, mano, renderer, mesh_sampler):
+def run_inference(args, image_list, Graphormer_model, renderer, mesh_sampler):
 # switch to evaluate mode
     Graphormer_model.eval()
-    mano.eval()
+    # mano.eval()
     faces = torch.load("../FastMETRO/models/weights/faces.pt")
     print(f"faces: {faces.shape}")
+
     with torch.no_grad():
         for image_file in image_list:
             if 'pred' not in image_file:
@@ -76,10 +78,28 @@ def run_inference(args, image_list, Graphormer_model, mano, renderer, mesh_sampl
                 batch_imgs = torch.unsqueeze(img_tensor, 0)#.cuda()
                 batch_visual_imgs = torch.unsqueeze(img_visual, 0)#.cuda()
                 # forward-pass
-                wrapper_model = WrapperForRadiusAndMeshGraphormer(Graphormer_model, mano, mesh_sampler, faces)
+                wrapper_model = WrapperForRadiusAndMeshGraphormer(
+                    Graphormer_model,
+                    mesh_sampler=mesh_sampler,
+                    faces=faces,
+                    mano_dir=pathlib.Path('src/modeling/data')
+                    )
                 # pred_camera, pred_3d_joints, pred_vertices_sub, pred_vertices, hidden_states, att = Graphormer_model(batch_imgs, mano, mesh_sampler)
                 # pred_camera, pred_3d_joints, pred_vertices_sub, pred_vertices = wrapper_model(batch_imgs)
                 collision_points, vertices, faces, max_distance, min_distance, mean_distance, ring_finger_length, ring_finger_points, pred_cam  = wrapper_model(batch_imgs)
+                # collision_points, vertices, faces, max_distance, min_distance, mean_distance = wrapper_model(batch_imgs)
+                print()
+                print("######")
+                print(f"collision_points: {collision_points.shape}")
+                print(f"vertices: {vertices.shape}")
+                print(f"faces: {faces.shape}")
+                print(f"max_distance: {max_distance.shape}")
+                print(f"min_distance: {min_distance.shape}")
+                print(f"mean_distance: {mean_distance.shape}")
+                print(f"ring_finger_length: {ring_finger_length.shape}")
+                print(f"ring_finger_points: {ring_finger_points.shape}")
+                print(f"pred_cam: {pred_cam.shape}")
+                print("######")
 
                 torch.onnx.export(
                     wrapper_model, (batch_imgs,), args.export_model,
@@ -239,12 +259,12 @@ def main(args):
     logger.info("Using {} GPUs".format(args.num_gpus))
 
     # Mesh and MANO utils
-    mano_model = MANO().to(args.device)
-    mano_model.layer = mano_model.layer
+    # mano_model = MANO().to(args.device)
+    # mano_model.layer = mano_model.layer
     mesh_sampler = Mesh(device=args.device)
 
     # Renderer for visualization
-    renderer = Renderer(faces=mano_model.face)
+    renderer = None # Renderer(faces=mano_model.face)
 
     # Load pretrained model
     trans_encoder = []
@@ -361,7 +381,7 @@ def main(args):
     else:
         raise ValueError("Cannot find images at {}".format(args.image_file_or_path))
 
-    run_inference(args, image_list, _model, mano_model, renderer, mesh_sampler)    
+    run_inference(args, image_list, _model, renderer, mesh_sampler)
 
 if __name__ == "__main__":
     args = parse_args()

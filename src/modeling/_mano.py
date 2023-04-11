@@ -27,7 +27,7 @@ class MANO(nn.Module):
         self.vertex_num = 778
         self.face = self.layer.th_faces.numpy()
         self.joint_regressor = self.layer.th_J_regressor.numpy()
-        
+
         self.joint_num = 21
         self.joints_name = ('Wrist', 'Thumb_1', 'Thumb_2', 'Thumb_3', 'Thumb_4', 'Index_1', 'Index_2', 'Index_3', 'Index_4', 'Middle_1', 'Middle_2', 'Middle_3', 'Middle_4', 'Ring_1', 'Ring_2', 'Ring_3', 'Ring_4', 'Pinky_1', 'Pinky_2', 'Pinky_3', 'Pinky_4')
         self.skeleton = ( (0,1), (0,5), (0,9), (0,13), (0,17), (1,2), (2,3), (3,4), (5,6), (6,7), (7,8), (9,10), (10,11), (11,12), (13,14), (14,15), (15,16), (17,18), (18,19), (19,20) )
@@ -45,8 +45,13 @@ class MANO(nn.Module):
         joint_regressor_torch = torch.from_numpy(self.joint_regressor).float()
         self.register_buffer('joint_regressor_torch', joint_regressor_torch)
 
-    def get_layer(self):
-        return ManoLayer(mano_root=osp.join(self.mano_dir), flat_hand_mean=False, use_pca=False) # load right hand MANO model
+    def get_right_layer(self):
+         # load right-hand MANO model
+        return ManoLayer(side='right', mano_root=osp.join(self.mano_dir), flat_hand_mean=False, use_pca=False)
+
+    def get_left_layer(self):
+         # load left-hand MANO model
+        return ManoLayer(side='left',mano_root=osp.join(self.mano_dir), flat_hand_mean=False, use_pca=False)
 
     def get_3d_joints(self, vertices):
         """
