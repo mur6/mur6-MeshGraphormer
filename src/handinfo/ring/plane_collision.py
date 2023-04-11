@@ -269,6 +269,8 @@ class WrapperForRadiusAndMeshGraphormer(nn.Module):
         collision_points = plane_colli.get_filtered_collision_points(sort_by_angle=True)
         # 1: 薬指根本周囲の点群の、原点からの距離を計算
         distance_from_origin = torch.norm(collision_points, dim=1)
+        print(f"distance_from_origin: {distance_from_origin.shape}")
+        print(f"distance_from_origin: {distance_from_origin}")
         max_distance = distance_from_origin.max()
         min_distance = distance_from_origin.min()
         mean_distance = distance_from_origin.mean()
