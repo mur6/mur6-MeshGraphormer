@@ -202,9 +202,9 @@ class WrapperForRadiusAndMeshGraphormer(nn.Module):
         # self.mano_model = mano_model
 
         mesh_model_right_layer = ManoLayer(side='right', mano_root=mano_dir, flat_hand_mean=False, use_pca=False)
-        mesh_model_left_layer = ManoLayer(side='left', mano_root=mano_dir, flat_hand_mean=False, use_pca=False)
+        # mesh_model_left_layer = ManoLayer(side='left', mano_root=mano_dir, flat_hand_mean=False, use_pca=False)
         self.mesh_model_right_layer = mesh_model_right_layer
-        self.mesh_model_left_layer = mesh_model_left_layer
+        # self.mesh_model_left_layer = mesh_model_left_layer
         self.mesh_sampler = mesh_sampler
         self.faces = faces
 
@@ -214,27 +214,28 @@ class WrapperForRadiusAndMeshGraphormer(nn.Module):
         mesh_model_layer = self.mesh_model_right_layer
         pred_camera, pred_3d_joints, _, pred_vertices, _, _ = model(
             batch_imgs, mesh_model_layer, self.mesh_sampler)
-        (collision_points,
-            vertices,
-            faces
-            max_distance,
-            min_distance,
-            mean_distance,
-            ring_finger_length,
-            ring_finger_points,
-            pred_cam
-        ) = self.calc_ring_infos(pred_3d_joints, pred_vertices, pred_camera, self.faces)
-        return (
-            collision_points,
-            vertices, # pred_3d_vertices_fine[0],
-            faces,
-            max_distance,
-            min_distance,
-            mean_distance,
-            ring_finger_length,
-            ring_finger_points,
-            pred_cam,
-        )
+        # (collision_points,
+        #     vertices,
+        #     faces
+        #     max_distance,
+        #     min_distance,
+        #     mean_distance,
+        #     ring_finger_length,
+        #     ring_finger_points,
+        #     pred_cam
+        # ) = self.calc_ring_infos(pred_3d_joints, pred_vertices, pred_camera, self.faces)
+        # return (
+        #     collision_points,
+        #     vertices, # pred_3d_vertices_fine[0],
+        #     faces,
+        #     max_distance,
+        #     min_distance,
+        #     mean_distance,
+        #     ring_finger_length,
+        #     ring_finger_points,
+        #     pred_cam,
+        # )
+        return self.calc_ring_infos(pred_3d_joints, pred_vertices, pred_camera, self.faces)
 
     @classmethod
     def calc_ring_infos(cls, pred_3d_joints, pred_vertices, pred_camera, faces):
