@@ -1,3 +1,4 @@
+import pathlib
 import argparse
 from logging import DEBUG, INFO, basicConfig, debug, error, exception, getLogger, info, warning
 from pathlib import Path
@@ -88,6 +89,12 @@ def load_image_as_tensor(image_file, show_image=False):
 
 def parse_args():
     parser = argparse.ArgumentParser()
+    parser.add_argument(
+        '--mode', help='set mode, [visualize] or [export]',
+        type=str,
+        choices=['visualize', 'export'],
+        required=True,
+    )
     # parser.add_argument(
     #     "--onnx_filename",
     #     type=Path,
@@ -135,6 +142,7 @@ def set_color(mesh, *, color):
 def set_blue(mesh):
     blue = [32, 32, 210, 128]
     return set_color(mesh, color=blue)
+
 def visualize_mesh2(*, mesh, tx, ty, sc):
     import numpy as np
     cam = Camera(resolution=(640, 480), focal=(800, 800))
@@ -154,19 +162,13 @@ def visualize_mesh2(*, mesh, tx, ty, sc):
     scene.show()
 
 
-def main(args):
-    #model_filename = "onnx/gm2.onnx"
-    model_filename = str(args.model_path)
-    print(f"model_filename: {model_filename}")
-    images = load_image_as_tensor(args.sample_dir)
-    print(images.shape)
-    # str(model_filename)
+def test():
+    faces = torch.load("../FastMETRO/models/weights/faces.pt")
+    print(f"faces: {faces.shape}")
 
+
+def predict_onnx_model(model_filename, images, *, side, debug=True):
     ort_sess = ort.InferenceSession(model_filename)
-    # outputs = ort_sess.run(None, {"images": images.numpy()})
-
-    # (pred_camera, pred_3d_joints, pred_vertices_sub, vertices)
-
     (
         collision_points,
         vertices,
@@ -178,16 +180,24 @@ def main(args):
         ring_finger_points,
         pred_cam,
     ) = ort_sess.run(None, {"batch_imgs": images.numpy()})
+    if debug:
+        print(f"collision_points: {collision_points.shape}")
+        print(f"vertices: {vertices.shape}")
+        print(f"faces: {faces.shape}")
+        print(f"max_distance: {max_distance.shape}")
+        print(f"min_distance: {min_distance.shape}")
+        print(f"mean_distance: {mean_distance.shape}")
+        print(f"ring_finger_length: {ring_finger_length.shape}")
+        print(f"ring_finger_points: {ring_finger_points.shape}")
+        print(f"pred_cam: {pred_cam.shape}")
+    if side == "right":
+        idx = 0
+    else:
+        idx = 1
+    return vertices[idx], faces[idx], pred_cam[idx]
 
-    # 'pred_camera', 'pred_3d_joints', 'pred_vertices_sub', 'pred_vertices'],
-    print(f"pred_cam: {pred_cam}")
-    # print(f"pred_cam:converted: {conv_camera_param(pred_cam[0])}")
-    print(f"vertices: {vertices.shape}")
-    # print(f"faces: {faces.shape}")
 
-    faces = torch.load("../FastMETRO/models/weights/faces.pt")
-    print(f"faces: {faces.shape}")
-    ####
+def make_camera_params(pred_cam):
     camera = pred_cam
     tx = camera[1]
     ty = camera[2]
@@ -196,27 +206,25 @@ def main(args):
     print(f"camera debug: {debug_text}")
     camera_t = conv_camera_param2(pred_cam)
     print(f"camera_t: {camera_t}")
-    mesh = trimesh.Trimesh(vertices=vertices, faces=faces)
-    import pathlib
-    export_type = "obj"
-    if export_type == "obj":
-        # with pathlib.Path("test.obj").open(mode="wb") as fh:
-        #     # trimesh.exchange.obj.export_obj(mesh)
-        #     content = trimesh.exchange.stl.export_stl(mesh)
-        #     fh.write(content)
-        mesh.export('jsapp/png_08.obj')
-    elif export_type == "stl":
-        with pathlib.Path("test.stl").open(mode="wb") as fh:
-            # trimesh.exchange.obj.export_obj(mesh)
-            content = trimesh.exchange.gltf.export_gltf(mesh)
-            fh.write(content)
-    elif export_type == "gltf":
-        with pathlib.Path("test.gltf").open(mode="wb") as fh:
-            # trimesh.exchange.obj.export_obj(mesh)
-            content = trimesh.exchange.gltf.export_gltf(mesh)
-            fh.write(content)
+    return tx, ty, sc
 
-    # visualize_mesh2(mesh=mesh, tx=tx, ty=ty, sc=sc)
+
+def main(args, mode):
+    model_filename = str(args.model_path)
+    print(f"model_filename: {model_filename}")
+    images = load_image_as_tensor(args.sample_dir)
+    print(images.shape)
+    vertices, faces, pred_cam = predict_onnx_model(model_filename, images, side="right")
+
+    if mode == "visualize":
+        tx, ty, sc = make_camera_params(pred_cam)
+        mesh = trimesh.Trimesh(vertices=vertices, faces=faces)
+        visualize_mesh2(mesh=mesh, tx=tx, ty=ty, sc=sc)
+    elif mode == "export":
+        mesh.export('jsapp/png_08.obj')
+    else:
+        assert False
+
 
 
 """
@@ -226,4 +234,5 @@ PYTHONPATH=. python scripts/tests/test_infer_with_logic.py --sample_dir  demo/sa
 
 if __name__ == "__main__":
     args = parse_args()
-    main(args)
+    main(args, args.mode)
+
