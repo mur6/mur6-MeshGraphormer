@@ -214,42 +214,20 @@ class WrapperForRadiusAndMeshGraphormer(nn.Module):
         mesh_model_layer = self.mesh_model_right_layer
         pred_camera, pred_3d_joints, _, pred_vertices, _, _ = model(
             batch_imgs, mesh_model_layer, self.mesh_sampler)
-        (collision_points1,
-            vertices1,
-            max_distance1,
-            min_distance1,
-            mean_distance1,
-            ring_finger_length1,
-            ring_finger_points1,
-            pred_cam1
+        (collision_points,
+            vertices,
+            faces
+            max_distance,
+            min_distance,
+            mean_distance,
+            ring_finger_length,
+            ring_finger_points,
+            pred_cam
         ) = self.calc_ring_infos(pred_3d_joints, pred_vertices, pred_camera, self.faces)
-
-        mesh_model_layer = self.mesh_model_left_layer
-        pred_camera, pred_3d_joints, _, pred_vertices, _, _ = model(
-            batch_imgs, mesh_model_layer, self.mesh_sampler)
-        (collision_points2,
-            vertices2,
-            max_distance2,
-            min_distance2,
-            mean_distance2,
-            ring_finger_length2,
-            ring_finger_points2,
-            pred_cam2
-        ) = self.calc_ring_infos(pred_3d_joints, pred_vertices, pred_camera, self.faces)
-
-
-        collision_points = torch.stack([collision_points1, collision_points2], dim=0)
-        vertices = torch.stack([vertices1, vertices2], dim=0)
-        max_distance = torch.stack([max_distance1, max_distance2], dim=0)
-        min_distance = torch.stack([min_distance1, min_distance2], dim=0)
-        mean_distance = torch.stack([mean_distance1, mean_distance2], dim=0)
-        ring_finger_length = torch.stack([ring_finger_length1, ring_finger_length2], dim=0)
-        ring_finger_points = torch.stack([ring_finger_points1, ring_finger_points2], dim=0)
-        pred_cam = torch.stack([pred_cam1, pred_cam2], dim=0)
         return (
             collision_points,
-            vertices,  # pred_3d_vertices_fine[0],
-            self.faces,
+            vertices, # pred_3d_vertices_fine[0],
+            faces,
             max_distance,
             min_distance,
             mean_distance,
@@ -303,6 +281,7 @@ class WrapperForRadiusAndMeshGraphormer(nn.Module):
         return (
             collision_points,
             vertices,  # pred_3d_vertices_fine[0],
+            faces,
             max_distance,
             min_distance,
             mean_distance,
