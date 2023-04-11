@@ -258,13 +258,6 @@ class WrapperForRadiusAndMeshGraphormer(nn.Module):
             pred_cam,
         )
 
-    # def _helper(self, batch_imgs):
-    #     model = self.graphormer_model
-    #     pred_camera, pred_3d_joints, pred_vertices_sub, pred_vertices, hidden_states, att = model(
-    #         batch_imgs, mesh_model_layer, self.mesh_sampler)
-
-
-
     @classmethod
     def calc_ring_infos(cls, pred_3d_joints, pred_vertices, pred_camera, faces):
         ring1_point = pred_3d_joints[:, 13, :]
