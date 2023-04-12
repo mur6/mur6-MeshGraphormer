@@ -110,6 +110,7 @@ def parse_args():
         type=Path,
         required=True,
     )
+    parser.add_argument("--output_obj_filename")
     args = parser.parse_args()
     return args
 
@@ -167,7 +168,7 @@ def test():
     print(f"faces: {faces.shape}")
 
 
-def predict_onnx_model(model_filename, images, *, side, debug=True):
+def predict_onnx_model(model_filename, images, *, debug=True):
     ort_sess = ort.InferenceSession(model_filename)
     (
         collision_points,
@@ -190,11 +191,7 @@ def predict_onnx_model(model_filename, images, *, side, debug=True):
         print(f"ring_finger_length: {ring_finger_length.shape}")
         print(f"ring_finger_points: {ring_finger_points.shape}")
         print(f"pred_cam: {pred_cam.shape}")
-    if side == "right":
-        idx = 0
-    else:
-        idx = 1
-    return vertices[idx], faces, pred_cam[idx]
+    return vertices, faces, pred_cam
 
 
 def make_camera_params(pred_cam):
@@ -214,14 +211,15 @@ def main(args, mode):
     print(f"model_filename: {model_filename}")
     images = load_image_as_tensor(args.sample_dir)
     print(images.shape)
-    vertices, faces, pred_cam = predict_onnx_model(model_filename, images, side="right")
+    vertices, faces, pred_cam = predict_onnx_model(model_filename, images)
 
     if mode == "visualize":
         tx, ty, sc = make_camera_params(pred_cam)
         mesh = trimesh.Trimesh(vertices=vertices, faces=faces)
         visualize_mesh2(mesh=mesh, tx=tx, ty=ty, sc=sc)
     elif mode == "export":
-        mesh.export('jsapp/png_08.obj')
+        mesh = trimesh.Trimesh(vertices=vertices, faces=faces)
+        mesh.export(args.output_obj_filename)
     else:
         assert False
 
