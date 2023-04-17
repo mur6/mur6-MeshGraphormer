@@ -194,15 +194,12 @@ def predict_onnx_model(model_filename, images, *, debug=True):
     return vertices, faces, pred_cam
 
 
-def make_camera_params(pred_cam):
-    camera = pred_cam
+def make_camera_params(camera):
     tx = camera[1]
     ty = camera[2]
     sc = camera[0]
     debug_text = {"sc": camera[0], "tx": camera[1], "ty": camera[2]}
     print(f"camera debug: {debug_text}")
-    camera_t = conv_camera_param2(pred_cam)
-    print(f"camera_t: {camera_t}")
     return tx, ty, sc
 
 
@@ -218,6 +215,7 @@ def main(args, mode):
         mesh = trimesh.Trimesh(vertices=vertices, faces=faces)
         visualize_mesh2(mesh=mesh, tx=tx, ty=ty, sc=sc)
     elif mode == "export":
+        make_camera_params(pred_cam)
         mesh = trimesh.Trimesh(vertices=vertices, faces=faces)
         mesh.export(args.output_obj_filename)
     else:
