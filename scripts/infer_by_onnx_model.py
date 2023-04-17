@@ -3,9 +3,11 @@ import argparse
 from logging import DEBUG, INFO, basicConfig, debug, error, exception, getLogger, info, warning
 from pathlib import Path
 
+import numpy as np
 import onnxruntime as ort
 import torch
 import trimesh
+from trimesh import transformations
 from matplotlib import pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 from PIL import Image
@@ -144,22 +146,28 @@ def set_blue(mesh):
     blue = [32, 32, 210, 128]
     return set_color(mesh, color=blue)
 
-def visualize_mesh2(*, mesh, tx, ty, sc):
-    import numpy as np
-    cam = Camera(resolution=(640, 480), focal=(800, 800))
-    # set camera parameters
-    # cam.transform = trimesh.transformations.translation_matrix([tx, ty, -sc])
-    # cam.projection = 'perspective'
-    scene = trimesh.Scene()
-    cam = np.eye(4)
-    cam[3, 0:3] = [tx, ty, sc]
-    scene.camera_transform = cam
-    # angles=(0.5, 0, 0), distance=5,
-    print(f"distance: {sc}")
-    # scene.set_camera(distance=sc, center=(0,0,0))
-    print(scene.camera_transform)
 
-    scene.add_geometry(set_blue(mesh))
+def rotate_z_matrix():
+    alpha, beta, gamma = 0, 0, np.pi
+    rot_matrix = transformations.euler_matrix(alpha, beta, gamma, 'rxyz')
+    # rot_matrix = transformations.rotation_matrix(angle, direction, center)
+    return rot_matrix
+
+
+def visualize_mesh2(*, mesh, tx, ty, sc):
+    focal = 618.0386719675123
+    camera = Camera(resolution=(512, 512), focal=(focal, focal), z_near=0.05, z_far=1000)
+    print(f"camera.fov: {camera.fov}")
+    # print(f"camera.transform: {camera.transform}")
+    # = trimesh.transformations.translation_matrix([0, 0, sc])
+    # camera.look_at([[tx, ty, 0]])
+
+    scene = trimesh.Scene()
+    # print(f"camera.K {scene.camera.K}")
+    # print(f"distance: {sc}")
+    mesh = set_blue(mesh)
+    # mesh.apply_transform()
+    scene.add_geometry(mesh)
     scene.show()
 
 
