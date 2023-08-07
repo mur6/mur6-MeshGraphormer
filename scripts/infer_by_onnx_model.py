@@ -166,7 +166,7 @@ def visualize_mesh2(*, mesh, tx, ty, sc):
     # print(f"camera.K {scene.camera.K}")
     # print(f"distance: {sc}")
     mesh = set_blue(mesh)
-    # mesh.apply_transform()
+    mesh.apply_transform()
     scene.add_geometry(mesh)
     scene.show()
 
