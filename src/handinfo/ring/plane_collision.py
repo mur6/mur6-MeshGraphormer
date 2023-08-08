@@ -252,9 +252,10 @@ class WrapperForRadiusAndMeshGraphormer(nn.Module):
         # #########################################################################
         vertices = pred_vertices[0]
         pred_cam = pred_camera
-        print(f"vertices: {vertices.shape}")
-        print(f"faces: {faces.shape}")
-        print(f"faces: {faces.dtype}")
+        print("######: BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB")
+        print(f"vertices: shape={vertices.shape} dtype={vertices.dtype}")
+        print(f"faces: shape={faces.shape} dtype={faces.dtype}")
+        print("######: BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB")
 
         # #########################################################################
         ring_mesh_vertices, ring_mesh_faces = PlaneCollision.ring_finger_submesh(
