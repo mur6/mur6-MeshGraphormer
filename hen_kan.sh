@@ -38,5 +38,5 @@ if [ "$RUN_MODE" = "all" ] || [ "$RUN_MODE" = "infer" ]; then
 
     # export PYTHONPATH=".:/Users/taichi.muraki/workspace/Python/mur6/FastMETRO"
     echo python scripts/infer_by_onnx_model.py --mode visualize --sample_dir $TEST_IMAGE_PATH --model_path $MODEL_PATH
-    python scripts/infer_by_onnx_model.py --mode visualize --sample_dir $TEST_IMAGE_PATH --model_path $MODEL_PATH
+    PYTHONPATH=. python scripts/infer_by_onnx_model.py --mode visualize --sample_dir $TEST_IMAGE_PATH --model_path $MODEL_PATH
 fi
